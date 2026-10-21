@@ -102,3 +102,11 @@ Backup archives are now written to a private temporary file and published only w
 GitHub Actions tests both the pilot and browser demo, checks JavaScript syntax, audits npm dependencies for high/critical findings, verifies basic accessibility and performs an isolated encrypted backup/restore drill. See [the verification matrix](docs/CI_VERIFICATION.md). Passing CI does not constitute legal, privacy or independent security certification.
 
 **Current full CI evidence:** [run #39667630075](https://github.com/titanfit102-bit/Protesto/actions/runs/39667630075) passed runtime + development dependency audit, syntax checks, unit/API tests, browser/accessibility smoke and encrypted PostgreSQL restore. This does not authorize public deployment.
+
+## Second-reviewer appeals and shared rate limits
+
+The pilot now supports a one-time appeal by the author of a rejected correction. A **different reviewer** from the first decision (and separate from the correction author and case author) can uphold or overturn the decision. Overturning archives the published case with an immutable audit history; the original correction record remains unchanged.
+
+The pilot requires a securely generated `PROTESTO_RATE_LIMIT_SECRET` (32+ characters) for deterministic PostgreSQL rate limiting across backend processes. IP/account login quotas and user write quotas are enforced with HMAC identifiers. Keep the secret outside the repository; no real identity or production app environment has been created.
+
+**Latest implementation tests:** [Actions #39670591638](https://github.com/titanfit102-bit/Protesto/actions/runs/39670591638), 17/17 Node tests plus Chromium/restore gates. Independent accessibility, security, editorial and legal audits remain open.

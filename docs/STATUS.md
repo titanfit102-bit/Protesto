@@ -47,3 +47,18 @@ No merge into main, public application deployment, expenses or changes to other 
 ## Next engineering tranche
 
 Prioritize meaningful release blockers rather than counting extra features as completion: improved identity and anti-abuse, accessible UX audit, formal correction/appeals workflow, source provenance, and real operational recovery policy. External legal judgment, human content verification and a genuine production environment cannot be certified by GitHub Actions alone.
+
+## Development tranche — independent appeals and shared throttling (2026-10-21)
+
+- Added a one-time citizen appeal for a rejected correction, using a distinct second reviewer. The original editorial rejection remains on record. Acceptance archives a still-published case and records retraction plus audit in one transaction; rejection preserves the prior publication.
+- Appeals are private to the submitter and qualified reviewers; the original correction reviewer, appeal author, and affected case author may not judge the appeal.
+- Added PostgreSQL-backed, atomic, cross-instance rate limiting for login by remote network address (12 / 15 minutes), login by normalized account (15 / 15 minutes), and authenticated write attempts (120 / hour). Keys are HMAC-SHA256; the private pilot requires a separate stable 32+ character PROTESTO_RATE_LIMIT_SECRET.
+- New migrations: 005_correction_appeals.sql and 006_shared_rate_limits.sql. Existing schema is not altered destructively.
+- **Verified:** [GitHub Actions run #39670591638](https://github.com/titanfit102-bit/Protesto/actions/runs/39670591638), commit `97d827425740247688b9631612fd6b87cb758484`: 17 Node test cases passed, PostgreSQL integration includes acceptance/refusal and independent review, Chromium smoke passed, dependency audit passed, migration replay passed, encrypted Postgres restoration passed.
+- Current restrictions: no public application deployment or merge. Rate limiting alone is not full abuse prevention. Appeal process does not implement a legally certified remedy, external arbitrator, notification deadline or independent governance.
+
+## Next hardening
+1. Revocable device sessions and password reset/MFA with audited operational process.
+2. Formal public correction history, independent moderator SOP, evidence redaction and appeal escalation.
+3. End-to-end browser tests specifically for the appeal UI and abusive traffic conditions.
+4. Backup retention policy, verified offsite storage, monitoring, legal/privacy review and private pilot.

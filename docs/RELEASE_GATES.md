@@ -29,3 +29,7 @@ GitHub Actions cannot itself establish that public allegations are factually cor
 ## Definition of done for production
 
 All P0 gates require reproducible evidence and independent review appropriate to risk, a functioning staging and production environment, documented owners and incident procedures, and the project's owner's explicit approval. Historical CI runs with failures should remain visible; a newer passing run is the current code verification baseline.
+
+## New evidence — editorial appeals and shared quotas
+
+In [run #39670591638](https://github.com/titanfit102-bit/Protesto/actions/runs/39670591638), all 17 Node tests, PostgreSQL migration replay, headless browser smoke and encrypted restore drill passed. An independent second-reviewer appeal flow and shared PostgreSQL rate-limit implementation are tested. **Still PARTIAL for production:** centralized reverse-proxy rate limiting, safe account recovery, operational escalation, external appeal remedies, verified evidence redaction, incident response and privacy/legal checks.

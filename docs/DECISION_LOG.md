@@ -23,3 +23,5 @@
 | ADR-019 | Fail closed on GitHub Actions runner provisioning failure | Tests did not execute; do not falsely mark integration verification green | Runner provisioning recovered and full drill passes |
 | ADR-020 | Atomic publication of completed encrypted archives using a temporary file and hard-link | Crash-safe visibility and never overwrites a previous backup | Filesystems without hard-link support require separate audited strategy |
 | ADR-021 | Public ledger exposes UUID, event type and timestamp only | Provide accountability for withdrawals without republishing contested claims or sensitive identities | Public corrections/appeals policy reviewed |
+| ADR-022 | One-time appeal of rejected corrections, decided by independent second reviewer | Preserve original decision and reduce unilateral moderation mistakes | Formal appeals policy and due-process review |
+| ADR-023 | Central atomic PostgreSQL counters using HMAC identity keys | Prevent per-instance throttling bypass and avoid storing raw IP/email in quota table | Gateway abuse prevention, distributed scale, data retention |

@@ -32,3 +32,5 @@
 - Latest PR: [Draft pull request #1](https://github.com/titanfit102-bit/Protesto/pull/1).
 
 - [Complete verification after remediation — run #39667630075](https://github.com/titanfit102-bit/Protesto/actions/runs/39667630075): all-dependency npm audit, JavaScript syntax, 16 Node tests, Chromium E2E/accessibility smoke, PostgreSQL migration replay, encrypted isolated restore. Auditing the development dependencies exposed 7 high-severity advisories in older puppeteer-core transitive packages; upgrade to `^25.15.0` passed in this run.
+
+- [Verified appeals and shared quotas — run #39670591638](https://github.com/titanfit102-bit/Protesto/actions/runs/39670591638): 17 passing Node tests, API integration of independent editorial appeals, shared atomic quota checks, Chromium smoke, audited dependencies and isolated encrypted database restore.
