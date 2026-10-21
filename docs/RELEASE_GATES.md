@@ -33,3 +33,21 @@ All P0 gates require reproducible evidence and independent review appropriate to
 ## New evidence — editorial appeals and shared quotas
 
 In [run #39670591638](https://github.com/titanfit102-bit/Protesto/actions/runs/39670591638), all 17 Node tests, PostgreSQL migration replay, headless browser smoke and encrypted restore drill passed. An independent second-reviewer appeal flow and shared PostgreSQL rate-limit implementation are tested. **Still PARTIAL for production:** centralized reverse-proxy rate limiting, safe account recovery, operational escalation, external appeal remedies, verified evidence redaction, incident response and privacy/legal checks.
+
+
+## Civic dialogue release gate (phase 1, 2026-10-22)
+
+| Control | Verified status |
+|---|---|
+| Reviewer topic on published case only | Automated integration verified |
+| Private pending statements, independent reviewer, duplicate-decision rejection | Automated integration verified |
+| Explicit vote privacy acknowledgment, account-scoped vote changes while open | Automated integration verified |
+| No live counts and no small-group release (minimum 10, closed only) | Automated integration verified |
+| Atomic final aggregate and deletion of individual active vote rows | Automated integration verified |
+| Chromium workflow and mobile accessibility smoke | Automated E2E verified |
+| Pseudonymous voter mapping and backup erasure limitations | Documented; independent privacy audit OPEN |
+| Self-selection / fake-account bias and consent appropriateness | OPEN for real users |
+| Statement appeal, misconduct reporting, topic governance, content retention | OPEN for public use |
+| Independent security assessment, specialist privacy/legal approval | OPEN / P0 |
+
+[Green Actions #39687784143](https://github.com/titanfit102-bit/Protesto/actions/runs/39687784143) is technical proof, not authorization to deploy or collect sensitive information. Polis inspiration is conceptual; no AGPL licensed source code is incorporated.
