@@ -44,3 +44,11 @@ jobs:
           echo "CHROME_PATH=$CHROME" >> "$GITHUB_ENV"
       - name: Chromium end-to-end journey
         run: npm run test:e2e
+      - name: Verify PostgreSQL client tools are available
+        run: |
+          command -v pg_dump
+          command -v pg_restore
+      - name: Encrypted backup and isolated restore drill
+        env:
+          PROTESTO_BACKUP_TEST: '1'
+        run: npm run test:backup
