@@ -13,11 +13,12 @@ const exited=new Promise((resolve,reject)=>{
  child.once('error',reject);
  child.once('close',code=>code===0?resolve():reject(new Error('pg_dump failed (exit '+code+').')));
 });
+let encryptedOk=false;
 try{
- await Promise.all([encryptToFile(child.stdout,path,secret),exited]);
+ await Promise.all([encryptToFile(child.stdout,path,secret).then(()=>{encryptedOk=true;}),exited]);
  console.log('Encrypted database archive created. Verify restoration before treating this as a usable backup.');
 }catch(error){
  child.kill('SIGTERM');
- try{await unlink(path);}catch{}
+ if(encryptedOk){try{await unlink(path);}catch{}}
  throw error;
 }
