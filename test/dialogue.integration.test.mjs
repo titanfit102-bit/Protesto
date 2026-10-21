@@ -83,6 +83,10 @@ test("Dialogu Qytetar: independent moderation, consent, vote threshold and delet
   r=await send("/api/dialogue/topics/"+topicId);
   assert.equal(r.data.item.state,"open");
   assert.ok(r.data.statements.every(s=>s.participants===null),"No live tally despite 11 votes");
+  r=await send("/api/dialogue/report");
+  assert.equal(r.status,200);
+  assert.ok(!r.data.items.some(x=>x.topic_id===topicId),"Report must not reveal open-topic results");
+
   r=await send("/api/dialogue/topics/"+topicId+"/close",{method:"POST",as:author,body:{note:"Mbyllja kërkon rol editorial të autorizuar."}});
   assert.equal(r.status,403);
   r=await send("/api/dialogue/topics/"+topicId+"/close",{method:"POST",as:reviewer,body:{note:"Diskutimi sintetik përfundoi dhe rezultatet agregohen me prag."}});
@@ -98,6 +102,15 @@ test("Dialogu Qytetar: independent moderation, consent, vote threshold and delet
   assert.equal(main.pass_count,1);
   assert.equal(small.participants,null,"Suppress small groups entirely");
   assert.equal(small.agree_count,null);
+  r=await send("/api/dialogue/report");
+  assert.equal(r.status,200);
+  const entry=r.data.items.find(x=>x.statement_id===statementId);
+  assert.ok(entry,"Eligible finalized statement should be in public report");
+  assert.equal(entry.participants,11);
+  assert.equal(entry.agree_count,7);
+  assert.ok(!r.data.items.some(x=>x.statement_id===smallId),"Single-vote statement must never be reported");
+  assert.equal(JSON.stringify(r.data).includes(author.email),false,"No private identities in aggregate report");
+
   const q=await pool.query("SELECT count(*)::integer n FROM dialogue_votes WHERE statement_id IN($1,$2)",[statementId,smallId]);
   assert.equal(q.rows[0].n,0,"All individual vote records purged on close");
   r=await send("/api/dialogue/statements/"+statementId+"/vote",{method:"POST",as:author,body:{choice:"agree",acknowledge:true}});
@@ -107,6 +120,9 @@ test("Dialogu Qytetar: independent moderation, consent, vote threshold and delet
   await pool.query("UPDATE civic_cases SET state='archived' WHERE id=$1",[publishedCase]);
   r=await send("/api/dialogue/topics/"+topicId);assert.equal(r.status,404);
   r=await send("/api/dialogue/topics");assert.ok(!r.data.items.some(x=>x.id===topicId));
+  r=await send("/api/dialogue/report");
+  assert.ok(!r.data.items.some(x=>x.topic_id===topicId),"Archived case removes its report from public listing");
+
  }finally{
   await new Promise(resolve=>server.close(resolve));
   await pool.end();
