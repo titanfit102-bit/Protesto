@@ -1,6 +1,7 @@
-import {createCipheriv,createDecipheriv,randomBytes,scryptSync} from 'node:crypto';
+import {createCipheriv,createDecipheriv,randomBytes,randomUUID,scryptSync} from 'node:crypto';
 import {createReadStream,createWriteStream} from 'node:fs';
-import {open,stat,unlink} from 'node:fs/promises';
+import {open,stat,unlink,link} from 'node:fs/promises';
+import {dirname,basename,join} from 'node:path';
 import {Transform,Writable} from 'node:stream';
 import {pipeline} from 'node:stream/promises';
 
@@ -18,20 +19,25 @@ function tagWriter(cipher){return new Transform({
 });}
 
 export async function encryptToFile(source,path,secret){
+ // A process crash must not leave a partially written backup under the final filename.
+ // Atomic hard-link publication refuses to overwrite an existing backup.
  const salt=randomBytes(SALT_LENGTH),iv=randomBytes(IV_LENGTH);
  const header=Buffer.concat([MAGIC,salt,iv]);
  const key=passwordKey(secret,salt);
  const cipher=createCipheriv('aes-256-gcm',key,iv);
  cipher.setAAD(header);
- let created=false;
- const file=createWriteStream(path,{flags:'wx',mode:0o600});
- file.once('open',()=>{created=true;});
+ const temp=join(dirname(path),'.'+basename(path)+'.'+randomUUID()+'.part');
+ const file=createWriteStream(temp,{flags:'wx',mode:0o600});
  file.write(header);
  try{
   await pipeline(source,cipher,tagWriter(cipher),file);
+  const handle=await open(temp,'r');
+  try{await handle.sync();}finally{await handle.close();}
+  await link(temp,path); // EEXIST prevents overwriting any existing archive.
+  await unlink(temp);
  }catch(error){
   file.destroy();
-  if(created){try{await unlink(path);}catch{}}
+  try{await unlink(temp);}catch{}
   throw error;
  }finally{key.fill(0);}
 }
