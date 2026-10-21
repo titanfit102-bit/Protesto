@@ -11,7 +11,7 @@ const statementCreate=/^\/api\/dialogue\/topics\/([^/]+)\/statements$/;
 const topicClose=/^\/api\/dialogue\/topics\/([^/]+)\/close$/;
 const statementReview=/^\/api\/dialogue\/statements\/([^/]+)\/review$/;
 const statementVote=/^\/api\/dialogue\/statements\/([^/]+)\/vote$/;
-const publicGet=new Set(["/api/dialogue/topics"]);
+const publicGet=new Set(["/api/dialogue/topics","/api/dialogue/report"]);
 const privateGet=new Set(["/api/dialogue/review/queue"]);
 const posts=new Set(["/api/dialogue/topics"]);
 export const dialogueGetRoute=path=>publicGet.has(path)||privateGet.has(path)||topic.test(path);
@@ -20,6 +20,18 @@ const isUUID=v=>UUID.test(String(v||""));
 const jsonTopic="t.id,t.case_id,t.title,t.description,t.state,t.created_at,t.closed_at";
 
 export async function dialogueRoute({pathname,req,res,pool,user,json,fail,readJSON,dialogueSecret}){
+ if(pathname==="/api/dialogue/report"&&req.method==="GET"){
+  // A descriptive export of finalized counts only. It is not a population poll.
+  const q=await pool.query(
+   "SELECT t.id AS topic_id,t.case_id,t.title AS topic_title,s.id AS statement_id,s.body AS statement,r.participants,r.agree_count,r.disagree_count,r.pass_count,t.closed_at,c.title AS case_title,(SELECT cs.url FROM case_sources cs WHERE cs.case_id=c.id AND cs.state='accepted' ORDER BY cs.created_at ASC LIMIT 1) AS source_url FROM dialogue_results r JOIN dialogue_statements s ON s.id=r.statement_id JOIN dialogue_topics t ON t.id=s.topic_id JOIN civic_cases c ON c.id=t.case_id WHERE t.state='closed' AND s.state='accepted' AND c.state='published' AND r.participants>=10 ORDER BY t.closed_at DESC,s.created_at ASC LIMIT 100"
+  );
+  return json(res,200,{
+   format:"protesto-dialogue-aggregates/1",
+   disclaimer:"Përgjigje vullnetare nga pjesëmarrësit e kësaj platforme. Nuk janë përfaqësuese për popullsinë dhe nuk vërtetojnë fakte.",
+   methodology:{minimumRespondents:10,visibility:"Vetëm diskutime të mbyllura dhe deklarata me 10+ përgjigje.",choices:["agree","disagree","pass"],identifiers:"Asnjë identifikues votuesi nuk përfshihet."},
+   items:q.rows
+  });
+ }
  if(pathname==="/api/dialogue/topics"&&req.method==="GET"){
   const data=await pool.query("SELECT "+jsonTopic+" FROM dialogue_topics t JOIN civic_cases c ON c.id=t.case_id WHERE c.state='published' ORDER BY t.created_at DESC LIMIT 50");
   return json(res,200,{items:data.rows,disclaimer:"Pjesëmarrja është vullnetare; rezultatet nuk përfaqësojnë popullsinë."});
