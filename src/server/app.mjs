@@ -16,7 +16,8 @@ const publicAssets=new Map([
  ["/src/app.mjs",["../app.mjs","text/javascript; charset=utf-8"]],
  ["/src/domain.mjs",["../domain.mjs","text/javascript; charset=utf-8"]],
  ["/src/seed.mjs",["../seed.mjs","text/javascript; charset=utf-8"]],
- ["/src/pilot.mjs",["../pilot.mjs","text/javascript; charset=utf-8"]]
+ ["/src/pilot.mjs",["../pilot.mjs","text/javascript; charset=utf-8"]],
+ ["/src/pilot-evidence.mjs",["../pilot-evidence.mjs","text/javascript; charset=utf-8"]]
 ]);
 const idFormat=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const json=(res,status,data,headers={})=>{
