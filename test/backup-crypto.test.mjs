@@ -37,3 +37,25 @@ test('postgres connection args use environment, never CLI secrets',()=>{
  assert.equal(pg.env.PGSSLMODE,'require');
  assert.throws(()=>postgresEnv('https://example.org/notdb'));
 });
+
+test('interrupted and concurrent backups never expose a partial final archive',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'protesto-atomic-'));
+ const target=join(dir,'published.ptbk');
+ try{
+  const {readdir}=await import('node:fs/promises');
+  const broken=Readable.from((async function*(){yield Buffer.from('partial content');throw Error('source interrupted');})());
+  await assert.rejects(encryptToFile(broken,target,secret),/source interrupted/);
+  await assert.rejects(stat(target),{code:'ENOENT'});
+  assert.deepEqual(await readdir(dir),[],'partial encrypted files must be removed');
+  const writes=await Promise.allSettled([
+   encryptToFile(Readable.from(Buffer.from('writer 1')),target,secret),
+   encryptToFile(Readable.from(Buffer.from('writer 2')),target,secret)
+  ]);
+  assert.equal(writes.filter(x=>x.status==='fulfilled').length,1);
+  assert.equal(writes.filter(x=>x.status==='rejected').length,1);
+  assert.deepEqual(await readdir(dir),['published.ptbk']);
+  const chunks=[];
+  await decryptToStream(target,secret,new Writable({write(b,_e,cb){chunks.push(b);cb();}}));
+  assert.match(Buffer.concat(chunks).toString(),/^writer [12]$/);
+ }finally{await rm(dir,{recursive:true,force:true});}
+});
