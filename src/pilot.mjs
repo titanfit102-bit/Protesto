@@ -1,4 +1,5 @@
 import {attachEvidence,attachCorrection,displayCorrections,displayAppeals} from "./pilot-evidence.mjs";
+import {initDialogue,renderDialogue} from "./pilot-dialogue.mjs";
 const $=id=>document.getElementById(id);
 let user=null;
 const escapeHTML=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -111,6 +112,7 @@ async function refresh(){
  const publicActions=await call("/api/actions/public");fillActions($("public-actions"),publicActions.items);
  const publicRows=await call("/api/public/cases");
  fill($("public-cases"),publicRows.items);
+ await renderDialogue({user,call,notice,refresh,cases:publicRows.items});
  if(!user)return;
  const myAppeals=await call("/api/appeals/mine");displayAppeals($("my-appeals"),myAppeals.items,{review:false,call,notice,refresh,user});
  const myCorrections=await call("/api/corrections/mine");displayCorrections($("my-corrections"),myCorrections.items,{review:false,call,notice,refresh,user});
@@ -166,4 +168,5 @@ $("logout").addEventListener("click",async()=>{
  try{await call("/api/auth/logout","POST",{});user=null;notice("Dole nga llogaria.");await load();}
  catch(e){notice(e.message,true);}
 });
+initDialogue({call,notice,refresh});
 load();
