@@ -1,4 +1,3 @@
-BEGIN;
 CREATE TABLE IF NOT EXISTS civic_users (
  id uuid PRIMARY KEY,
  email text NOT NULL UNIQUE CHECK (email=lower(email)),
@@ -46,4 +45,3 @@ CREATE TABLE IF NOT EXISTS audit_entries (
  created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS audit_entries_date_idx ON audit_entries(created_at DESC);
-COMMIT;

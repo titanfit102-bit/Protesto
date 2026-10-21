@@ -33,6 +33,8 @@ jobs:
           node-version: '22'
       - run: npm install --no-audit --no-fund
       - run: npm run db:migrate
+      - name: Confirm migrations are idempotent
+        run: npm run db:migrate
       - run: npm run verify
       - name: Find preinstalled Chromium
         shell: bash

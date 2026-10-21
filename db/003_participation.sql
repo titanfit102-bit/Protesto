@@ -1,4 +1,3 @@
-BEGIN;
 CREATE TABLE IF NOT EXISTS civic_actions(
  id uuid PRIMARY KEY,
  author_id uuid NOT NULL REFERENCES civic_users(id),
@@ -24,4 +23,3 @@ CREATE TABLE IF NOT EXISTS action_reviews(
  note varchar(1000) NOT NULL CHECK(char_length(note)>=15),
  created_at timestamptz NOT NULL DEFAULT now()
 );
-COMMIT;

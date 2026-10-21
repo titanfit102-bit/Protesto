@@ -15,6 +15,8 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
  for(const u of [reporter,reviewer]){
   await pool.query("INSERT INTO civic_users(id,email,password_hash,role) VALUES($1,$2,$3,$4)",[u.id,u.email,hashPassword(u.password),u===reporter?"reporter":"reviewer"]);
  }
+ const applied=await pool.query("SELECT count(*)::integer n FROM schema_migrations");
+ assert.equal(applied.rows[0].n,4,"Expected all four versioned migrations");
  await new Promise((resolve,reject)=>server.listen(4174,"127.0.0.1",e=>e?reject(e):resolve()));
  const send=async(path,{method="GET",body,cookie,originHeader=true,extraHeaders={}}={})=>{
   const headers={...extraHeaders};

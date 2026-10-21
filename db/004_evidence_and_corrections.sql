@@ -1,4 +1,3 @@
-BEGIN;
 CREATE TABLE IF NOT EXISTS case_sources (
  id uuid PRIMARY KEY,
  case_id uuid NOT NULL REFERENCES civic_cases(id) ON DELETE CASCADE,
@@ -28,4 +27,3 @@ CREATE TABLE IF NOT EXISTS case_corrections (
 );
 CREATE INDEX IF NOT EXISTS case_corrections_state_idx ON case_corrections(state,created_at);
 CREATE INDEX IF NOT EXISTS case_corrections_author_idx ON case_corrections(author_id,created_at DESC);
-COMMIT;
