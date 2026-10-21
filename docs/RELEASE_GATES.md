@@ -32,3 +32,7 @@ A passing unit test = a tested module, *not* a finished product. An integrated p
 ## Browser E2E details
 
 The GitHub workflow uses a disposable PostgreSQL service and Chromium to test the pilot lifecycle and browser-only demo. Passing smoke tests does not establish legal compliance, content verification, resilience, production accessibility or safe public operation.
+
+## Encrypted backup gate, October 21, 2026
+
+Backup encryption/decryption logic has standalone local unit-test evidence. Full PostgreSQL dump→encrypted archive→isolated restore parity is implemented as `npm run test:backup` and configured in GitHub Actions, but **has not yet run successfully on the new revision** because job initialization failed before any steps. This is **PARTIAL**, not verified operational recovery. Requires a green disposable-DB restore drill and independent offsite policy before production.

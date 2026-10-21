@@ -48,3 +48,11 @@ Build and verify a safe backup/restore workflow in an isolated disposable databa
 
 ## Operational restrictions
 No merger to main, production modifications, public deployment, spending, or changes to other projects. Maintain a separate branch and PR evidence. Never claim 100% based on code or tests alone.
+
+## Continuation: October 21, 2026 — encrypted recovery work
+
+- Added streaming AES-256-GCM backup archive with random salt and nonce, and credentials passed as PostgreSQL environment variables rather than process command-line parameters.
+- Added offline archive authentication, a fail-closed restore command restricted to empty test databases, PostgreSQL dump/restore parity integration test, tamper refusal test and protections against overwriting existing backups.
+- Added CI step for automated restore drill and basic local crypto test results; **full database restore in the current revision remains unverified**.
+- **CI BLOCKER:** GitHub Actions workflow runs #39643094795, #39642967274 and #39642685683 ended with no runner steps and no job logs; retry of #39643094795 also had `steps=[]`. This is consistent with a runner provisioning / account-quota problem, but the underlying cause cannot be confirmed from the accessible data. Prior success was run #39639604577, **before** these new backup features. Do not treat newer commits as CI-verified.
+- Next priority: resolve GitHub runner provisioning, achieve a green encrypted restore drill, then establish recurring backups with documented retention, restore objectives and testing. There was no merge, production deployment or spending authorization executed.

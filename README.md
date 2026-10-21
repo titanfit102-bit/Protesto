@@ -77,3 +77,16 @@ See [Evidence and corrections](docs/EVIDENCE_AND_CORRECTIONS.md) and [release ga
 ### Private data export
 
 An authenticated user can download their own pilot cases, civic actions, correction requests and submitted source metadata in JSON. No password hashes, session tokens or another citizen's data are included. This is a partial data-access feature, not a complete GDPR compliance process.
+
+## Encrypted backup and restore (private pilot only)
+
+Requires PostgreSQL client binaries `pg_dump`/`pg_restore` compatible with the source database. Set the database connection and strong independent backup passphrase as environment variables (never in repo):
+
+```
+PROTESTO_BACKUP_FILE=/safe/backup/location/protesto.ptbk
+PROTESTO_BACKUP_SECRET=<generated-secret-of-24-or-more-characters>
+```
+
+`npm run db:backup` creates a non-overwriting AES-256-GCM encrypted archive. `npm run db:verify-backup` verifies authentication but not restorable SQL. Only for a **new disposable database**, set `RESTORE_DATABASE_URL` and `PROTESTO_ALLOW_RESTORE=I_ACKNOWLEDGE_EMPTY_TEST_DATABASE`, then run `npm run db:restore-test`. The tool refuses nonempty targets and production mode. This is an operator-assisted pilot mechanism, not a scheduled/compliant production backup.
+
+The integration drill `npm run test:backup` requires `PROTESTO_BACKUP_TEST=1`, a throwaway PostgreSQL CI database and database creation rights. It must **never** run against real data. CI runner availability is currently unresolved; check `docs/STATUS.md` rather than assuming the restore drill passed.

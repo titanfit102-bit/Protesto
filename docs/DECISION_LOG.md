@@ -19,3 +19,5 @@
 | ADR-015 | Versioned transactional SQL migrations with checksum verification | Prevent silent schema drift and partial migrations | Multi-database upgrade requirements |
 | ADR-016 | Separate liveness and database readiness endpoints | Do not claim healthy operation when database is unavailable | Metrics and alerting design |
 | ADR-017 | Authenticated export of own data only | Early privacy-by-design and user access; no other users' data | Full deletion/export rights and GDPR review |
+| ADR-018 | AES-256-GCM stream-encrypted PostgreSQL custom archives and guarded isolated restore | Avoid plaintext backups, add tamper authentication, preserve preexisting archive files and require restore proof | Production secrets management and offsite retention |
+| ADR-019 | Fail closed on GitHub Actions runner provisioning failure | Tests did not execute; do not falsely mark integration verification green | Runner provisioning recovered and full drill passes |

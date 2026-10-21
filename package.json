@@ -15,7 +15,8 @@
     "test:e2e": "node test/browser.e2e.mjs",
     "db:backup": "node tools/backup.mjs",
     "db:restore-test": "node tools/restore.mjs",
-    "test:backup": "node test/backup.integration.mjs"
+    "test:backup": "node test/backup.integration.mjs",
+    "db:verify-backup": "node tools/verify-backup.mjs"
   },
   "engines": {
     "node": ">=22"
