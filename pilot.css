@@ -4,3 +4,11 @@
 @media(max-width:850px){.pilot-header{flex-wrap:wrap}.pilot-logo{min-width:0}.pilot-right{max-width:100%;min-width:0;flex-wrap:wrap;overflow-wrap:anywhere}.pilot-right #account-label{overflow-wrap:anywhere;min-width:0}.pilot-main,.pilot-panel{min-width:0}}
 
 .pilot-ledger-row{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;border:1px solid #e0e7ef;border-radius:8px;padding:11px 13px;font-size:12px;background:#f9fbfe}.pilot-ledger-row strong{color:#263b54}.pilot-ledger-row span{color:#60738b;overflow-wrap:anywhere}
+
+#dialogue-topic-select{display:block;width:100%;max-width:500px;margin:8px 0 18px;padding:10px;border:1px solid #d6dde7;border-radius:8px;background:#fff}
+.pilot-dialogue-review-label{display:grid;gap:7px;margin:12px 0;font-size:12px;font-weight:700}
+.pilot-dialogue-review-label textarea{width:100%}
+.pilot-dialogue-disclaimer,.pilot-muted{color:#65778c;font-size:12px;line-height:1.6}
+.pilot-dialogue-statement-text{font-size:15px!important;color:#233044!important}
+.pilot-dialogue-stats{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;font-weight:600;margin-top:8px}
+#dialogue-statement-form,#dialogue-close-form{margin-top:18px}
