@@ -1,0 +1,16 @@
+{
+  "name": "protesto",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Protesto — privacy-first civic accountability prototype",
+  "scripts": {
+    "dev": "node tools/dev-server.mjs",
+    "test": "node --test",
+    "check": "node tools/check.mjs",
+    "verify": "npm run check && npm test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
