@@ -45,18 +45,52 @@ function record(item,review=false){
  }
  return article;
 }
+function actionCard(item,review=false){
+ const div=document.createElement("article");div.className="pilot-card";
+ const kind=item.kind==="gathering"?"Tubim paqësor":item.subtype||"Nismë";
+ const date=item.event_date?'<span>'+escapeHTML(String(item.event_date).slice(0,10))+'</span>':"";
+ div.innerHTML='<div class="pilot-meta"><span>'+escapeHTML(kind)+'</span><span>'+escapeHTML(item.area)+'</span>'+date+'</div><h3>'+escapeHTML(item.title)+'</h3><p>'+escapeHTML(item.description)+'</p>';
+ if(review){
+  const note=document.createElement("textarea");note.rows=3;note.className="review-note";note.maxLength=1000;note.placeholder="Arsyetimi i verifikimit (të paktën 15 karaktere)";note.setAttribute("aria-label","Arsyetimi");
+  const buttons=document.createElement("div");buttons.className="pilot-review-actions";
+  for(const [decision,label] of [["published","Publiko pas kontrollit"],["rejected","Refuzo"]]){
+   const btn=document.createElement("button");btn.type="button";btn.className="btn "+(decision==="published"?"primary":"subtle");btn.textContent=label;
+   if(item.author_id===user.id)btn.disabled=true;
+   btn.addEventListener("click",async()=>{btn.disabled=true;try{await call("/api/actions/review/"+encodeURIComponent(item.id),"POST",{decision,note:note.value});notice("Vendimi u regjistrua.");await refresh();}catch(e){notice(e.message,true);}finally{btn.disabled=false;}});
+   buttons.appendChild(btn);
+  }
+  div.append(note,buttons);
+ }else if(!item.state&&user&&(user.role==="reviewer"||user.role==="admin")){
+  const btn=document.createElement("button");btn.type="button";btn.className="btn subtle";btn.textContent="Tërhiq publikimin";
+  btn.addEventListener("click",async()=>{
+   const note=window.prompt("Arsyetimi i tërheqjes (20+ karaktere):","");
+   if(note===null)return;
+   btn.disabled=true;try{await call("/api/actions/archive/"+encodeURIComponent(item.id),"POST",{note});notice("Publikimi u tërhoq.");await refresh();}catch(e){notice(e.message,true);}finally{btn.disabled=false;}
+  });
+  div.appendChild(btn);
+ }
+ return div;
+}
+function fillActions(target,items,review=false){
+ target.replaceChildren();
+ if(!items.length){const empty=document.createElement("div");empty.className="pilot-empty";empty.textContent="Nuk ka regjistrime.";target.appendChild(empty);return;}
+ items.forEach(item=>target.appendChild(actionCard(item,review)));
+}
 function fill(target,items,review=false){
  target.replaceChildren();
  if(!items.length){const empty=document.createElement("div");empty.className="pilot-empty";empty.textContent="Nuk ka dosje për të shfaqur.";target.appendChild(empty);return;}
  items.forEach(item=>target.appendChild(record(item,review)));
 }
 async function refresh(){
+ const publicActions=await call("/api/actions/public");fillActions($("public-actions"),publicActions.items);
  const publicRows=await call("/api/public/cases");
  fill($("public-cases"),publicRows.items);
  if(!user)return;
+ const myActions=await call("/api/actions/mine");fillActions($("my-actions"),myActions.items);
  const myRows=await call("/api/cases/mine");
  fill($("my-cases"),myRows.items);
  if(user.role==="reviewer"||user.role==="admin"){
+  const actionQueue=await call("/api/actions/review/queue");fillActions($("review-actions"),actionQueue.items,true);
   const queue=await call("/api/review/queue");
   fill($("review-cases"),queue.items,true);
  }
@@ -81,6 +115,13 @@ $("case-form").addEventListener("submit",async event=>{
  try{const data=Object.fromEntries(new FormData(form));await call("/api/cases","POST",data);form.reset();notice("Raportimi u dërgua për verifikim, jo për publikim.");await refresh();}
  catch(e){notice(e.message,true);}
 });
+for(const [formId,kind] of [["initiative-form","initiative"],["gathering-form","gathering"]]){
+ $(formId).addEventListener("submit",async event=>{
+  event.preventDefault();const form=event.currentTarget;
+  try{await call("/api/actions","POST",{...Object.fromEntries(new FormData(form)),kind});form.reset();notice("Nisma ose tubimi u dërgua për verifikim.");await refresh();}
+  catch(e){notice(e.message,true);}
+ });
+}
 $("logout").addEventListener("click",async()=>{
  try{await call("/api/auth/logout","POST",{});user=null;notice("Dole nga llogaria.");await load();}
  catch(e){notice(e.message,true);}

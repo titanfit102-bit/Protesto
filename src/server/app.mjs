@@ -3,6 +3,7 @@ import {readFile} from "node:fs/promises";
 import {fileURLToPath} from "node:url";
 import {randomUUID} from "node:crypto";
 import {validateCase,cleanText} from "../domain.mjs";
+import {actionRoute,actionGetRoutes,actionPostRoute} from "./actions.mjs";
 import {normalizeEmail,verifyPassword,newSessionToken,tokenHash,parseSessionCookie,sessionCookie,clearSessionCookie,secureWrite,canReview,SESSION_AGE_SECONDS} from "./security.mjs";
 
 const publicAssets=new Map([
@@ -71,11 +72,15 @@ export function createPilotServer(pool,{origin,production=false}={}){
   const isArchive=/^\/api\/archive\/[^/]+$/.test(pathname);
   const getRoutes=["/api/public/cases","/api/me","/api/cases/mine","/api/review/queue"];
   const postRoutes=["/api/auth/login","/api/auth/logout","/api/cases"];
-  if(!(req.method==="GET"&&getRoutes.includes(pathname))&&!(req.method==="POST"&&(postRoutes.includes(pathname)||isReview||isArchive))){
+  if(!(req.method==="GET"&&(getRoutes.includes(pathname)||actionGetRoutes.includes(pathname)))&&!(req.method==="POST"&&(postRoutes.includes(pathname)||isReview||isArchive||actionPostRoute(pathname)))){
    return fail(res,404,"API endpoint nuk ekziston.");
   }
   if(req.method==="POST"&&!secureWrite(req,origin))return fail(res,403,"Kërkesë e bllokuar nga mbrojtja CSRF.");
   try{
+   if(pathname==="/api/actions"||pathname.startsWith("/api/actions/")){
+    const current=pathname==="/api/actions/public"?null:await auth(req);
+    return await actionRoute({pathname,req,res,pool,user:current,json,fail,readJSON});
+   }
    if(pathname==="/api/public/cases"&&req.method==="GET"){
     const result=await pool.query("SELECT id,title,description,area,category,source_url,created_at FROM civic_cases WHERE state='published' ORDER BY created_at DESC LIMIT 100");
     return json(res,200,{items:result.rows});

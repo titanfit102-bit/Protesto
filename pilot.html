@@ -47,16 +47,43 @@
      <div id="my-cases" class="pilot-records"></div>
     </section>
    </div>
+   <div class="pilot-columns">
+    <section class="pilot-panel">
+     <h2>Nismë qytetare</h2>
+     <p>Propozimet publikohen vetëm pas moderimit; kjo nuk është një sistem i nënshkrimeve zyrtare.</p>
+     <form id="initiative-form" class="pilot-form">
+      <label>Titulli<input name="title" minlength="8" maxlength="120" required></label>
+      <label>Lloji<select name="type"><option>Peticioni</option><option>Kërkesë publike</option><option>Diskutim komunitar</option></select></label>
+      <label>Zona<input name="area" minlength="2" maxlength="80" required></label>
+      <label>Përshkrimi<textarea name="description" rows="4" minlength="25" maxlength="2000" required></textarea></label>
+      <button type="submit" class="btn primary">Dërgo nismën për verifikim</button>
+     </form>
+    </section>
+    <section class="pilot-panel">
+     <h2>Tubim paqësor</h2>
+     <p>Pa regjistrim të pjesëmarrësve ose gjurmim të vendndodhjes së tyre.</p>
+     <form id="gathering-form" class="pilot-form">
+      <label>Titulli<input name="title" minlength="8" maxlength="120" required></label>
+      <label>Vendndodhja publike<input name="area" minlength="3" maxlength="120" required></label>
+      <label>Data<input name="date" type="date" required></label>
+      <label>Përshkrimi<textarea name="description" rows="4" minlength="25" maxlength="2000" required></textarea></label>
+      <button type="submit" class="btn primary">Dërgo tubimin për verifikim</button>
+     </form>
+    </section>
+   </div>
+   <section class="pilot-panel"><h2>Nismat dhe tubimet e mia</h2><div id="my-actions" class="pilot-records"></div></section>
    <section id="review-section" class="pilot-panel" hidden>
     <h2>Radhë verifikimi</h2>
     <p>Publiko vetëm pas kontrollit të provave, privatësisë dhe të drejtës së përgjigjes. Nuk mund të verifikosh raportimin tënd.</p>
     <div id="review-cases" class="pilot-records"></div>
+    <h3>Nismat dhe tubimet në pritje</h3><div id="review-actions" class="pilot-records"></div>
    </section>
   </div>
   <section class="pilot-panel">
    <h2>Dosjet e publikuara pas verifikimit</h2>
    <div id="public-cases" class="pilot-records"></div>
   </section>
+  <section class="pilot-panel"><h2>Nisma dhe tubime të publikuara pas verifikimit</h2><div id="public-actions" class="pilot-records"></div></section>
   <p class="pilot-disclaimer">Mos vendos të dhëna sensitive ose identitete private pa bazë ligjore. Në këtë pilot nuk ka mekanizëm për përpunimin e sigurt të raportimeve konfidenciale.</p>
  </main>
 </body>

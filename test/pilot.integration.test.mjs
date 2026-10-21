@@ -65,6 +65,27 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
   r=await send("/api/public/cases");assert.ok(!r.json.items.some(x=>x.id===caseId));
   const withdrawn=await pool.query("SELECT count(*)::integer AS n FROM retraction_history WHERE case_id=$1",[caseId]);
   assert.equal(withdrawn.rows[0].n,1);
+  const newAction={
+   kind:"initiative",type:"Diskutim komunitar",title:"Diskutim demonstrues për hapësirat",
+   area:"Zona e testit",description:"Nismë qytetare fiktive për të testuar procesin e verifikimit."
+  };
+  r=await send("/api/actions",{method:"POST",cookie:reporterCookie,body:newAction});
+  assert.equal(r.status,201);assert.equal(r.json.item.state,"pending");const actionId=r.json.item.id;
+  r=await send("/api/actions/mine",{cookie:reporterCookie});assert.ok(r.json.items.some(x=>x.id===actionId));
+  r=await send("/api/actions/review/queue",{cookie:reporterCookie});assert.equal(r.status,403);
+  r=await send("/api/actions/public");assert.ok(!r.json.items.some(x=>x.id===actionId));
+  r=await send("/api/actions/review/"+actionId,{method:"POST",cookie:reviewCookie,body:{decision:"published",note:"Nisma u kontrollua nga redaktori i testit."}});
+  assert.equal(r.status,200);
+  r=await send("/api/actions/public");assert.ok(r.json.items.some(x=>x.id===actionId));
+  r=await send("/api/actions/archive/"+actionId,{method:"POST",cookie:reviewCookie,body:{note:"Publikimi u tërhoq për kontroll të mëtejshëm."}});
+  assert.equal(r.status,200);
+  r=await send("/api/actions/public");assert.ok(!r.json.items.some(x=>x.id===actionId));
+  r=await send("/api/actions",{method:"POST",cookie:reporterCookie,body:{
+   kind:"gathering",title:"Tubim paqësor fiktiv për testim",
+   area:"Sheshi i demonstrimit",date:"2027-04-15",
+   description:"Tubim demonstrues për të testuar regjistrimin e një ngjarjeje pa pjesëmarrës realë."
+  }});
+  assert.equal(r.status,201);
   r=await send("/api/auth/logout",{method:"POST",cookie:reporterCookie,body:{}});
   assert.equal(r.status,200);
   r=await send("/api/me",{cookie:reporterCookie});assert.equal(r.status,401);
