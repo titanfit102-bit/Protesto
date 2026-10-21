@@ -6,6 +6,7 @@ const make=(tag,className,content)=>{
  return el;
 };
 let selectedTopic="";
+let publicAggregateReport=null;
 let context;
 function listOption(value,title){const opt=make("option","",title);opt.value=value;return opt;}
 async function openTopic(id){
@@ -59,9 +60,43 @@ async function openTopic(id){
   target.append(records);
  }catch(e){target.append(make("p","pilot-empty",e.message));}
 }
+async function loadAggregateReport(){
+ const target=$("dialogue-report");
+ target.replaceChildren();
+ const report=await context.call("/api/dialogue/report");
+ publicAggregateReport=report;
+ if(!report.items.length){
+  target.append(make("p","pilot-empty","Nuk ka ende rezultate të kualifikuara. Diskutimet mbyllen përpara publikimit të totalit."));
+  return;
+ }
+ for(const item of report.items){
+  const card=make("article","pilot-card");
+  card.append(make("h3","",item.topic_title),make("p","",item.statement));
+  const percent=Math.round(1000*item.agree_count/item.participants)/10;
+  card.append(make("p","pilot-dialogue-disclaimer",
+   "Vetëm pjesëmarrësit e kësaj teme: "+item.participants+
+   " përgjigje, "+item.agree_count+" pajtohen ("+percent+
+   "%), "+item.disagree_count+" kundërshtojnë, "+item.pass_count+" e kaluan."));
+  const buttons=make("div","pilot-review-actions");
+  const show=make("button","btn subtle","Shiko diskutimin");show.type="button";
+  show.addEventListener("click",async()=>{
+   selectedTopic=item.topic_id;$("dialogue-topic-select").value=selectedTopic;
+   await openTopic(selectedTopic);
+   $("dialogue-section").scrollIntoView({behavior:"smooth",block:"start"});
+  });
+  buttons.append(show);
+  if(item.source_url&&/^https:\/\//.test(item.source_url)){
+   const link=make("a","pilot-evidence-link","Burimi i verifikuar i dosjes ↗");
+   link.href=item.source_url;link.target="_blank";link.rel="noopener noreferrer";
+   buttons.append(link);
+  }
+  card.append(buttons);target.append(card);
+ }
+}
 export async function renderDialogue({user,call,notice,refresh,cases}){
  context={user,call,notice,refresh};
  const result=await call("/api/dialogue/topics"),topics=result.items;
+ await loadAggregateReport();
  const select=$("dialogue-topic-select");select.replaceChildren(listOption("","Zgjidh një diskutim..."));
  for(const item of topics)select.append(listOption(item.id,item.title+" — "+(item.state==="closed"?"mbyllur":"hapur")));
  if(!topics.some(x=>x.id===selectedTopic))selectedTopic=topics[0]?.id||"";
@@ -98,6 +133,15 @@ export async function renderDialogue({user,call,notice,refresh,cases}){
  }
 }
 export function initDialogue({call,notice,refresh}){
+ $("dialogue-report-export").addEventListener("click",()=>{
+  if(!publicAggregateReport||!publicAggregateReport.items.length){
+   notice("Nuk ka ende të dhëna të agreguara për eksport.",true);return;
+  }
+  const url=URL.createObjectURL(new Blob([JSON.stringify(publicAggregateReport,null,2)],{type:"application/json"}));
+  const link=make("a");link.href=url;link.download="protesto-dialogu-raport.json";link.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  notice("U eksportuan vetëm statistikat e lejuara dhe përfundimtare.");
+ });
  $("dialogue-topic-select").addEventListener("change",async event=>{
   selectedTopic=event.target.value;await openTopic(selectedTopic);
  });
