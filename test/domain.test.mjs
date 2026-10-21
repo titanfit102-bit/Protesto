@@ -53,6 +53,7 @@ test("tubimet duhet të kenë datë të ardhshme", () => {
   assert.equal(validateGathering(base, now, id).peaceful, true);
   assert.throws(() => validateGathering({ ...base, date: "2026-01-01" }, now, id));
   assert.throws(() => validateGathering({ ...base, date: "jo-date" }, now, id));
+  assert.throws(() => validateGathering({ ...base, date: "2026-02-31" }, now, id));
 });
 test("filtrimi kërkon brenda dosjeve dhe kategorive", () => {
   assert.equal(filterCases(SEED.cases, { query: "ndricim" }).length, 1);
