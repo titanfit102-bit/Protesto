@@ -15,6 +15,18 @@ function record(item,review=false){
  const state=item.state||"publikuar";
  const source=item.source_url&&/^https:\/\//.test(item.source_url)?'<a href="'+escapeHTML(item.source_url)+'" target="_blank" rel="noopener noreferrer">Shiko burimin ↗</a>':"";
  article.innerHTML='<div class="pilot-meta"><span>'+escapeHTML(item.category)+'</span><span>'+escapeHTML(state)+'</span><span>'+escapeHTML(item.area)+'</span></div><h3>'+escapeHTML(item.title)+'</h3><p>'+escapeHTML(item.description)+'</p>'+source;
+ if(!review&&!item.state&&user&&(user.role==="reviewer"||user.role==="admin")){
+  const div=document.createElement("div");div.className="pilot-review-actions";
+  const button=document.createElement("button");button.type="button";button.className="btn subtle";button.textContent="Tërhiq publikimin";
+  button.addEventListener("click",async()=>{
+   const note=window.prompt("Arsyetimi i tërheqjes (min. 20 karaktere):","");
+   if(note===null)return;
+   button.disabled=true;
+   try{await call("/api/archive/"+encodeURIComponent(item.id),"POST",{note});notice("Publikimi u tërhoq dhe u regjistrua.");await refresh();}
+   catch(e){notice(e.message,true);}finally{button.disabled=false;}
+  });
+  div.appendChild(button);article.appendChild(div);
+ }
  if(review){
   const field=document.createElement("textarea");field.className="review-note";field.rows=3;field.maxLength=1000;field.placeholder="Arsyetim konkret për vendimin (minimumi 15 karaktere)...";field.setAttribute("aria-label","Arsyetimi i verifikimit");
   const actions=document.createElement("div");actions.className="pilot-review-actions";

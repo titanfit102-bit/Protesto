@@ -68,9 +68,10 @@ export function createPilotServer(pool,{origin,production=false}={}){
   if(pathname==="/api/health"&&req.method==="GET")return json(res,200,{status:"ok",mode:"private-pilot"});
   if(!pathname.startsWith("/api/"))return fail(res,404,"Nuk u gjet.");
   const isReview=/^\/api\/review\/[^/]+$/.test(pathname);
+  const isArchive=/^\/api\/archive\/[^/]+$/.test(pathname);
   const getRoutes=["/api/public/cases","/api/me","/api/cases/mine","/api/review/queue"];
   const postRoutes=["/api/auth/login","/api/auth/logout","/api/cases"];
-  if(!(req.method==="GET"&&getRoutes.includes(pathname))&&!(req.method==="POST"&&(postRoutes.includes(pathname)||isReview))){
+  if(!(req.method==="GET"&&getRoutes.includes(pathname))&&!(req.method==="POST"&&(postRoutes.includes(pathname)||isReview||isArchive))){
    return fail(res,404,"API endpoint nuk ekziston.");
   }
   if(req.method==="POST"&&!secureWrite(req,origin))return fail(res,403,"Kërkesë e bllokuar nga mbrojtja CSRF.");
@@ -135,6 +136,24 @@ export function createPilotServer(pool,{origin,production=false}={}){
      await client.query("INSERT INTO audit_entries(id,actor_id,action,object_type,object_id) VALUES($1,$2,$3,'case',$4)",[randomUUID(),user.id,"case.review."+decision,caseId]);
      await client.query("COMMIT");
      return json(res,200,{item:updated.rows[0]});
+    }catch(e){try{await client.query("ROLLBACK");}catch{}throw e;}
+    finally{client.release();}
+   }
+   if(isArchive&&req.method==="POST"){
+    const caseId=pathname.split("/").at(-1);
+    if(!idFormat.test(caseId))return fail(res,400,"Identifikues i pavlefshëm.");
+    const body=await readJSON(req);
+    const note=cleanText(body.note,1001);
+    if(note.length<20||note.length>1000)return fail(res,422,"Arsyetimi 20–1000 karaktere është i detyrueshëm.");
+    const client=await pool.connect();
+    try{
+     await client.query("BEGIN");
+     const updated=await client.query("UPDATE civic_cases SET state='archived',reviewed_at=now(),reviewed_by=$1 WHERE id=$2 AND state='published' AND author_id<>$1 RETURNING id,state",[user.id,caseId]);
+     if(!updated.rowCount){await client.query("ROLLBACK");return fail(res,409,"Dosja nuk mund të tërhiqet ose të përket ty.");}
+     await client.query("INSERT INTO retraction_history(id,case_id,reviewer_id,note) VALUES($1,$2,$3,$4)",[randomUUID(),caseId,user.id,note]);
+     await client.query("INSERT INTO audit_entries(id,actor_id,action,object_type,object_id) VALUES($1,$2,'case.retracted','case',$3)",[randomUUID(),user.id,caseId]);
+     await client.query("COMMIT");
+     return json(res,200,{item:updated.rows[0],message:"Publikimi u tërhoq dhe u regjistrua në audit."});
     }catch(e){try{await client.query("ROLLBACK");}catch{}throw e;}
     finally{client.release();}
    }

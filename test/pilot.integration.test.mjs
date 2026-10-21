@@ -58,6 +58,13 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
   r=await send("/api/public/cases");assert.ok(r.json.items.some(x=>x.id===caseId));
   const audit=await pool.query("SELECT count(*)::integer AS n FROM audit_entries WHERE object_id=$1",[caseId]);
   assert.equal(audit.rows[0].n,1);
+  r=await send("/api/archive/"+caseId,{method:"POST",cookie:reporterCookie,body:{note:"This should fail due to reporter role."}});
+  assert.equal(r.status,403);
+  r=await send("/api/archive/"+caseId,{method:"POST",cookie:reviewCookie,body:{note:"Retract the article pending an additional independent source review."}});
+  assert.equal(r.status,200);assert.equal(r.json.item.state,"archived");
+  r=await send("/api/public/cases");assert.ok(!r.json.items.some(x=>x.id===caseId));
+  const withdrawn=await pool.query("SELECT count(*)::integer AS n FROM retraction_history WHERE case_id=$1",[caseId]);
+  assert.equal(withdrawn.rows[0].n,1);
   r=await send("/api/auth/logout",{method:"POST",cookie:reporterCookie,body:{}});
   assert.equal(r.status,200);
   r=await send("/api/me",{cookie:reporterCookie});assert.equal(r.status,401);
