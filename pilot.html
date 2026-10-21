@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="sq">
+<head>
+ <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+ <meta name="theme-color" content="#111b2b">
+ <title>Protesto — Pilot privat</title>
+ <link rel="stylesheet" href="/styles.css">
+ <link rel="stylesheet" href="/pilot.css">
+ <script type="module" src="/src/pilot.mjs"></script>
+</head>
+<body class="pilot-body">
+ <a href="#pilot-main" class="skip-link">Kalo te përmbajtja</a>
+ <header class="pilot-header">
+  <a href="/" class="pilot-logo"><span class="pilot-brand">P.</span><span>PROTESTO<small>PILOT PRIVAT</small></span></a>
+  <div class="pilot-right"><span class="private-pill">Mjedis testimi · Pa publikim automatik</span><span id="account-label"></span><button id="logout" type="button" class="btn subtle" hidden>Dil</button></div>
+ </header>
+ <main id="pilot-main" class="pilot-main">
+  <div class="eyebrow">PLATFORMA E VERIFIKIMIT</div>
+  <h1>Raporto me fakte. Publiko vetëm pas kontrollit.</h1>
+  <p class="pilot-subtitle">Ky është një modul për përdorues të aprovuar. Çdo raportim kërkon shqyrtim editorial; platforma nuk është instrument për akuza të paverifikuara.</p>
+  <div class="notice" id="pilot-notice" role="status" aria-live="polite" hidden></div>
+  <section id="auth-section" class="pilot-panel">
+   <h2>Identifikimi për pilotin</h2>
+   <p>Llogaritë krijohen nga administratori. Regjistrimi publik nuk është aktiv.</p>
+   <form id="login-form" class="pilot-form">
+    <label>Email<input name="email" type="email" autocomplete="username" required></label>
+    <label>Fjalëkalimi<input name="password" type="password" autocomplete="current-password" minlength="12" required></label>
+    <button class="btn primary" type="submit">Hyr në pilot</button>
+   </form>
+  </section>
+  <div id="authenticated" hidden>
+   <div class="pilot-columns">
+    <section class="pilot-panel">
+     <h2>Raportim i ri</h2>
+     <p>Nuk është publik derisa të shqyrtohet nga një verifikues tjetër.</p>
+     <form id="case-form" class="pilot-form">
+      <label>Titulli<input name="title" type="text" minlength="8" maxlength="120" required></label>
+      <label>Kategoria<select name="category" required><option>Infrastrukturë</option><option>Arsim</option><option>Shëndetësi</option><option>Mjedis</option><option>Shërbime publike</option><option>Tjetër</option></select></label>
+      <label>Zona<input name="area" type="text" minlength="2" maxlength="80" required></label>
+      <label>Përshkrimi<textarea name="description" rows="5" minlength="25" maxlength="2000" required></textarea></label>
+      <label>Burimi HTTPS (opsional)<input name="source" type="url" placeholder="https://..."></label>
+      <button class="btn primary" type="submit">Dërgo për verifikim</button>
+     </form>
+    </section>
+    <section class="pilot-panel">
+     <h2>Raportimet e mia</h2>
+     <div id="my-cases" class="pilot-records"></div>
+    </section>
+   </div>
+   <section id="review-section" class="pilot-panel" hidden>
+    <h2>Radhë verifikimi</h2>
+    <p>Publiko vetëm pas kontrollit të provave, privatësisë dhe të drejtës së përgjigjes. Nuk mund të verifikosh raportimin tënd.</p>
+    <div id="review-cases" class="pilot-records"></div>
+   </section>
+  </div>
+  <section class="pilot-panel">
+   <h2>Dosjet e publikuara pas verifikimit</h2>
+   <div id="public-cases" class="pilot-records"></div>
+  </section>
+  <p class="pilot-disclaimer">Mos vendos të dhëna sensitive ose identitete private pa bazë ligjore. Në këtë pilot nuk ka mekanizëm për përpunimin e sigurt të raportimeve konfidenciale.</p>
+ </main>
+</body>
+</html>
