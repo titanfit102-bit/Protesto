@@ -12,11 +12,12 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
  const suffix=randomUUID().slice(0,8);
  const reporter={id:randomUUID(),email:"reporter-"+suffix+"@example.org",password:"ReporterSecret!123"};
  const reviewer={id:randomUUID(),email:"reviewer-"+suffix+"@example.org",password:"ReviewerSecret!123"};
- for(const u of [reporter,reviewer]){
+ const adjudicator={id:randomUUID(),email:"appeal-reviewer-"+suffix+"@example.org",password:"IndependentReviewer!123"};
+ for(const u of [reporter,reviewer,adjudicator]){
   await pool.query("INSERT INTO civic_users(id,email,password_hash,role) VALUES($1,$2,$3,$4)",[u.id,u.email,hashPassword(u.password),u===reporter?"reporter":"reviewer"]);
  }
  const applied=await pool.query("SELECT count(*)::integer n FROM schema_migrations");
- assert.equal(applied.rows[0].n,4,"Expected all four versioned migrations");
+ assert.equal(applied.rows[0].n,5,"Expected all five versioned migrations");
  await new Promise((resolve,reject)=>server.listen(4174,"127.0.0.1",e=>e?reject(e):resolve()));
  const send=async(path,{method="GET",body,cookie,originHeader=true,extraHeaders={}}={})=>{
   const headers={...extraHeaders};
@@ -94,6 +95,25 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
   assert.equal(r.status,403);
   r=await send("/api/corrections/review/"+correctionId,{method:"POST",cookie:reviewCookie,body:{decision:"rejected",note:"Kërkesa nuk përmban prova të reja të mjaftueshme."}});
   assert.equal(r.status,200);
+  // A different reviewer is required for the appeal; the first reviewer cannot decide it.
+  r=await send("/api/appeals",{method:"POST",body:{correctionId,reason:"Po kundërshtoj këtë korrigjim sepse ka prova të reja për shqyrtim."}});
+  assert.equal(r.status,401);
+  r=await send("/api/appeals",{method:"POST",cookie:reporterCookie,body:{correctionId,reason:"Po kundërshtoj këtë korrigjim sepse ka prova të reja për shqyrtim."}});
+  assert.equal(r.status,201);const firstAppeal=r.json.item.id;
+  r=await send("/api/appeals",{method:"POST",cookie:reporterCookie,body:{correctionId,reason:"Një apelim tjetër duhet të refuzohet."}});
+  assert.equal(r.status,409);
+  r=await send("/api/appeals/queue",{cookie:reporterCookie});assert.equal(r.status,403);
+  r=await send("/api/appeals/queue",{cookie:reviewCookie});assert.equal(r.status,200);
+  assert.ok(r.json.items.some(x=>x.id===firstAppeal));
+  r=await send("/api/appeals/review/"+firstAppeal,{method:"POST",cookie:reviewCookie,body:{decision:"accepted",note:"Shqyrtuesi origjinal nuk mund të gjykojë apelimin."}});
+  assert.equal(r.status,403);
+  r=await send("/api/auth/login",{method:"POST",body:{email:adjudicator.email,password:adjudicator.password}});
+  assert.equal(r.status,200);const independentCookie=r.cookie.split(";")[0];
+  r=await send("/api/appeals/review/"+firstAppeal,{method:"POST",cookie:independentCookie,body:{decision:"rejected",note:"Shqyrtuesi i pavarur nuk gjeti prova për ta ndryshuar vendimin."}});
+  assert.equal(r.status,200);
+  r=await send("/api/appeals/review/"+firstAppeal,{method:"POST",cookie:independentCookie,body:{decision:"accepted",note:"Nuk mund të ndryshojmë dy herë të njëjtin apelim."}});
+  assert.equal(r.status,409);
+  r=await send("/api/appeals/mine",{cookie:reporterCookie});assert.ok(r.json.items.some(x=>x.id===firstAppeal&&x.state==="rejected"));
   r=await send("/api/public/cases");assert.ok(r.json.items.some(x=>x.id===caseId));
   const audit=await pool.query("SELECT count(*)::integer AS n FROM audit_entries WHERE object_id=$1",[caseId]);
   assert.equal(audit.rows[0].n,1);
@@ -147,6 +167,27 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
   r=await send("/api/corrections/review/"+secondCorrection,{method:"POST",cookie:reviewCookie,body:{decision:"accepted",note:"Për arsye të provave të kundërta publikohet tërheqja."}});
   assert.equal(r.status,200);
   r=await send("/api/public/cases");assert.ok(!r.json.items.some(x=>x.id===secondId));
+  // Accepted independent appeal archives the case and retains the original rejected correction.
+  r=await send("/api/cases",{method:"POST",cookie:reporterCookie,body:{...sample,title:"Dosja e tretë për apelim"}});
+  assert.equal(r.status,201);const appealCaseId=r.json.item.id;
+  r=await send("/api/dossiers/"+appealCaseId+"/sources",{cookie:reviewCookie});const appealSource=r.json.items[0].id;
+  r=await send("/api/dossiers/"+appealCaseId+"/sources/"+appealSource+"/review",{method:"POST",cookie:reviewCookie,body:{decision:"accepted",note:"Kontrolli i burimit demonstrues për apelim u krye."}});
+  assert.equal(r.status,200);
+  r=await send("/api/review/"+appealCaseId,{method:"POST",cookie:reviewCookie,body:{decision:"published",note:"Për demonstrimin, verifikimi editorial është përfunduar.",checks:checklist}});
+  assert.equal(r.status,200);
+  r=await send("/api/corrections",{method:"POST",cookie:reporterCookie,body:{caseId:appealCaseId,reason:"Kjo dosje demonstrimi përmban një pretendim që kërkon rivlerësim të plotë."}});
+  assert.equal(r.status,201);const disputedCorrection=r.json.item.id;
+  r=await send("/api/corrections/review/"+disputedCorrection,{method:"POST",cookie:reviewCookie,body:{decision:"rejected",note:"Korrigjimi fillestar u refuzua për testimin e procesit të apelimit."}});
+  assert.equal(r.status,200);
+  r=await send("/api/appeals",{method:"POST",cookie:reporterCookie,body:{correctionId:disputedCorrection,reason:"Apelim i bazuar në një kërkesë të re për rivlerësim të burimit dhe kontekstit."}});
+  assert.equal(r.status,201);const acceptedAppeal=r.json.item.id;
+  r=await send("/api/appeals/review/"+acceptedAppeal,{method:"POST",cookie:independentCookie,body:{decision:"accepted",note:"Apelimi u pranua pas shqyrtimit të pavarur dhe dosja duhet të tërhiqet."}});
+  assert.equal(r.status,200);
+  r=await send("/api/public/cases");assert.ok(!r.json.items.some(x=>x.id===appealCaseId));
+  const originalCorrection=await pool.query("SELECT state FROM case_corrections WHERE id=$1",[disputedCorrection]);
+  assert.equal(originalCorrection.rows[0].state,"rejected","Original decision remains in history");
+  const appealAudit=await pool.query("SELECT count(*)::integer n FROM audit_entries WHERE object_id=$1 AND action='appeal.accepted'",[acceptedAppeal]);
+  assert.equal(appealAudit.rows[0].n,1);
   r=await send("/api/auth/logout",{method:"POST",cookie:reporterCookie,body:{}});
   assert.equal(r.status,200);
   r=await send("/api/me",{cookie:reporterCookie});assert.equal(r.status,401);
