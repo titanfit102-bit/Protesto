@@ -3,12 +3,13 @@ import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import {hashPassword} from "../src/server/security.mjs";
 import {createPilotServer} from "../src/server/app.mjs";
+import {rateKey,consumeRateLimit} from "../src/server/rate-limits.mjs";
 const enabled=!!process.env.DATABASE_URL;
 test("PostgreSQL private pilot: reporting, session security and editorial separation",{skip:!enabled},async()=>{
  const {default:pg}=await import("pg");
  const pool=new pg.Pool({connectionString:process.env.DATABASE_URL,max:8});
  const origin="http://127.0.0.1:4174";
- const server=createPilotServer(pool,{origin});
+ const server=createPilotServer(pool,{origin,rateLimitSecret:"synthetic-integration-rate-limit-key-longer-than-32"});
  const suffix=randomUUID().slice(0,8);
  const reporter={id:randomUUID(),email:"reporter-"+suffix+"@example.org",password:"ReporterSecret!123"};
  const reviewer={id:randomUUID(),email:"reviewer-"+suffix+"@example.org",password:"ReviewerSecret!123"};
@@ -17,7 +18,14 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
   await pool.query("INSERT INTO civic_users(id,email,password_hash,role) VALUES($1,$2,$3,$4)",[u.id,u.email,hashPassword(u.password),u===reporter?"reporter":"reviewer"]);
  }
  const applied=await pool.query("SELECT count(*)::integer n FROM schema_migrations");
- assert.equal(applied.rows[0].n,5,"Expected all five versioned migrations");
+ assert.equal(applied.rows[0].n,6,"Expected all six versioned migrations");
+ const quotaKey=rateKey("synthetic-integration-rate-limit-key-longer-than-32","test-concurrent",randomUUID());
+ const quota=await Promise.all([1,2,3].map(()=>consumeRateLimit(pool,quotaKey,{limit:2,windowSeconds:60})));
+ assert.equal(quota.filter(x=>x.allowed).length,2,"Concurrent database quota must allow exactly two hits");
+ assert.equal(quota.filter(x=>!x.allowed).length,1);
+ assert.ok(quota[2].retrySeconds>=1);
+ await pool.query("UPDATE request_rate_limits SET expires_at=now()-interval '2 seconds' WHERE key_hash=$1",[quotaKey]);
+ assert.equal((await consumeRateLimit(pool,quotaKey,{limit:2,windowSeconds:60})).allowed,true,"Quota resets after expiry");
  await new Promise((resolve,reject)=>server.listen(4174,"127.0.0.1",e=>e?reject(e):resolve()));
  const send=async(path,{method="GET",body,cookie,originHeader=true,extraHeaders={}}={})=>{
   const headers={...extraHeaders};

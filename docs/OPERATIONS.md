@@ -58,3 +58,7 @@ Never run E2E tests against real user data or a production database: tests inser
 ## Service monitoring
 
 `GET /api/health` checks only that the HTTP process responds (liveness). `GET /api/ready` checks the PostgreSQL connection (readiness), returning HTTP 503 when the database is unavailable. Neither endpoint authenticates a user; do not place secrets or privileged telemetry in responses. Full production monitoring and paging remain open release gates.
+
+## Shared rate limiting
+
+The pilot now requires `PROTESTO_RATE_LIMIT_SECRET`, a separately stored stable random value of at least 32 characters. Never commit production secrets or rotate this key without planning: changing it resets anonymous quota identities. PostgreSQL `request_rate_limits` enforces atomic per-IP login quotas (12 per 15 minutes), per-email login quotas (15 per 15 minutes), and per-authenticated-user mutation quotas (120 per hour), shared across Node instances. Identifiers are HMAC-SHA256 hashes, not plain IPs/emails. Periodically delete expired rows via a reviewed database maintenance job; the prototype does not schedule one. A rejected request returns HTTP 429 with `Retry-After`. This is defense-in-depth and does not replace a gateway WAF, legitimate-user appeal process or proxy-aware identity strategy. Do not trust unverified forwarded headers. The pilot has no safe public release without further anti-abuse review.

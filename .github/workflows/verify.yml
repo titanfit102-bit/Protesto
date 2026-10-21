@@ -26,6 +26,7 @@ jobs:
     env:
       DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/protesto
       APP_ORIGIN: http://127.0.0.1:4174
+      PROTESTO_RATE_LIMIT_SECRET: synthetic-ci-rate-limit-secret-for-isolated-postgres-only
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
