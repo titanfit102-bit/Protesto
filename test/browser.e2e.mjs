@@ -120,6 +120,9 @@ try{
  await clickText(page,correction,"Prano dhe tërhiq dosjen");
  await page.waitForFunction(t=>![...document.querySelectorAll("#public-cases h3")].some(x=>x.textContent===t),{timeout:12000},title);
  log("reviewed correction withdrew published case");
+ await page.waitForFunction(()=>[...document.querySelectorAll("#public-ledger strong")].some(x=>x.textContent.includes("tërhequr")),{timeout:12000});
+ log("public retraction history contains no private review details");
+
  await page.setViewport({width:390,height:844,isMobile:true});
  await pause(300);
  const size=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,viewport:document.documentElement.clientWidth}));

@@ -90,7 +90,24 @@ function fill(target,items,review=false){
  if(!items.length){const empty=document.createElement("div");empty.className="pilot-empty";empty.textContent="Nuk ka dosje për të shfaqur.";target.appendChild(empty);return;}
  items.forEach(item=>target.appendChild(record(item,review)));
 }
+function showLedger(events){
+ const target=$("public-ledger");
+ target.replaceChildren();
+ if(!Array.isArray(events)||events.length===0){
+  const empty=document.createElement("p");empty.className="pilot-empty";empty.textContent="Ende nuk ka veprime të publikuara.";target.append(empty);return;
+ }
+ for(const event of events){
+  const row=document.createElement("div");row.className="pilot-ledger-row";
+  const flag=document.createElement("strong");
+  flag.textContent=event.event_type==="archived"?"Publikim i tërhequr":"Dosje e publikuar";
+  const details=document.createElement("span");
+  const date=new Date(event.created_at);
+  details.textContent="Dosja "+String(event.case_id).slice(0,8)+" · "+(Number.isNaN(date.getTime())?"Datë e panjohur":new Intl.DateTimeFormat("sq-AL",{dateStyle:"medium"}).format(date));
+  row.append(flag,details);target.append(row);
+ }
+}
 async function refresh(){
+ const ledger=await call("/api/public/ledger");showLedger(ledger.events);
  const publicActions=await call("/api/actions/public");fillActions($("public-actions"),publicActions.items);
  const publicRows=await call("/api/public/cases");
  fill($("public-cases"),publicRows.items);
