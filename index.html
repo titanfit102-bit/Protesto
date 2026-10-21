@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="sq">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#101827" />
+  <meta name="description" content="Protesto — raportime qytetare, nisma dhe aktivitete paqësore. Version demonstrimi lokal." />
+  <title>Protesto — Zëri qytetar, me fakte</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <script type="module" src="/src/app.mjs"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Kalo te përmbajtja</a>
+  <div class="shell">
+    <aside class="sidebar">
+      <a class="brand" href="#overview" aria-label="Protesto - fillimi"><span class="brand-mark">P<span class="brand-dot">.</span></span><span>PROTESTO<small>QYTETARËT · TRANSPARENCA</small></span></a>
+      <div class="nav-caption">HAPËSIRA JOTE</div>
+      <nav aria-label="Navigimi kryesor">
+        <a class="nav-item active" data-page="overview" href="#overview"><span>◫</span> Përmbledhje</a>
+        <a class="nav-item" data-page="cases" href="#cases"><span>▤</span> Dosjet qytetare</a>
+        <a class="nav-item" data-page="initiatives" href="#initiatives"><span>◇</span> Iniciativat</a>
+        <a class="nav-item" data-page="gatherings" href="#gatherings"><span>◎</span> Tubimet paqësore</a>
+        <a class="nav-item" data-page="about" href="#about"><span>ⓘ</span> Si funksionon</a>
+      </nav>
+      <div class="sidebar-note"><span class="live-dot"></span> DEMO LOKALE
+        <p>Ky është një prototip. Të dhënat nuk dërgohen në server dhe nuk janë publikime zyrtare.</p>
+      </div>
+    </aside>
+    <div class="workspace">
+      <header class="topbar">
+        <div class="breadcrumb">PLATFORMA <span>/</span> <strong id="breadcrumb">Përmbledhje</strong></div>
+        <div class="top-actions"><span class="secure-label">◈ Privacy-first</span><button id="reset-btn" type="button" class="btn subtle" title="Fshij ndryshimet lokale dhe kthe të dhënat e demonstrimit">Rivendos demon</button></div>
+      </header>
+      <main id="main" tabindex="-1">
+        <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+        <div id="content"></div>
+      </main>
+      <footer>© 2026 Protesto · Prototip demonstrimi · Pa mbledhje të të dhënave personale</footer>
+    </div>
+  </div>
+  <dialog id="composer" aria-labelledby="dialog-title">
+    <form id="compose-form" novalidate>
+      <div class="modal-header"><div><div class="eyebrow">KRIJO NJË REGJISTRIM</div><h2 id="dialog-title">Raportim i ri</h2></div><button type="button" id="close-dialog" class="icon-btn" aria-label="Mbyll">×</button></div>
+      <div id="form-fields"></div>
+      <div id="form-error" class="form-error" role="alert" hidden></div>
+      <div class="modal-actions"><button type="button" id="cancel-dialog" class="btn subtle">Anulo</button><button type="submit" class="btn primary">Ruaj lokalisht →</button></div>
+    </form>
+  </dialog>
+</body>
+</html>

@@ -1,0 +1,16 @@
+node_modules/
+.DS_Store
+.env
+.env.*
+!.env.example
+coverage/
+dist/
+.vercel/
+
+# Never commit backups, temporary encrypted archives or plaintext database exports.
+*.ptbk
+*.ptbk.*.part
+*.dump
+*.backup
+*.sql.gz
+backups/
