@@ -62,3 +62,14 @@ Never run E2E tests against real user data or a production database: tests inser
 ## Shared rate limiting
 
 The pilot now requires `PROTESTO_RATE_LIMIT_SECRET`, a separately stored stable random value of at least 32 characters. Never commit production secrets or rotate this key without planning: changing it resets anonymous quota identities. PostgreSQL `request_rate_limits` enforces atomic per-IP login quotas (12 per 15 minutes), per-email login quotas (15 per 15 minutes), and per-authenticated-user mutation quotas (120 per hour), shared across Node instances. Identifiers are HMAC-SHA256 hashes, not plain IPs/emails. Periodically delete expired rows via a reviewed database maintenance job; the prototype does not schedule one. A rejected request returns HTTP 429 with `Retry-After`. This is defense-in-depth and does not replace a gateway WAF, legitimate-user appeal process or proxy-aware identity strategy. Do not trust unverified forwarded headers. The pilot has no safe public release without further anti-abuse review.
+
+
+## Civic dialogue private pilot
+
+Set a *different*, cryptographically random 32+ character PROTESTO_DIALOGUE_SECRET in the runtime environment. This secret is required on startup because the application uses keyed, per-statement vote identifiers; do not reuse the rate-limit secret, commit either secret or confuse pseudonymization with anonymity.
+
+In the authenticated pilot, an authorized reviewer selects a published case and creates a dialogue topic. A citizen submits a statement (pending until approved by a different reviewer). An authenticated user may vote after acknowledging the privacy notice; votes can change while the topic is open. A reviewer closes the topic, automatically generating aggregate counts only for statements with >=10 distinct respondents and deleting individual vote rows within the same database transaction.
+
+**Do not use with real political/sensitive participation.** Complete legal/DPIA review where needed, consent and rights processes, backup retention, duplicate-account controls, participant disclosures, security testing, neutral moderation procedures and independent data stewardship first. The old vote records can survive in backups even when deleted from the live tables.
+
+CI uses an entirely synthetic PROTESTO_DIALOGUE_SECRET. The new PostgreSQL migration 007 adds dialogue_topics, dialogue_statements, dialogue_reviews, dialogue_votes and dialogue_results. For methodology and licence boundaries see docs/POLIS_DESIGN_ADAPTATION.md.
