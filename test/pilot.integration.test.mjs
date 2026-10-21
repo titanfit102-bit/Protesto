@@ -55,13 +55,6 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
   assert.ok(!Object.hasOwn(r.json.user,"password_hash"));
   r=await send("/api/review/queue",{cookie:reporterCookie});assert.equal(r.status,403);
   r=await send("/api/public/cases");assert.ok(!r.json.items.some(x=>x.id===caseId));
-  r=await send("/api/public/ledger");
-  assert.equal(r.status,200);
-  const ledgerEntries=r.json.events.filter(x=>x.case_id===caseId);
-  assert.equal(ledgerEntries.filter(x=>x.event_type==="published").length,1);
-  assert.equal(ledgerEntries.filter(x=>x.event_type==="archived").length,1);
-  assert.equal(JSON.stringify(r.json).includes(reporter.email),false);
-  assert.equal(JSON.stringify(r.json).includes("Retract the article"),false);
 
   r=await send("/api/auth/login",{method:"POST",body:{email:reviewer.email,password:reviewer.password}});
   assert.equal(r.status,200);
@@ -109,6 +102,13 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
   r=await send("/api/archive/"+caseId,{method:"POST",cookie:reviewCookie,body:{note:"Retract the article pending an additional independent source review."}});
   assert.equal(r.status,200);assert.equal(r.json.item.state,"archived");
   r=await send("/api/public/cases");assert.ok(!r.json.items.some(x=>x.id===caseId));
+  r=await send("/api/public/ledger");
+  assert.equal(r.status,200);
+  const ledgerEntries=r.json.events.filter(x=>x.case_id===caseId);
+  assert.equal(ledgerEntries.filter(x=>x.event_type==="published").length,1);
+  assert.equal(ledgerEntries.filter(x=>x.event_type==="archived").length,1);
+  assert.equal(JSON.stringify(r.json).includes(reporter.email),false);
+  assert.equal(JSON.stringify(r.json).includes("Retract the article"),false);
   const withdrawn=await pool.query("SELECT count(*)::integer AS n FROM retraction_history WHERE case_id=$1",[caseId]);
   assert.equal(withdrawn.rows[0].n,1);
   const newAction={
