@@ -4,6 +4,7 @@ import {fileURLToPath} from "node:url";
 import {randomUUID} from "node:crypto";
 import {validateCase,cleanText} from "../domain.mjs";
 import {actionRoute,actionGetRoutes,actionPostRoute} from "./actions.mjs";
+import {dossierRoute,dossierGetRoute,dossierPostRoute} from "./dossiers.mjs";
 import {normalizeEmail,verifyPassword,newSessionToken,tokenHash,parseSessionCookie,sessionCookie,clearSessionCookie,secureWrite,canReview,SESSION_AGE_SECONDS} from "./security.mjs";
 
 const publicAssets=new Map([
@@ -72,17 +73,21 @@ export function createPilotServer(pool,{origin,production=false}={}){
   const isArchive=/^\/api\/archive\/[^/]+$/.test(pathname);
   const getRoutes=["/api/public/cases","/api/me","/api/cases/mine","/api/review/queue"];
   const postRoutes=["/api/auth/login","/api/auth/logout","/api/cases"];
-  if(!(req.method==="GET"&&(getRoutes.includes(pathname)||actionGetRoutes.includes(pathname)))&&!(req.method==="POST"&&(postRoutes.includes(pathname)||isReview||isArchive||actionPostRoute(pathname)))){
+  if(!(req.method==="GET"&&(getRoutes.includes(pathname)||actionGetRoutes.includes(pathname)||dossierGetRoute(pathname)))&&!(req.method==="POST"&&(postRoutes.includes(pathname)||isReview||isArchive||actionPostRoute(pathname)||dossierPostRoute(pathname)))){
    return fail(res,404,"API endpoint nuk ekziston.");
   }
   if(req.method==="POST"&&!secureWrite(req,origin))return fail(res,403,"Kërkesë e bllokuar nga mbrojtja CSRF.");
   try{
+   if(pathname==="/api/corrections"||pathname.startsWith("/api/corrections/")||pathname.startsWith("/api/dossiers/")){
+    const current=await auth(req);
+    return await dossierRoute({pathname,req,res,pool,user:current,json,fail,readJSON});
+   }
    if(pathname==="/api/actions"||pathname.startsWith("/api/actions/")){
     const current=pathname==="/api/actions/public"?null:await auth(req);
     return await actionRoute({pathname,req,res,pool,user:current,json,fail,readJSON});
    }
    if(pathname==="/api/public/cases"&&req.method==="GET"){
-    const result=await pool.query("SELECT id,title,description,area,category,source_url,created_at FROM civic_cases WHERE state='published' ORDER BY created_at DESC LIMIT 100");
+    const result=await pool.query("SELECT c.id,c.title,c.description,c.area,c.category,c.created_at,(SELECT s.url FROM case_sources s WHERE s.case_id=c.id AND s.state='accepted' ORDER BY s.created_at ASC LIMIT 1) AS source_url FROM civic_cases c WHERE c.state='published' ORDER BY c.created_at DESC LIMIT 100");
     return json(res,200,{items:result.rows});
    }
    if(pathname==="/api/auth/login"&&req.method==="POST"){
@@ -119,8 +124,15 @@ export function createPilotServer(pool,{origin,production=false}={}){
     let item;try{item=validateCase(body,new Date(),randomUUID);}catch(e){return fail(res,422,e.message);}
     const number=await pool.query("SELECT count(*)::integer AS n FROM civic_cases WHERE author_id=$1 AND created_at>now()-interval '1 hour'",[user.id]);
     if(number.rows[0].n>=10)return fail(res,429,"Lejohen deri në 10 raportime në orë.");
-    const result=await pool.query("INSERT INTO civic_cases(id,author_id,title,description,area,category,source_url,state) VALUES($1,$2,$3,$4,$5,$6,$7,'pending') RETURNING id,state,created_at",[item.id,user.id,item.title,item.description,item.area,item.category,item.source]);
-    return json(res,201,{item:result.rows[0],message:"Dosja u regjistrua për verifikim. Nuk është publikuar."});
+    const client=await pool.connect();
+    try{
+     await client.query("BEGIN");
+     const result=await client.query("INSERT INTO civic_cases(id,author_id,title,description,area,category,source_url,state) VALUES($1,$2,$3,$4,$5,$6,$7,'pending') RETURNING id,state,created_at",[item.id,user.id,item.title,item.description,item.area,item.category,item.source]);
+     if(item.source) await client.query("INSERT INTO case_sources(id,case_id,submitted_by,title,url,context) VALUES($1,$2,$3,$4,$5,$6)",[randomUUID(),item.id,user.id,item.title,item.source,item.description.slice(0,700)]);
+     await client.query("COMMIT");
+     return json(res,201,{item:result.rows[0],message:"Dosja u regjistrua për verifikim. Nuk është publikuar."});
+    }catch(e){try{await client.query("ROLLBACK");}catch{}throw e;}
+    finally{client.release();}
    }
    if(!canReview(user.role))return fail(res,403,"Kjo veprimtari kërkon rol verifikuesi.");
    if(pathname==="/api/review/queue"&&req.method==="GET"){
@@ -132,9 +144,14 @@ export function createPilotServer(pool,{origin,production=false}={}){
     if(!idFormat.test(caseId))return fail(res,400,"Identifikues i pavlefshëm.");
     const body=await readJSON(req),decision=body.decision,note=cleanText(body.note,1001);
     if(!["published","rejected"].includes(decision)||note.length<15||note.length>1000)return fail(res,422,"Vendimi dhe arsyetimi 15–1000 karaktere janë të detyrueshëm.");
+    if(decision==="published" && !(body.checks?.sourceReviewed===true && body.checks?.privacyReviewed===true && body.checks?.replyConsidered===true))return fail(res,422,"Konfirmo kontrollin e burimit, privatësisë dhe të drejtën e përgjigjes.");
     const client=await pool.connect();
     try{
      await client.query("BEGIN");
+     if(decision==="published"){
+      const accepted=await client.query("SELECT 1 FROM case_sources WHERE case_id=$1 AND state='accepted' LIMIT 1",[caseId]);
+      if(!accepted.rowCount){await client.query("ROLLBACK");return fail(res,422,"Të paktën një burim duhet verifikuar para publikimit.");}
+     }
      const updated=await client.query("UPDATE civic_cases SET state=$1,reviewed_at=now(),reviewed_by=$2 WHERE id=$3 AND state='pending' AND author_id<>$2 RETURNING id,state",[decision,user.id,caseId]);
      if(!updated.rowCount){await client.query("ROLLBACK");return fail(res,409,"Dosja nuk është në pritje ose është e jotja.");}
      await client.query("INSERT INTO review_history(id,case_id,reviewer_id,decision,note) VALUES($1,$2,$3,$4,$5)",[randomUUID(),caseId,user.id,decision,note]);
