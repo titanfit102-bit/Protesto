@@ -33,11 +33,11 @@ For PostgreSQL integration tests export `DATABASE_URL` and run migrations first.
 
 ## What is still missing
 
-- External browser E2E checks, accessibility audit and mobile device acceptance.
-- Production identity, MFA, account recovery, email verification and centralized rate limiting.
-- Formal editorial source-verification, redaction, corrections, appeals, and institutional right-of-reply.
+- Independent accessibility audit and real mobile-device acceptance (Chromium E2E exists).
+- Production identity, MFA, account recovery, email verification and gateway-level abuse protection (PostgreSQL quotas exist).
+- Formal document provenance, redaction and institutional right-of-reply (early correction/appeal workflows exist).
 - Document evidence storage, government data connectors, AI provenance pipeline and false-claim evaluation.
-- Operational backup with restore proof, monitoring, privacy/legal review, incident response, operational ownership and scalable deployment.
+- Operational offsite backup scheduling and restore ownership, monitoring, privacy/legal review, incident response and production hosting.
 - Public launch consent, domain configuration and separate authorization for merging the PR.
 
 **Never submit sensitive personal information, confidential whistleblower content, allegations about private people or political preference data** to this unaudited prototype. The private pilot is for synthetic/test material only.
@@ -110,3 +110,13 @@ The pilot now supports a one-time appeal by the author of a rejected correction.
 The pilot requires a securely generated `PROTESTO_RATE_LIMIT_SECRET` (32+ characters) for deterministic PostgreSQL rate limiting across backend processes. IP/account login quotas and user write quotas are enforced with HMAC identifiers. Keep the secret outside the repository; no real identity or production app environment has been created.
 
 **Latest implementation tests:** [Actions #39670591638](https://github.com/titanfit102-bit/Protesto/actions/runs/39670591638), 17/17 Node tests plus Chromium/restore gates. Independent accessibility, security, editorial and legal audits remain open.
+
+## Dialogu Qytetar — Polis-inspired, original implementation (private pilot)
+
+A reviewer can start a moderated discussion linked to a published civic case. Citizens can submit statements for independent moderation, then choose Pajtohem / Kundërshtoj / E kaloj. Voting requires a privacy acknowledgement and stores a *pseudonymous* statement-specific HMAC identifier, not raw public account identities. This is **not anonymous** and is **not a representative political opinion survey**.
+
+No live results are shown. On topic closure, counts are published only for statements with 10+ responses. Individual vote rows are removed from the active database in that transaction; existing backups may still hold older copies. No political microtargeting, segmentation or AI inference.
+
+The pilot now requires a distinct secret PROTESTO_DIALOGUE_SECRET (32+ characters) as well as PROTESTO_RATE_LIMIT_SECRET. Keep both outside GitHub. Detailed design, privacy and licensing: [Polis-inspired dialogue design](docs/POLIS_DESIGN_ADAPTATION.md). Original Polis AGPLv3 source is **not copied** into Protesto.
+
+**Verified build:** [GitHub Actions run #39687784143](https://github.com/titanfit102-bit/Protesto/actions/runs/39687784143) passed **18/18 Node tests**, PostgreSQL migrations, original browser E2E and dedicated dialogue Chromium E2E, dependency audit, and encrypted PostgreSQL restore. This is a private synthetic pilot, not approval to collect live political opinions or deploy.
