@@ -36,3 +36,7 @@ The GitHub workflow uses a disposable PostgreSQL service and Chromium to test th
 ## Encrypted backup gate, October 21, 2026
 
 Backup encryption/decryption logic has standalone local unit-test evidence. Full PostgreSQL dump→encrypted archive→isolated restore parity is implemented as `npm run test:backup` and configured in GitHub Actions, but **has not yet run successfully on the new revision** because job initialization failed before any steps. This is **PARTIAL**, not verified operational recovery. Requires a green disposable-DB restore drill and independent offsite policy before production.
+
+## Follow-up verification: 2026-10-21
+
+Local Node crypto checks: 3/3 passed on recreated current crypto routines, including interruption and concurrent archive creation. End-to-end PostgreSQL restore and new public ledger checks cannot be counted as verified because GitHub Actions is failing at runner allocation; see [Issue #2](https://github.com/titanfit102-bit/Protesto/issues/2). Full production readiness remains **BLOCKED**.

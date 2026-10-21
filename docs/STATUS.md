@@ -56,3 +56,12 @@ No merger to main, production modifications, public deployment, spending, or cha
 - Added CI step for automated restore drill and basic local crypto test results; **full database restore in the current revision remains unverified**.
 - **CI BLOCKER:** GitHub Actions workflow runs #39643094795, #39642967274 and #39642685683 ended with no runner steps and no job logs; retry of #39643094795 also had `steps=[]`. This is consistent with a runner provisioning / account-quota problem, but the underlying cause cannot be confirmed from the accessible data. Prior success was run #39639604577, **before** these new backup features. Do not treat newer commits as CI-verified.
 - Next priority: resolve GitHub runner provisioning, achieve a green encrypted restore drill, then establish recurring backups with documented retention, restore objectives and testing. There was no merge, production deployment or spending authorization executed.
+
+## Follow-up: atomic archives and public status ledger — 2026-10-21
+
+- Fixed backup publication to write encrypted ciphertext to a private temporary file, fsync it and publish with an atomic hard link. This refuses overwrites and prevents incomplete archives appearing under the final filename.
+- Reproduced the repository crypto routines in an isolated Node 22 environment; **3/3 targeted crypto tests passed**: roundtrip/tamper/wrong-passphrase, connection environment parsing and interrupted/concurrent writers. This local test **does not** validate PostgreSQL restore.
+- Added a nonidentifying public status ledger at `GET /api/public/ledger` (publication/retraction event type, case UUID and timestamp, no reporter identity, notes or archived allegations). Pilot page displays the ledger.
+- Added PostgreSQL integration assertions for ledger privacy and Chromium end-to-end assertion for withdrawn entries. These new integration/E2E assertions remain **UNVERIFIED** while GitHub hosted runners are not allocated.
+- Latest CI run #39653030671 failed before steps with no runner; previous successful full pipeline #39639604577 predates backup and ledger code. Never conflate local crypto verification with a full clean PR test.
+- Still no public production deployment, merge, expenses or modifications to other projects.
