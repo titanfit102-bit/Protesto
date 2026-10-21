@@ -65,7 +65,7 @@ export function validateGathering(input, now = new Date(), idFactory = () => cry
   if (title.length < 8 || title.length > 120) throw new Error("Titulli duhet të jetë 8–120 karaktere.");
   if (description.length < 25 || description.length > 2000) throw new Error("Përshkrimi duhet të jetë 25–2000 karaktere.");
   if (area.length < 3 || area.length > 120) throw new Error("Vendndodhja duhet të jetë 3–120 karaktere.");
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(new Date(date + "T12:00:00").getTime())) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(date + "T12:00:00Z")) || new Date(date + "T12:00:00Z").toISOString().slice(0, 10) !== date) {
     throw new Error("Zgjidh një datë të vlefshme.");
   }
   const today = [now.getFullYear(), String(now.getMonth() + 1).padStart(2, "0"), String(now.getDate()).padStart(2, "0")].join("-");
