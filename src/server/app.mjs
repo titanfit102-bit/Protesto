@@ -6,6 +6,7 @@ import {validateCase,cleanText} from "../domain.mjs";
 import {actionRoute,actionGetRoutes,actionPostRoute} from "./actions.mjs";
 import {dossierRoute,dossierGetRoute,dossierPostRoute} from "./dossiers.mjs";
 import {appealRoute,appealGetRoute,appealPostRoute} from "./appeals.mjs";
+import {rateKey,consumeRateLimit} from "./rate-limits.mjs";
 import {normalizeEmail,verifyPassword,newSessionToken,tokenHash,parseSessionCookie,sessionCookie,clearSessionCookie,secureWrite,canReview,SESSION_AGE_SECONDS} from "./security.mjs";
 
 const publicAssets=new Map([
@@ -40,11 +41,12 @@ async function readJSON(req){
   return parsed;
  }catch{throw {status:400,message:"JSON i pavlefshëm."};}
 }
-export function createPilotServer(pool,{origin,production=false}={}){
+export function createPilotServer(pool,{origin,production=false,rateLimitSecret=process.env.PROTESTO_RATE_LIMIT_SECRET}={}){
  if(typeof pool?.query!=="function"||typeof pool?.connect!=="function")throw Error("PostgreSQL pool missing.");
  if(typeof origin!=="string"||!/https?:\/\/[^/]+$/.test(origin))throw Error("APP_ORIGIN missing or invalid.");
  if(production&&!origin.startsWith("https://"))throw Error("HTTPS required in production.");
- const attempts=new Map();
+ // Reject missing or unstable cross-instance rate-limit secret at startup.
+ rateKey(rateLimitSecret,"startup","check");
  const auth=async(req)=>{
   const token=parseSessionCookie(req.headers.cookie);
   if(!token)return null;
@@ -84,6 +86,13 @@ export function createPilotServer(pool,{origin,production=false}={}){
   }
   if(req.method==="POST"&&!secureWrite(req,origin))return fail(res,403,"Kërkesë e bllokuar nga mbrojtja CSRF.");
   try{
+   if(req.method==="POST"&&pathname!=="/api/auth/login"&&pathname!=="/api/auth/logout"){
+    const currentUser=await auth(req);
+    if(currentUser){
+     const quota=await consumeRateLimit(pool,rateKey(rateLimitSecret,"write-user",currentUser.id),{limit:120,windowSeconds:3600});
+     if(!quota.allowed)return json(res,429,{error:"Shumë kërkesa. Provo më vonë."},{"Retry-After":String(quota.retrySeconds)});
+    }
+   }
    if(pathname==="/api/appeals"||pathname.startsWith("/api/appeals/")){
     const current=await auth(req);
     return await appealRoute({pathname,req,res,pool,user:current,json,fail,readJSON});
@@ -115,14 +124,13 @@ export function createPilotServer(pool,{origin,production=false}={}){
     return json(res,200,{items:result.rows});
    }
    if(pathname==="/api/auth/login"&&req.method==="POST"){
-    const ip=String(req.socket.remoteAddress||"unknown").slice(0,80),now=Date.now();
-    let count=attempts.get(ip)||{n:0,until:now+15*60*1000};
-    if(count.until<now)count={n:0,until:now+15*60*1000};
-    if(attempts.size>5000)attempts.clear();
-    if(count.n>=5)return fail(res,429,"Shumë tentativa. Provo më vonë.");
-    count.n++;attempts.set(ip,count);
+    const ip=String(req.socket.remoteAddress||"unknown");
+    const ipLimit=await consumeRateLimit(pool,rateKey(rateLimitSecret,"login-ip",ip),{limit:12,windowSeconds:900});
+    if(!ipLimit.allowed)return json(res,429,{error:"Shumë tentativa. Provo më vonë."},{"Retry-After":String(ipLimit.retrySeconds)});
     const body=await readJSON(req);
     let email;try{email=normalizeEmail(body.email);}catch{return fail(res,401,"Kredenciale të pavlefshme.");}
+    const accountLimit=await consumeRateLimit(pool,rateKey(rateLimitSecret,"login-email",email),{limit:15,windowSeconds:900});
+    if(!accountLimit.allowed)return json(res,429,{error:"Shumë tentativa për këtë llogari."},{"Retry-After":String(accountLimit.retrySeconds)});
     const password=typeof body.password==="string"?body.password:"";
     const found=await pool.query("SELECT id,email,role,password_hash FROM civic_users WHERE email=$1 AND active=true LIMIT 1",[email]);
     const user=found.rows[0];
