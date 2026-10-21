@@ -32,6 +32,10 @@ jobs:
         with:
           node-version: '22'
       - run: npm install --no-audit --no-fund
+      - name: Audit runtime dependencies for high severity vulnerabilities
+        run: npm audit --omit=dev --audit-level=high
+      - name: Syntax-check every JavaScript module
+        run: find src tools test -type f -name '*.mjs' -print0 | xargs -0 -r -n 1 node --check
       - run: npm run db:migrate
       - name: Confirm migrations are idempotent
         run: npm run db:migrate
@@ -42,7 +46,7 @@ jobs:
           CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
           if [ -z "$CHROME" ]; then echo 'Chrome is not installed in runner'; exit 1; fi
           echo "CHROME_PATH=$CHROME" >> "$GITHUB_ENV"
-      - name: Chromium end-to-end journey
+      - name: Chromium end-to-end journey and accessibility smoke
         run: npm run test:e2e
       - name: Verify PostgreSQL client tools are available
         run: |
