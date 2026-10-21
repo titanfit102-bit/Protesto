@@ -73,3 +73,7 @@ See [Evidence and corrections](docs/EVIDENCE_AND_CORRECTIONS.md) and [release ga
 ## Browser E2E checks
 
 \`npm run test:e2e\` executes real Chromium checks with a disposable development PostgreSQL database and test accounts. It requires \`CHROME_PATH\` and the pilot environment. GitHub Actions runs the check on draft PRs, not public hosting.
+
+### Private data export
+
+An authenticated user can download their own pilot cases, civic actions, correction requests and submitted source metadata in JSON. No password hashes, session tokens or another citizen's data are included. This is a partial data-access feature, not a complete GDPR compliance process.

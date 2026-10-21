@@ -133,6 +133,16 @@ for(const [formId,kind] of [["initiative-form","initiative"],["gathering-form","
   catch(e){notice(e.message,true);}
  });
 }
+$("export-user-data").addEventListener("click",async()=>{
+ try{
+  const data=await call("/api/me/export");
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob),link=document.createElement("a");
+  link.href=url;link.download="protesto-my-data.json";link.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  notice("Eksporti privat u përgatit në pajisjen tënde.");
+ }catch(e){notice(e.message,true);}
+});
 $("logout").addEventListener("click",async()=>{
  try{await call("/api/auth/logout","POST",{});user=null;notice("Dole nga llogaria.");await load();}
  catch(e){notice(e.message,true);}

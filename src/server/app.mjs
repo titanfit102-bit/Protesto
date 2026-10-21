@@ -76,7 +76,7 @@ export function createPilotServer(pool,{origin,production=false}={}){
   if(!pathname.startsWith("/api/"))return fail(res,404,"Nuk u gjet.");
   const isReview=/^\/api\/review\/[^/]+$/.test(pathname);
   const isArchive=/^\/api\/archive\/[^/]+$/.test(pathname);
-  const getRoutes=["/api/public/cases","/api/me","/api/cases/mine","/api/review/queue"];
+  const getRoutes=["/api/public/cases","/api/me","/api/me/export","/api/cases/mine","/api/review/queue"];
   const postRoutes=["/api/auth/login","/api/auth/logout","/api/cases"];
   if(!(req.method==="GET"&&(getRoutes.includes(pathname)||actionGetRoutes.includes(pathname)||dossierGetRoute(pathname)))&&!(req.method==="POST"&&(postRoutes.includes(pathname)||isReview||isArchive||actionPostRoute(pathname)||dossierPostRoute(pathname)))){
    return fail(res,404,"API endpoint nuk ekziston.");
@@ -115,6 +115,15 @@ export function createPilotServer(pool,{origin,production=false}={}){
    const user=await auth(req);
    if(pathname==="/api/me"&&req.method==="GET")return user?json(res,200,{user}):fail(res,401,"Kërkohet identifikim.");
    if(!user)return fail(res,401,"Kërkohet identifikim.");
+   if(pathname==="/api/me/export"&&req.method==="GET"){
+    const [cases,actions,corrections,sources]=await Promise.all([
+     pool.query("SELECT id,title,description,area,category,source_url,state,created_at FROM civic_cases WHERE author_id=$1 ORDER BY created_at DESC LIMIT 1000",[user.id]),
+     pool.query("SELECT id,kind,subtype,title,description,area,event_date,state,created_at FROM civic_actions WHERE author_id=$1 ORDER BY created_at DESC LIMIT 1000",[user.id]),
+     pool.query("SELECT id,case_id,reason,counter_source_url,state,created_at FROM case_corrections WHERE author_id=$1 ORDER BY created_at DESC LIMIT 1000",[user.id]),
+     pool.query("SELECT id,case_id,title,url,context,state,created_at FROM case_sources WHERE submitted_by=$1 ORDER BY created_at DESC LIMIT 1000",[user.id])
+    ]);
+    return json(res,200,{exported_at:new Date().toISOString(),user,records:{cases:cases.rows,actions:actions.rows,corrections:corrections.rows,sources:sources.rows}});
+   }
    if(pathname==="/api/auth/logout"&&req.method==="POST"){
     const token=parseSessionCookie(req.headers.cookie);
     if(token)await pool.query("DELETE FROM sessions WHERE token_hash=$1",[tokenHash(token)]);

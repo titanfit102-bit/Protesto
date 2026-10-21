@@ -33,6 +33,7 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
   r=await send("/api/public/cases");
   assert.equal(r.status,200);assert.ok(Array.isArray(r.json.items));
   r=await send("/api/me");assert.equal(r.status,401);
+  r=await send("/api/me/export");assert.equal(r.status,401);
   const sample={
    title:"Raportim testimi i ndriçimit",description:"Raportim artificial për testimin e verifikimit dhe të drejtës së përgjigjes.",
    area:"Zona e testit",category:"Infrastrukturë",source:"https://example.org/source"
@@ -48,6 +49,9 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
   assert.equal(r.json.item.state,"pending");const caseId=r.json.item.id;
   r=await send("/api/cases/mine",{cookie:reporterCookie});assert.equal(r.status,200);
   assert.ok(r.json.items.some(x=>x.id===caseId));
+  r=await send("/api/me/export",{cookie:reporterCookie});
+  assert.equal(r.status,200);assert.ok(r.json.records.cases.some(x=>x.id===caseId));
+  assert.ok(!Object.hasOwn(r.json.user,"password_hash"));
   r=await send("/api/review/queue",{cookie:reporterCookie});assert.equal(r.status,403);
   r=await send("/api/public/cases");assert.ok(!r.json.items.some(x=>x.id===caseId));
   r=await send("/api/auth/login",{method:"POST",body:{email:reviewer.email,password:reviewer.password}});
