@@ -32,6 +32,7 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
   let r=await send("/api/ready");assert.equal(r.status,200);assert.equal(r.json.check,"readiness");
   r=await send("/api/public/cases");
   assert.equal(r.status,200);assert.ok(Array.isArray(r.json.items));
+  r=await send("/api/public/ledger");assert.equal(r.status,200);
   r=await send("/api/me");assert.equal(r.status,401);
   r=await send("/api/me/export");assert.equal(r.status,401);
   const sample={
@@ -54,6 +55,14 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
   assert.ok(!Object.hasOwn(r.json.user,"password_hash"));
   r=await send("/api/review/queue",{cookie:reporterCookie});assert.equal(r.status,403);
   r=await send("/api/public/cases");assert.ok(!r.json.items.some(x=>x.id===caseId));
+  r=await send("/api/public/ledger");
+  assert.equal(r.status,200);
+  const ledgerEntries=r.json.events.filter(x=>x.case_id===caseId);
+  assert.equal(ledgerEntries.filter(x=>x.event_type==="published").length,1);
+  assert.equal(ledgerEntries.filter(x=>x.event_type==="archived").length,1);
+  assert.equal(JSON.stringify(r.json).includes(reporter.email),false);
+  assert.equal(JSON.stringify(r.json).includes("Retract the article"),false);
+
   r=await send("/api/auth/login",{method:"POST",body:{email:reviewer.email,password:reviewer.password}});
   assert.equal(r.status,200);
   const reviewCookie=r.cookie.split(";")[0];
