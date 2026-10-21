@@ -91,6 +91,18 @@ export function displayCorrections(target,items,{review,call,notice,refresh,user
    const link=node("a","pilot-evidence-link","Shiko burimin kundërshtues ↗");
    link.href=item.counter_source_url;link.target="_blank";link.rel="noopener noreferrer";article.append(link);
   }
+  if(!review&&item.state==="rejected"){
+   const details=node("details","pilot-evidence");details.append(node("summary","","Apelo vendimin e refuzimit"));
+   const form=node("form","pilot-evidence-form");
+   form.append(field("Pse kërkon shqyrtim të dytë? (30+ karaktere)","reason",true,"textarea"));
+   const send=node("button","btn subtle","Dërgo apelimin");send.type="submit";form.append(send);
+   form.addEventListener("submit",async event=>{
+    event.preventDefault();send.disabled=true;
+    try{await call("/api/appeals","POST",{correctionId:item.id,...Object.fromEntries(new FormData(form))});notice("Apelimi u dërgua për shqyrtim të pavarur.");await refresh();}
+    catch(e){notice(e.message,true);}finally{send.disabled=false;}
+   });
+   details.append(form);article.append(details);
+  }
   if(review&&item.author_id!==user?.id){
    const note=field("Arsyetimi i vendimit (20+ karaktere)","note",true,"textarea");
    article.append(note);
@@ -104,6 +116,33 @@ export function displayCorrections(target,items,{review,call,notice,refresh,user
     }));
    }
    article.append(buttons);
+  }
+  target.append(article);
+ }
+}
+
+export function displayAppeals(target,items,{review,call,notice,refresh,user}){
+ target.replaceChildren();
+ if(!items.length){target.append(node("p","pilot-empty","Nuk ka apelime për të shfaqur."));return;}
+ for(const item of items){
+  const article=node("article","pilot-card");
+  article.append(node("h3","",review?item.title:"Apelimi për korrigjimin "+item.correction_id));
+  article.append(node("p","",item.reason),node("small","",item.state||"Në pritje"));
+  if(review){
+   const conflict=[item.author_id,item.original_reviewer_id,item.case_author_id].includes(user?.id);
+   if(conflict){
+    article.append(node("p","pilot-empty","Konflikt shqyrtimi: kërkohet një verifikues tjetër, i pavarur."));target.append(article);continue;
+   }
+   const note=field("Arsyetimi i shqyrtimit të dytë (25+ karaktere)","note",true,"textarea");
+   const buttons=node("div","pilot-review-actions");
+   for(const [decision,label] of [["accepted","Prano dhe tërhiq dosjen"],["rejected","Lë në fuqi vendimin"]]){
+    buttons.append(button(label,async()=>{
+     try{await call("/api/appeals/review/"+encodeURIComponent(item.id),"POST",{decision,note:note.querySelector("textarea").value});
+      notice("Vendimi i apelimit u regjistrua në audit.");await refresh();
+     }catch(e){notice(e.message,true);}
+    }));
+   }
+   article.append(note,buttons);
   }
   target.append(article);
  }

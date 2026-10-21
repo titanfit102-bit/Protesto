@@ -1,4 +1,4 @@
-import {attachEvidence,attachCorrection,displayCorrections} from "./pilot-evidence.mjs";
+import {attachEvidence,attachCorrection,displayCorrections,displayAppeals} from "./pilot-evidence.mjs";
 const $=id=>document.getElementById(id);
 let user=null;
 const escapeHTML=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -112,11 +112,13 @@ async function refresh(){
  const publicRows=await call("/api/public/cases");
  fill($("public-cases"),publicRows.items);
  if(!user)return;
+ const myAppeals=await call("/api/appeals/mine");displayAppeals($("my-appeals"),myAppeals.items,{review:false,call,notice,refresh,user});
  const myCorrections=await call("/api/corrections/mine");displayCorrections($("my-corrections"),myCorrections.items,{review:false,call,notice,refresh,user});
  const myActions=await call("/api/actions/mine");fillActions($("my-actions"),myActions.items);
  const myRows=await call("/api/cases/mine");
  fill($("my-cases"),myRows.items);
  if(user.role==="reviewer"||user.role==="admin"){
+  const appeals=await call("/api/appeals/queue");displayAppeals($("review-appeals"),appeals.items,{review:true,call,notice,refresh,user});
   const corrections=await call("/api/corrections/queue");displayCorrections($("review-corrections"),corrections.items,{review:true,call,notice,refresh,user});
   const actionQueue=await call("/api/actions/review/queue");fillActions($("review-actions"),actionQueue.items,true);
   const queue=await call("/api/review/queue");
