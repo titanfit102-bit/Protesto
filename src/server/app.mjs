@@ -76,7 +76,7 @@ export function createPilotServer(pool,{origin,production=false}={}){
   if(!pathname.startsWith("/api/"))return fail(res,404,"Nuk u gjet.");
   const isReview=/^\/api\/review\/[^/]+$/.test(pathname);
   const isArchive=/^\/api\/archive\/[^/]+$/.test(pathname);
-  const getRoutes=["/api/public/cases","/api/me","/api/me/export","/api/cases/mine","/api/review/queue"];
+  const getRoutes=["/api/public/cases","/api/public/ledger","/api/me","/api/me/export","/api/cases/mine","/api/review/queue"];
   const postRoutes=["/api/auth/login","/api/auth/logout","/api/cases"];
   if(!(req.method==="GET"&&(getRoutes.includes(pathname)||actionGetRoutes.includes(pathname)||dossierGetRoute(pathname)))&&!(req.method==="POST"&&(postRoutes.includes(pathname)||isReview||isArchive||actionPostRoute(pathname)||dossierPostRoute(pathname)))){
    return fail(res,404,"API endpoint nuk ekziston.");
@@ -90,6 +90,20 @@ export function createPilotServer(pool,{origin,production=false}={}){
    if(pathname==="/api/actions"||pathname.startsWith("/api/actions/")){
     const current=pathname==="/api/actions/public"?null:await auth(req);
     return await actionRoute({pathname,req,res,pool,user:current,json,fail,readJSON});
+   }
+   if(pathname==="/api/public/ledger"&&req.method==="GET"){
+    // Public transparency uses only previously published items.
+    // Never expose reporter identities, private notes or unreviewed content.
+    const result=await pool.query(`SELECT case_id,event_type,created_at FROM (
+      SELECT r.case_id AS case_id,'published'::text AS event_type,r.created_at AS created_at
+      FROM review_history r JOIN civic_cases c ON c.id=r.case_id
+      WHERE r.decision='published' AND c.state IN ('published','archived')
+      UNION ALL
+      SELECT r.case_id AS case_id,'archived'::text AS event_type,r.created_at AS created_at
+      FROM retraction_history r JOIN civic_cases c ON c.id=r.case_id
+      WHERE c.state='archived'
+    ) events ORDER BY created_at DESC,case_id DESC LIMIT 100`);
+    return json(res,200,{events:result.rows,disclaimer:"Kjo listë regjistron ndryshimet e statusit; nuk provon vërtetësinë e pretendimeve."});
    }
    if(pathname==="/api/public/cases"&&req.method==="GET"){
     const result=await pool.query("SELECT c.id,c.title,c.description,c.area,c.category,c.created_at,(SELECT s.url FROM case_sources s WHERE s.case_id=c.id AND s.state='accepted' ORDER BY s.created_at ASC LIMIT 1) AS source_url FROM civic_cases c WHERE c.state='published' ORDER BY c.created_at DESC LIMIT 100");
