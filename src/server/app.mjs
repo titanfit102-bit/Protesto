@@ -68,7 +68,11 @@ export function createPilotServer(pool,{origin,production=false}={}){
     return res.end(file);
    }catch{return fail(res,500,"Skedari nuk u lexua.");}
   }
-  if(pathname==="/api/health"&&req.method==="GET")return json(res,200,{status:"ok",mode:"private-pilot"});
+  if(pathname==="/api/health"&&req.method==="GET")return json(res,200,{status:"ok",check:"liveness"});
+  if(pathname==="/api/ready"&&req.method==="GET"){
+   try{await pool.query("SELECT 1");return json(res,200,{status:"ok",check:"readiness"});}
+   catch{return fail(res,503,"Database unavailable.");}
+  }
   if(!pathname.startsWith("/api/"))return fail(res,404,"Nuk u gjet.");
   const isReview=/^\/api\/review\/[^/]+$/.test(pathname);
   const isArchive=/^\/api\/archive\/[^/]+$/.test(pathname);

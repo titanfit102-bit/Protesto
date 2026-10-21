@@ -19,7 +19,7 @@ child.stderr.on("data",x=>serviceLog+=x.toString());
 async function untilReady(){
  for(let attempt=0;attempt<80;attempt++){
   if(child.exitCode!==null)throw new Error("Pilot server exited: "+serviceLog.slice(-1200));
-  try{const r=await fetch(host+"/api/health");if(r.ok)return;}catch{}
+  try{const r=await fetch(host+"/api/ready");if(r.ok)return;}catch{}
   await pause(125);
  }
  throw new Error("Pilot server startup timed out: "+serviceLog.slice(-1200));

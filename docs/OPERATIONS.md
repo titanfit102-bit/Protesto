@@ -50,3 +50,7 @@ CI launches a preinstalled Chromium and a disposable PostgreSQL instance, coveri
     CHROME_PATH=/path/to/chromium npm run test:e2e
 
 Never run E2E tests against real user data or a production database: tests insert fictitious accounts and cases.
+
+## Service monitoring
+
+`GET /api/health` checks only that the HTTP process responds (liveness). `GET /api/ready` checks the PostgreSQL connection (readiness), returning HTTP 503 when the database is unavailable. Neither endpoint authenticates a user; do not place secrets or privileged telemetry in responses. Full production monitoring and paging remain open release gates.

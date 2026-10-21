@@ -29,7 +29,8 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
   return {status:res.status,json:await res.json(),cookie:res.headers.get("set-cookie"),headers:res.headers};
  };
  try{
-  let r=await send("/api/public/cases");
+  let r=await send("/api/ready");assert.equal(r.status,200);assert.equal(r.json.check,"readiness");
+  r=await send("/api/public/cases");
   assert.equal(r.status,200);assert.ok(Array.isArray(r.json.items));
   r=await send("/api/me");assert.equal(r.status,401);
   const sample={
