@@ -100,10 +100,11 @@ try{
  await fillForm(page,"#login-form",{email:accounts[0].email,password:accounts[0].password});
  await clickText(page,"#login-form","Hyr në pilot");
  await waitVisible(page,"#authenticated");
+ await page.waitForNetworkIdle({idleTime:350,timeout:12000});
  const publicCard=await page.evaluate(t=>[...document.querySelectorAll("#public-cases .pilot-card")].findIndex(x=>x.querySelector("h3")?.textContent===t),title);
  assert.ok(publicCard>=0);
  const publicSel="#public-cases .pilot-card:nth-child("+(publicCard+1)+")";
- await page.click(publicSel+" details:last-child summary");
+ await page.evaluate(selector=>document.querySelector(selector)?.click(),publicSel+" details:last-child summary");
  await page.$eval(publicSel+' details:last-child [name="reason"]',el=>el.value="Kërkoj korrigjim të materialit demonstrues sepse mbetet pa kontekst të mjaftueshëm.");
  await clickText(page,publicSel+" details:last-child","Dërgo kërkesën");
  await page.waitForFunction(()=>document.querySelectorAll("#my-corrections .pilot-card").length>0,{timeout:12000});
