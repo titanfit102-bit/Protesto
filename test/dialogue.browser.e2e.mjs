@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {mkdir} from "node:fs/promises";
 import {spawn} from "node:child_process";
 import {randomUUID} from "node:crypto";
 import {setTimeout as pause} from "node:timers/promises";
@@ -62,7 +63,10 @@ try{
  browser=await puppeteer.launch({executablePath:process.env.CHROME_PATH||"/usr/bin/google-chrome",headless:true,args:["--no-sandbox","--disable-dev-shm-usage"]});
  const page=await browser.newPage();
  const jsErrors=[];page.on("pageerror",error=>jsErrors.push(error.message));
+ await page.setViewport({width:1366,height:900});
+ if(process.env.PROTESTO_CAPTURE_PREVIEW==="1")await mkdir("dist-preview",{recursive:true});
  await page.goto(host+"/pilot.html",{waitUntil:"networkidle0"});
+ if(process.env.PROTESTO_CAPTURE_PREVIEW==="1")await page.screenshot({path:"dist-preview/04-hyrja-pilot.png",fullPage:true});
  await login(page,reviewer);
  await page.waitForSelector("#dialogue-create-section:not([hidden])");
  await form(page,"#dialogue-create-form",{caseId,title:"Konsultim sintetik për mjedisin",description:"Ky është një diskutim sintetik për verifikimin e funksioneve të moderimit dhe votimit."});
@@ -91,6 +95,10 @@ try{
  await click(page,"#dialogue-details .pilot-dialogue-statement","Pajtohem");
  await page.waitForFunction(()=>document.querySelector("#pilot-notice")?.textContent.includes("u ruajt"),{timeout:12000});
  assert.match(await page.$eval("#dialogue-details .pilot-dialogue-statement small",x=>x.textContent),/fshihen/);
+ if(process.env.PROTESTO_CAPTURE_PREVIEW==="1"){
+  const el=await page.$("#dialogue-section");
+  await el.screenshot({path:"dist-preview/05-dialogu-qytetar.png"});
+ }
  console.log("[dialogue browser] Consent enforced, vote recorded, live tally suppressed");
  await logout(page);
  await login(page,reviewer);
