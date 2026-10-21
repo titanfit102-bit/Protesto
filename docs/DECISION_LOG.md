@@ -16,3 +16,6 @@
 | ADR-012 | Source links are separately reviewed before case publication | Prevent unreviewed evidence links being displayed as verified | Provenance and archived snapshots |
 | ADR-013 | Citizen corrections can cause case withdrawal, never silent editing | Preserve accountability and auditability | Public correction ledger and appeal policy |
 | ADR-014 | End-to-end Chromium test runs against disposable database | Verify the actual browser workflow, not only API mocks | Multi-device QA |
+| ADR-015 | Versioned transactional SQL migrations with checksum verification | Prevent silent schema drift and partial migrations | Multi-database upgrade requirements |
+| ADR-016 | Separate liveness and database readiness endpoints | Do not claim healthy operation when database is unavailable | Metrics and alerting design |
+| ADR-017 | Authenticated export of own data only | Early privacy-by-design and user access; no other users' data | Full deletion/export rights and GDPR review |
