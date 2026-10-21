@@ -23,13 +23,15 @@ export async function encryptToFile(source,path,secret){
  const key=passwordKey(secret,salt);
  const cipher=createCipheriv('aes-256-gcm',key,iv);
  cipher.setAAD(header);
+ let created=false;
  const file=createWriteStream(path,{flags:'wx',mode:0o600});
+ file.once('open',()=>{created=true;});
  file.write(header);
  try{
   await pipeline(source,cipher,tagWriter(cipher),file);
  }catch(error){
   file.destroy();
-  try{await unlink(path);}catch{}
+  if(created){try{await unlink(path);}catch{}}
   throw error;
  }finally{key.fill(0);}
 }
