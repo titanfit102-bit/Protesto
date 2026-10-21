@@ -7,7 +7,7 @@
 | Browser demo correctness | Validated forms, navigation, filtering, storage and mobile behavior | VERIFIED for tested flows |
 | Pilot core workflow | Authentication, PostgreSQL, RBAC, moderated evidence, publication/retraction and audit | VERIFIED for automated cases; manual audit pending |
 | Data recovery test | Encrypted archive, tamper rejection, empty-database restore, row parity | VERIFIED in disposable CI database; operational backups still OPEN |
-| Dependency audit | No high/critical npm findings in the scoped dependency set | VERIFIED for runtime dependencies in run #39666863606; all-dependency scan running on newer commit |
+| Dependency audit | No high/critical npm findings in the scoped dependency set | VERIFIED for runtime and development dependencies in run #39667630075 (after upgrading puppeteer-core) |
 | JavaScript syntax | All JS module files syntax-checked in CI | VERIFIED |
 | Browser accessibility smoke | Unique IDs, accessible control labels/names, landmarks, basic keyboard focus, dialog focus | VERIFIED as smoke tests; full WCAG/accessibility audit OPEN |
 | Formal editorial safeguards | Provenance, redaction, right of reply, independent dispute/appeal workflow | PARTIAL / P0 |
@@ -20,7 +20,7 @@
 
 ## Latest verified automated pipeline
 
-[Actions run #39666863606](https://github.com/titanfit102-bit/Protesto/actions/runs/39666863606) passed all stages for commit \`96b89f6a6f561072139498fbe7bccfe34cecafe2\`, including Chromium browser and backup/restore. A later commit extends npm audit to development dependencies; its green result, if achieved, should be cited separately.
+[Actions run #39666863606](https://github.com/titanfit102-bit/Protesto/actions/runs/39666863606) passed all stages for commit \`96b89f6a6f561072139498fbe7bccfe34cecafe2\`, including Chromium browser and backup/restore. The expanded audit originally surfaced 7 high-severity development dependency advisories; upgrading puppeteer-core resolved the findings, and [run #39667630075](https://github.com/titanfit102-bit/Protesto/actions/runs/39667630075) passed the full audit and all other CI stages.
 
 ## What CI cannot complete
 

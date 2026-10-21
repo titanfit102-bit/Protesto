@@ -100,3 +100,5 @@ Backup archives are now written to a private temporary file and published only w
 ## Automated quality gates
 
 GitHub Actions tests both the pilot and browser demo, checks JavaScript syntax, audits npm dependencies for high/critical findings, verifies basic accessibility and performs an isolated encrypted backup/restore drill. See [the verification matrix](docs/CI_VERIFICATION.md). Passing CI does not constitute legal, privacy or independent security certification.
+
+**Current full CI evidence:** [run #39667630075](https://github.com/titanfit102-bit/Protesto/actions/runs/39667630075) passed runtime + development dependency audit, syntax checks, unit/API tests, browser/accessibility smoke and encrypted PostgreSQL restore. This does not authorize public deployment.

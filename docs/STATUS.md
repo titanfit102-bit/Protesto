@@ -12,7 +12,7 @@
   for commit \`96b89f6a6f561072139498fbe7bccfe34cecafe2\`.
 - Checks that passed: all 16 Node tests, repeatable PostgreSQL migrations, Chromium pilot and demo E2E including accessibility smoke and keyboard focus, JavaScript syntax, runtime dependency audit at high severity, AES-256-GCM encrypted archive and isolated PostgreSQL restore with matching data.
 - The earlier runner problem is **resolved** and recorded as [Issue #2](https://github.com/titanfit102-bit/Protesto/issues/2) (closed).
-- CI is now being extended to scan both runtime **and development** dependencies. See the latest run on PR #1 for that newer commit's result.
+- **Full dependency security audit also passed**: [Actions run #39667630075](https://github.com/titanfit102-bit/Protesto/actions/runs/39667630075), commit `743f29c65a3d650f2bf3df1f6269e94ec2e87453`; Chromium and encrypted PostgreSQL restore also passed on that commit. This followed upgrading `puppeteer-core` to `^25.15.0` after finding 7 high-severity development dependency advisories in an earlier audit run.
 - Historical failed runs remain in GitHub for audit purposes; they do **not** have to be rewritten as passed. Later green checks supersede earlier failures for the same tested behavior.
 
 ## Implemented
