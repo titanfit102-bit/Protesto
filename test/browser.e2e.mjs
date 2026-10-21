@@ -5,6 +5,7 @@ import {setTimeout as pause} from "node:timers/promises";
 import puppeteer from "puppeteer-core";
 import pg from "pg";
 import {hashPassword} from "../src/server/security.mjs";
+import {checkAccessibility} from "./accessibility.smoke.mjs";
 
 const chrome=process.env.CHROME_PATH||"/usr/bin/google-chrome";
 const host="http://127.0.0.1:4174";
@@ -62,10 +63,14 @@ try{
  await page.setViewport({width:1280,height:800});
  await page.goto(host+"/pilot.html",{waitUntil:"networkidle0"});
  await waitVisible(page,"#auth-section");
+ await checkAccessibility(page,"pilot login");
+ await page.keyboard.press("Tab");
+ assert.notEqual(await page.evaluate(()=>document.activeElement?.tagName),"BODY","Pilot must have keyboard focus");
  log("login form loaded");
  await fillForm(page,"#login-form",{email:accounts[0].email,password:accounts[0].password});
  await clickText(page,"#login-form","Hyr në pilot");
  await waitVisible(page,"#authenticated");
+ await checkAccessibility(page,"authenticated reporter");
  log("reporter logged in");
  const title="Raport browser "+unique;
  await fillForm(page,"#case-form",{
@@ -81,6 +86,7 @@ try{
  await fillForm(page,"#login-form",{email:accounts[1].email,password:accounts[1].password});
  await clickText(page,"#login-form","Hyr në pilot");
  await waitVisible(page,"#review-section");
+ await checkAccessibility(page,"reviewer dashboard");
  await page.waitForFunction(t=>[...document.querySelectorAll("#review-cases h3")].some(x=>x.textContent===t),{timeout:12000},title);
  const caseIndex=await page.evaluate(t=>[...document.querySelectorAll("#review-cases .pilot-card")].findIndex(el=>el.querySelector("h3")?.textContent===t),title);
  assert.ok(caseIndex>=0);
@@ -131,6 +137,7 @@ try{
  log("private pilot journey and mobile viewport passed");
  await page.goto(host+"/#cases",{waitUntil:"networkidle0"});
  await page.waitForSelector("#query");
+ await checkAccessibility(page,"demo case list");
  await page.$eval("#query",el=>{el.value="Mjedis";el.dispatchEvent(new Event("input",{bubbles:true}));});
  await page.waitForFunction(()=>document.querySelector(".result-count")?.textContent.includes("1 rezultate"),{timeout:12000});
  log("demo search filter works");
@@ -140,6 +147,9 @@ try{
   btn?.click();
  });
  await page.waitForSelector("#composer[open]");
+ await checkAccessibility(page,"open report dialog");
+ const focusInsideDialog=await page.evaluate(()=>document.querySelector("#composer")?.contains(document.activeElement));
+ assert.equal(focusInsideDialog,true,"Opening dialog should move focus inside it");
  const demoTitle="Raport demonstrimi browser "+unique;
  await fillForm(page,"#compose-form",{
   title:demoTitle,category:"Mjedis",area:"Zona demo",
