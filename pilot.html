@@ -75,6 +75,16 @@
    <section class="pilot-panel"><h2>Të dhënat e mia</h2><p>Eksporto vetëm regjistrimet e tua të këtij piloti, pa të dhëna të përdoruesve të tjerë.</p><button class="btn secondary" id="export-user-data" type="button">Eksporto të dhënat e mia (JSON)</button></section>
    <section class="pilot-panel"><h2>Kërkesat e mia për korrigjim</h2><div id="my-corrections" class="pilot-records"></div></section>
    <section class="pilot-panel"><h2>Apelimet e mia</h2><p>Nëse një korrigjim refuzohet, mund të kërkosh një shqyrtim të dytë nga verifikues tjetër.</p><div id="my-appeals" class="pilot-records"></div></section>
+   <section id="dialogue-create-section" class="pilot-panel" hidden>
+    <h2>Hap dialog qytetar</h2>
+    <p>Vetëm verifikuesi mund të hapë një temë mbi dosje tashmë të publikuar.</p>
+    <form id="dialogue-create-form" class="pilot-form">
+     <label>Dosja e verifikuar<select id="dialogue-case-select" name="caseId" required></select></label>
+     <label>Titulli i diskutimit<input name="title" minlength="8" maxlength="140" required></label>
+     <label>Konteksti neutral<textarea name="description" minlength="35" maxlength="1200" rows="3" required></textarea></label>
+     <button class="btn primary" type="submit">Hap diskutimin</button>
+    </form>
+   </section>
    <section id="review-section" class="pilot-panel" hidden>
     <h2>Radhë verifikimi</h2>
     <p>Publiko vetëm pas kontrollit të provave, privatësisë dhe të drejtës së përgjigjes. Nuk mund të verifikosh raportimin tënd.</p>
@@ -82,6 +92,7 @@
     <h3>Nismat dhe tubimet në pritje</h3><div id="review-actions" class="pilot-records"></div>
     <h3>Kërkesat për korrigjim</h3><div id="review-corrections" class="pilot-records"></div>
     <h3>Apelime në pritje</h3><div id="review-appeals" class="pilot-records"></div>
+    <h3>Deklarata për dialogun qytetar</h3><div id="review-dialogue-statements" class="pilot-records"></div>
    </section>
   </div>
   <section class="pilot-panel">
@@ -89,6 +100,26 @@
    <div id="public-cases" class="pilot-records"></div>
   </section>
   <section class="pilot-panel"><h2>Nisma dhe tubime të publikuara pas verifikimit</h2><div id="public-actions" class="pilot-records"></div></section>
+  <section class="pilot-panel" id="dialogue-section">
+   <h2>Dialogu Qytetar</h2>
+   <p>Diskutime të moderuara mbi dosje të verifikuara. Rezultatet nuk janë sondazh përfaqësues dhe nuk përdoren për profilizim politik.</p>
+   <label class="pilot-dialogue-review-label">Zgjidh temën
+    <select id="dialogue-topic-select"><option value="">Zgjidh diskutimin...</option></select>
+   </label>
+   <div id="dialogue-details" class="pilot-records" aria-live="polite"></div>
+   <form id="dialogue-statement-form" class="pilot-form" hidden>
+    <label>Propozo një deklaratë për diskutim<textarea name="body" minlength="25" maxlength="360" rows="3" required></textarea></label>
+    <button class="btn primary" type="submit">Dërgo deklaratën për moderim</button>
+   </form>
+   <fieldset id="dialogue-vote-consent" class="pilot-checklist" hidden>
+    <legend>Privatësia për pjesëmarrjen</legend>
+    <label><input type="checkbox" id="dialogue-consent"> Kuptoj se zgjedhja ime ruhet përkohësisht me identifikues pseudonim, mund të ndryshohet derisa tema të mbyllet dhe fshihet në mbyllje. Rezultatet agregohen vetëm me të paktën 10 përgjigje.</label>
+   </fieldset>
+   <form id="dialogue-close-form" class="pilot-form" hidden>
+    <label>Arsyetimi i mbylljes së diskutimit<textarea name="note" minlength="20" maxlength="1000" rows="2" required></textarea></label>
+    <button class="btn subtle" type="submit">Mbyll diskutimin dhe finalizo rezultatet</button>
+   </form>
+  </section>
   <section class="pilot-panel"><h2>Regjistri publik i transparencës</h2><p>Kjo listë shfaq vetëm datat dhe llojin e veprimit për dosje të publikuara më parë. Nuk përmban identitete, shënime private ose pretendime të arkivuara.</p><div id="public-ledger" class="pilot-records" aria-live="polite"></div></section>
   <p class="pilot-disclaimer">Mos vendos të dhëna sensitive ose identitete private pa bazë ligjore. Në këtë pilot nuk ka mekanizëm për përpunimin e sigurt të raportimeve konfidenciale.</p>
  </main>
