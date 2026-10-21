@@ -35,3 +35,18 @@ Do not promote this PR to main or deploy publicly without owner approval. If the
 - Basic editorial queue only; moderation standards and independent review are not yet formally audited.
 - No browser E2E proof yet.
 - No real data source integrations or AI investigator yet.
+
+## Evidence review in the private pilot
+
+A case with a URL is created with the source **pending**. The independent reviewer opens "Burimet dhe verifikimi", checks the link manually, records a reason and accepts/rejects it. Publication requires at least one accepted source and three explicit editorial acknowledgements. Later sources can be added by the author only while pending.
+
+Correction requests appear in a separate reviewer queue. **Acceptance withdraws publication** rather than rewriting history silently; rejection retains the existing record. These queues are not equivalent to a complete institutional right-of-reply, legal appeal or public correction notice process.
+
+## Browser automation
+
+CI launches a preinstalled Chromium and a disposable PostgreSQL instance, covering login, source acceptance, review/publish, citizen correction and withdrawal. Run locally only in an isolated test database:
+
+    npm run db:migrate
+    CHROME_PATH=/path/to/chromium npm run test:e2e
+
+Never run E2E tests against real user data or a production database: tests insert fictitious accounts and cases.

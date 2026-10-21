@@ -13,3 +13,6 @@
 | ADR-009 | No attendee lists or political preference profiling | Minimize sensitive data and safety risks | Do not change without expert review |
 | ADR-010 | AI integration deferred until provenance and editorial verification | Avoid fabricated or misleading claims | Evidence pipeline proven |
 | ADR-011 | Work on feature branch and Draft PR | Owner retains control of merge/production | Explicit owner approval |
+| ADR-012 | Source links are separately reviewed before case publication | Prevent unreviewed evidence links being displayed as verified | Provenance and archived snapshots |
+| ADR-013 | Citizen corrections can cause case withdrawal, never silent editing | Preserve accountability and auditability | Public correction ledger and appeal policy |
+| ADR-014 | End-to-end Chromium test runs against disposable database | Verify the actual browser workflow, not only API mocks | Multi-device QA |

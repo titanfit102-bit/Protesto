@@ -43,3 +43,16 @@ Node domain/security suites and PostgreSQL integration tests run in GitHub Actio
 5. Closed pilot with real editorial staff; explicit owner approval before any public deployment or main branch merge.
 
 See `docs/RELEASE_GATES.md` for complete criteria. Prototype completion is not product completion.
+
+## Implementation delta: evidence and citizen corrections (v0.3)
+
+- Schema 004: traceable \`case_sources\` (pending/accepted/rejected), \`case_corrections\` (pending/accepted/rejected).
+- Initial case URL automatically creates a pending source; the author can supply additional links with context.
+- Reviewer accepts/rejects a source with a recorded reason. Publication requires >=1 accepted source and explicit editorial checklist flags.
+- Public case summaries expose an accepted source only, not the reporter's unreviewed link.
+- Citizen correction request is non-public and independently reviewed; acceptance withdraws the published case transactionally with audit record. Rejections leave the publication intact.
+- Browser E2E tests cover reporter → source review → publication → correction → retraction and demo search/local storage.
+- More source provenance, public correction notices, appeals and independent oversight remain mandatory production gates.
+
+### Decision rule
+A reviewer checkbox proves acknowledgement, **not** truthfulness of a claim. This pilot must not be used for sensitive accusations without independent editorial policies and legal/privacy review. No external document fetching or AI fact assertions are in service.

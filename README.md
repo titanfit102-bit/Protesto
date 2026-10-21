@@ -59,3 +59,17 @@ For PostgreSQL integration tests export `DATABASE_URL` and run migrations first.
 Apply the same standards to every political party and government. Only nonviolent lawful civic organization; no propaganda bots, individualized political targeting, gathering participant lists, doxxing or automatic accusations.
 
 **Repo policy:** Changes remain on `feat/protesto-foundation` as draft PR. Do not merge into `main` or publicly deploy without the owner's separate approval.
+
+## Evidence and corrections (private pilot)
+
+- Every case with an initial HTTPS link receives a **pending source** record.
+- A separate reviewer must inspect and accept at least one source before publication. A three-part checklist acknowledges source inspection, privacy review and consideration of right of reply.
+- Case authors can attach more HTTPS sources while their case is pending (limit eight). Approval is recorded in the audit trail.
+- Authenticated citizens can request a correction of published material. Independent reviewers may reject the request or accept it and withdraw the published case while recording the decision.
+- These controls do **not** cryptographically verify documents, prove facts, or constitute a legally compliant right-of-reply program. The public platform is not launched.
+
+See [Evidence and corrections](docs/EVIDENCE_AND_CORRECTIONS.md) and [release gates](docs/RELEASE_GATES.md).
+
+## Browser E2E checks
+
+\`npm run test:e2e\` executes real Chromium checks with a disposable development PostgreSQL database and test accounts. It requires \`CHROME_PATH\` and the pilot environment. GitHub Actions runs the check on draft PRs, not public hosting.
