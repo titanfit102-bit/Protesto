@@ -25,3 +25,7 @@
 | ADR-021 | Public ledger exposes UUID, event type and timestamp only | Provide accountability for withdrawals without republishing contested claims or sensitive identities | Public corrections/appeals policy reviewed |
 | ADR-022 | One-time appeal of rejected corrections, decided by independent second reviewer | Preserve original decision and reduce unilateral moderation mistakes | Formal appeals policy and due-process review |
 | ADR-023 | Central atomic PostgreSQL counters using HMAC identity keys | Prevent per-instance throttling bypass and avoid storing raw IP/email in quota table | Gateway abuse prevention, distributed scale, data retention |
+| ADR-024 | Deliberation based on verified civic cases and independent statement moderation | Keep discussions grounded and prevent automatic public allegations | Full independent editorial governance |
+| ADR-025 | No real-time counts; show finalized totals only when 10+ responses | Reduce exposure and participant bandwagon effects without implying anonymity | Formal privacy/statistical review |
+| ADR-026 | Store keyed per-statement vote pseudonyms, then purge vote rows on closure | No plaintext participant ID in vote table and no ongoing post-close individual responses | Backup retention and data rights |
+| ADR-027 | Original code inspired only by Polis concepts; no AGPL source-code reuse | Keep IP/licensing obligations explicit | Any later source-code integration requires legal review |
