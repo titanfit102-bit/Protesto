@@ -5,6 +5,7 @@ import {randomUUID} from "node:crypto";
 import {validateCase,cleanText} from "../domain.mjs";
 import {actionRoute,actionGetRoutes,actionPostRoute} from "./actions.mjs";
 import {dossierRoute,dossierGetRoute,dossierPostRoute} from "./dossiers.mjs";
+import {appealRoute,appealGetRoute,appealPostRoute} from "./appeals.mjs";
 import {normalizeEmail,verifyPassword,newSessionToken,tokenHash,parseSessionCookie,sessionCookie,clearSessionCookie,secureWrite,canReview,SESSION_AGE_SECONDS} from "./security.mjs";
 
 const publicAssets=new Map([
@@ -78,11 +79,15 @@ export function createPilotServer(pool,{origin,production=false}={}){
   const isArchive=/^\/api\/archive\/[^/]+$/.test(pathname);
   const getRoutes=["/api/public/cases","/api/public/ledger","/api/me","/api/me/export","/api/cases/mine","/api/review/queue"];
   const postRoutes=["/api/auth/login","/api/auth/logout","/api/cases"];
-  if(!(req.method==="GET"&&(getRoutes.includes(pathname)||actionGetRoutes.includes(pathname)||dossierGetRoute(pathname)))&&!(req.method==="POST"&&(postRoutes.includes(pathname)||isReview||isArchive||actionPostRoute(pathname)||dossierPostRoute(pathname)))){
+  if(!(req.method==="GET"&&(getRoutes.includes(pathname)||actionGetRoutes.includes(pathname)||dossierGetRoute(pathname)||appealGetRoute(pathname)))&&!(req.method==="POST"&&(postRoutes.includes(pathname)||isReview||isArchive||actionPostRoute(pathname)||dossierPostRoute(pathname)||appealPostRoute(pathname)))){
    return fail(res,404,"API endpoint nuk ekziston.");
   }
   if(req.method==="POST"&&!secureWrite(req,origin))return fail(res,403,"Kërkesë e bllokuar nga mbrojtja CSRF.");
   try{
+   if(pathname==="/api/appeals"||pathname.startsWith("/api/appeals/")){
+    const current=await auth(req);
+    return await appealRoute({pathname,req,res,pool,user:current,json,fail,readJSON});
+   }
    if(pathname==="/api/corrections"||pathname.startsWith("/api/corrections/")||pathname.startsWith("/api/dossiers/")){
     const current=await auth(req);
     return await dossierRoute({pathname,req,res,pool,user:current,json,fail,readJSON});
