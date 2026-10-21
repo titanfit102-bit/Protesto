@@ -120,3 +120,8 @@ No live results are shown. On topic closure, counts are published only for state
 The pilot now requires a distinct secret PROTESTO_DIALOGUE_SECRET (32+ characters) as well as PROTESTO_RATE_LIMIT_SECRET. Keep both outside GitHub. Detailed design, privacy and licensing: [Polis-inspired dialogue design](docs/POLIS_DESIGN_ADAPTATION.md). Original Polis AGPLv3 source is **not copied** into Protesto.
 
 **Verified build:** [GitHub Actions run #39687784143](https://github.com/titanfit102-bit/Protesto/actions/runs/39687784143) passed **18/18 Node tests**, PostgreSQL migrations, original browser E2E and dedicated dialogue Chromium E2E, dependency audit, and encrypted PostgreSQL restore. This is a private synthetic pilot, not approval to collect live political opinions or deploy.
+
+
+### Descriptive dialogue results
+
+The private pilot also offers a public summary and download of **finalized aggregate** responses through GET /api/dialogue/report (JSON, format protesto-dialogue-aggregates/1). It excludes open discussions, sub-threshold statements and topics whose civic cases have been withdrawn, and never exports raw voter keys or account IDs. Treat it as descriptive participation within this pilot, not verified consensus across opinion groups or a population poll.

@@ -51,3 +51,7 @@ In [run #39670591638](https://github.com/titanfit102-bit/Protesto/actions/runs/3
 | Independent security assessment, specialist privacy/legal approval | OPEN / P0 |
 
 [Green Actions #39687784143](https://github.com/titanfit102-bit/Protesto/actions/runs/39687784143) is technical proof, not authorization to deploy or collect sensitive information. Polis inspiration is conceptual; no AGPL licensed source code is incorporated.
+
+
+## Descriptive dialogue export, October 22, 2026
+The public dialogue report includes only closed-topic aggregates with >=10 respondents, and filters out cases subsequently archived. Unit/integration checks plus browser smoke passed on the implementation revision ([run #39688457772](https://github.com/titanfit102-bit/Protesto/actions/runs/39688457772)). This does not make it a representative survey, a consensus across opinion clusters, a general civic mandate, or a legally approved sensitive-data program.

@@ -75,3 +75,10 @@ Prioritize meaningful release blockers rather than counting extra features as co
 **Limitations:** a ten-response threshold and finalized-only tally do not confer anonymity or statistically representative polling. Vote identifiers are keyed pseudonyms linked to accounts by the server's secret; vote records may survive on earlier backup copies. Critical open items: processing lawful basis/DPIA, informed participant notices, pseudonym and backup retention, countering fake accounts, editorial disputes, anti-harassment and unbiased discussion rules, independent threat assessment, manual accessibility testing and real user acceptance.
 
 **Next phases:** structured, independently reviewed institutional-response tracking plus source-cited aggregate reporting; only later consider any privacy-audited opinion clustering or human-reviewed AI. Never turn dialogue into individual political persuasion or targeting.
+
+
+## Additional dialogue reporting (2026-10-22)
+- Added descriptive public report GET /api/dialogue/report and a visible downloadable JSON report for finalized eligible statements, with self-selection caveats and links to the topic and source accepted by reviewers.
+- Integration tests ensure open topics, sub-threshold statements and cases subsequently archived are excluded. No private participant identities are exported.
+- This is **not** an AI report, PCA analysis, political targeting mechanism or statistical proof of agreement across demographic groups. It is a transparent descriptive tally for consenting pilot participants.
+- [GitHub Actions run #39688457772](https://github.com/titanfit102-bit/Protesto/actions/runs/39688457772) completed its Node, migration, Chromium, audit and encrypted recovery steps successfully on the tested commit. The final documentation-only commit should have its own CI status checked.

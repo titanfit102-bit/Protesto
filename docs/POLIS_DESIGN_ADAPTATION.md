@@ -59,8 +59,13 @@ Existing CSRF and per-user write quotas apply. Schema: db/007_civic_dialogue.sql
 6. No PCA, clustering, AI narratives or prediction are deployed; these need privacy and statistical review first.
 
 ## Staged follow-up
-- V2: well-labeled aggregate reports, transparent source-linked consensus candidates, editorial correction history and institutional answers; no unsupported population claims.
+- V2 **partly implemented**: a read-only aggregate JSON report and pilot presentation/export for finalized >=10-response statements. Still missing: independently reviewed public correction history for dialogue, formal cross-group consensus evidence and institutional response tracking. No unsupported population claims.
 - V3 (after privacy/statistics clearance): optional suitably anonymized clustering, transparent methodology, small-group suppression and independently evaluated source-cited AI.
 
 ## Licensing
 Polis uses AGPLv3 with an additional permission in section 7. Copying or combining its code in network software can trigger obligations to release the corresponding source. This module was independently implemented using only general ideas from deliberation design. A legal license review is needed before any later literal source-code reuse. This document is engineering guidance, not legal advice.
+
+
+### Implemented V2 slice: aggregate report (2026-10-22)
+
+GET /api/dialogue/report returns only aggregated counts finalized at topic closure, from accepted statements linked to currently published cases. The JSON response carries a versioned format id, methodology, sample threshold and a prominent non-representative warning. No raw voting data, public identity, account labels or participant groups are exported. The pilot provides a JSON download and references the associated topic and its accepted source link when available. It does **not** calculate a Polis-style cross-group consensus measure or claim representation of the population.

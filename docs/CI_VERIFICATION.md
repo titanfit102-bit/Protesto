@@ -41,3 +41,6 @@
 The unit/integration command automatically discovers test/dialogue.integration.test.mjs and checks permission boundaries, moderation, consent, unpublished results, >=10 private threshold, finalized tallies, pseudonymous temporary voting and deletion, and archived-case visibility. Browser E2E now runs **both** the general application flow and test/dialogue.browser.e2e.mjs (topic creation, statement moderation, consent-gated voting, close, mobile/accessibility smoke).
 
 [Run #39687784143 — success](https://github.com/titanfit102-bit/Protesto/actions/runs/39687784143): 18 passing Node test cases plus both Chromium journeys and encrypted restore drill. Only synthetic accounts and synthetic civic issues are used. These checks do not establish population representativeness or legal compliance.
+
+
+- [Descriptive aggregate dialogue report checks — run #39688457772](https://github.com/titanfit102-bit/Protesto/actions/runs/39688457772): verified hidden open-topic tallies, <=9 response suppression, case-archival exclusion, 18 Node tests, browser E2E, dependency audit and encrypted database restoration.
