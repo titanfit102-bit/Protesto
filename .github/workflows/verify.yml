@@ -48,8 +48,21 @@ jobs:
           CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
           if [ -z "$CHROME" ]; then echo 'Chrome is not installed in runner'; exit 1; fi
           echo "CHROME_PATH=$CHROME" >> "$GITHUB_ENV"
+      - name: Build private offline HTML preview (no deployment)
+        run: node tools/build-offline-preview.mjs
+      - name: Capture real browser demo screenshots
+        run: node tools/preview-demo-screenshots.mjs
       - name: Chromium end-to-end journey and accessibility smoke
+        env:
+          PROTESTO_CAPTURE_PREVIEW: '1'
         run: npm run test:e2e
+      - name: Upload offline preview and screenshots as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Protesto-Preview-Offline
+          path: dist-preview/
+          retention-days: 14
+          if-no-files-found: error
       - name: Verify PostgreSQL client tools are available
         run: |
           command -v pg_dump
