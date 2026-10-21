@@ -125,7 +125,37 @@ try{
  const size=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,viewport:document.documentElement.clientWidth}));
  assert.ok(size.scroll<=size.viewport+2,"Mobile overflow: "+JSON.stringify(size));
  log("mobile viewport has no horizontal page overflow");
- console.log("Chromium E2E passed: reporter → sources → reviewer → publication → correction → retraction.");
+ log("private pilot journey and mobile viewport passed");
+ await page.goto(host+"/#cases",{waitUntil:"networkidle0"});
+ await page.waitForSelector("#query");
+ await page.$eval("#query",el=>{el.value="Mjedis";el.dispatchEvent(new Event("input",{bubbles:true}));});
+ await page.waitForFunction(()=>document.querySelector(".result-count")?.textContent.includes("1 rezultate"),{timeout:12000});
+ log("demo search filter works");
+ await page.$eval("#query",el=>{el.value="";el.dispatchEvent(new Event("input",{bubbles:true}));});
+ await page.evaluate(()=>{
+  const btn=[...document.querySelectorAll('[data-compose="case"]')].find(x=>x.offsetParent!==null);
+  btn?.click();
+ });
+ await page.waitForSelector("#composer[open]");
+ const demoTitle="Raport demonstrimi browser "+unique;
+ await fillForm(page,"#compose-form",{
+  title:demoTitle,category:"Mjedis",area:"Zona demo",
+  description:"Test i përmbajtjes lokale në shfletues, pa pretendime për institucione reale.",
+  source:"https://example.org/example"
+ });
+ await clickText(page,"#compose-form","Ruaj lokalisht →");
+ await page.waitForFunction(t=>[...document.querySelectorAll("#content .record h3")].some(x=>x.textContent===t),{timeout:12000},demoTitle);
+ assert.ok((await page.evaluate(()=>localStorage.getItem("protesto.demo.v1"))).includes(demoTitle));
+ await page.reload({waitUntil:"networkidle0"});
+ await page.waitForFunction(t=>[...document.querySelectorAll("#content .record h3")].some(x=>x.textContent===t),{timeout:12000},demoTitle);
+ page.once("dialog",async dialog=>dialog.accept());
+ await page.click("#reset-btn");
+ await page.waitForFunction(t=>![...document.querySelectorAll("#content .record h3")].some(x=>x.textContent===t),{timeout:12000},demoTitle);
+ const demoSize=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,viewport:document.documentElement.clientWidth}));
+ assert.ok(demoSize.scroll<=demoSize.viewport+2,"Demo mobile overflow: "+JSON.stringify(demoSize));
+ log("demo case creation, local persistence, reset and mobile layout passed");
+ console.log("Chromium E2E passed: pilot publication/corrections and browser-only demo.");
+
 }finally{
  if(browser)await browser.close();
  await pool.end();
