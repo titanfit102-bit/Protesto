@@ -6,6 +6,7 @@ import {validateCase,cleanText} from "../domain.mjs";
 import {actionRoute,actionGetRoutes,actionPostRoute} from "./actions.mjs";
 import {dossierRoute,dossierGetRoute,dossierPostRoute} from "./dossiers.mjs";
 import {appealRoute,appealGetRoute,appealPostRoute} from "./appeals.mjs";
+import {dialogueRoute,dialogueGetRoute,dialoguePostRoute} from "./dialogue.mjs";
 import {rateKey,consumeRateLimit} from "./rate-limits.mjs";
 import {normalizeEmail,verifyPassword,newSessionToken,tokenHash,parseSessionCookie,sessionCookie,clearSessionCookie,secureWrite,canReview,SESSION_AGE_SECONDS} from "./security.mjs";
 
@@ -19,7 +20,8 @@ const publicAssets=new Map([
  ["/src/domain.mjs",["../domain.mjs","text/javascript; charset=utf-8"]],
  ["/src/seed.mjs",["../seed.mjs","text/javascript; charset=utf-8"]],
  ["/src/pilot.mjs",["../pilot.mjs","text/javascript; charset=utf-8"]],
- ["/src/pilot-evidence.mjs",["../pilot-evidence.mjs","text/javascript; charset=utf-8"]]
+ ["/src/pilot-evidence.mjs",["../pilot-evidence.mjs","text/javascript; charset=utf-8"]],
+ ["/src/pilot-dialogue.mjs",["../pilot-dialogue.mjs","text/javascript; charset=utf-8"]]
 ]);
 const idFormat=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const json=(res,status,data,headers={})=>{
@@ -41,12 +43,13 @@ async function readJSON(req){
   return parsed;
  }catch{throw {status:400,message:"JSON i pavlefshëm."};}
 }
-export function createPilotServer(pool,{origin,production=false,rateLimitSecret=process.env.PROTESTO_RATE_LIMIT_SECRET}={}){
+export function createPilotServer(pool,{origin,production=false,rateLimitSecret=process.env.PROTESTO_RATE_LIMIT_SECRET,dialogueSecret=process.env.PROTESTO_DIALOGUE_SECRET}={}){
  if(typeof pool?.query!=="function"||typeof pool?.connect!=="function")throw Error("PostgreSQL pool missing.");
  if(typeof origin!=="string"||!/https?:\/\/[^/]+$/.test(origin))throw Error("APP_ORIGIN missing or invalid.");
  if(production&&!origin.startsWith("https://"))throw Error("HTTPS required in production.");
  // Reject missing or unstable cross-instance rate-limit secret at startup.
  rateKey(rateLimitSecret,"startup","check");
+ rateKey(dialogueSecret,"dialogue-startup","check");
  const auth=async(req)=>{
   const token=parseSessionCookie(req.headers.cookie);
   if(!token)return null;
@@ -81,11 +84,20 @@ export function createPilotServer(pool,{origin,production=false,rateLimitSecret=
   const isArchive=/^\/api\/archive\/[^/]+$/.test(pathname);
   const getRoutes=["/api/public/cases","/api/public/ledger","/api/me","/api/me/export","/api/cases/mine","/api/review/queue"];
   const postRoutes=["/api/auth/login","/api/auth/logout","/api/cases"];
-  if(!(req.method==="GET"&&(getRoutes.includes(pathname)||actionGetRoutes.includes(pathname)||dossierGetRoute(pathname)||appealGetRoute(pathname)))&&!(req.method==="POST"&&(postRoutes.includes(pathname)||isReview||isArchive||actionPostRoute(pathname)||dossierPostRoute(pathname)||appealPostRoute(pathname)))){
+  if(!(req.method==="GET"&&(getRoutes.includes(pathname)||actionGetRoutes.includes(pathname)||dossierGetRoute(pathname)||appealGetRoute(pathname)||dialogueGetRoute(pathname)))&&!(req.method==="POST"&&(postRoutes.includes(pathname)||isReview||isArchive||actionPostRoute(pathname)||dossierPostRoute(pathname)||appealPostRoute(pathname)||dialoguePostRoute(pathname)))){
    return fail(res,404,"API endpoint nuk ekziston.");
   }
   if(req.method==="POST"&&!secureWrite(req,origin))return fail(res,403,"Kërkesë e bllokuar nga mbrojtja CSRF.");
   try{
+   if(pathname.startsWith("/api/dialogue/")){
+    const current=await auth(req);
+    // Existing global write quota remains in force for every dialogue mutation.
+    if(req.method==="POST"&&current){
+     const q=await consumeRateLimit(pool,rateKey(rateLimitSecret,"write-user",current.id),{limit:120,windowSeconds:3600});
+     if(!q.allowed)return json(res,429,{error:"Shumë kërkesa. Provo më vonë."},{"Retry-After":String(q.retrySeconds)});
+    }
+    return await dialogueRoute({pathname,req,res,pool,user:current,json,fail,readJSON,dialogueSecret});
+   }
    if(req.method==="POST"&&pathname!=="/api/auth/login"&&pathname!=="/api/auth/logout"){
     const currentUser=await auth(req);
     if(currentUser){
