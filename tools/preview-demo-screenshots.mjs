@@ -19,7 +19,7 @@ try{
  assert.deepEqual(errors,[],"Offline preview JS must run without page errors");
  await page.screenshot({path:join(folder,"01-desktop.png"),fullPage:true});
  await page.goto("file://"+html+"#cases",{waitUntil:"load"});
- await page.waitForFunction(()=>document.querySelector("#content h1")?.textContent.toLowerCase().includes("dosje"),{timeout:10000});
+ await page.waitForSelector("#content .filters",{timeout:10000});
  await page.screenshot({path:join(folder,"02-dosjet.png"),fullPage:true});
  await page.setViewport({width:390,height:844,deviceScaleFactor:1,isMobile:true});
  await page.goto("file://"+html+"#overview",{waitUntil:"load"});
