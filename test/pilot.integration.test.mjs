@@ -52,9 +52,39 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
   const reviewCookie=r.cookie.split(";")[0];
   r=await send("/api/review/queue",{cookie:reviewCookie});assert.equal(r.status,200);
   assert.ok(r.json.items.some(x=>x.id===caseId));
+  r=await send("/api/dossiers/"+caseId+"/sources");
+  assert.equal(r.status,404); // pending dossier is private
+  r=await send("/api/dossiers/"+caseId+"/sources",{cookie:reporterCookie});
+  assert.equal(r.status,200);
+  assert.equal(r.json.items.length,1);
+  const sourceId=r.json.items[0].id;
+  assert.equal(r.json.items[0].state,"pending");
+  r=await send("/api/dossiers/"+caseId+"/sources/"+sourceId+"/review",{method:"POST",cookie:reporterCookie,body:{decision:"accepted",note:"Vetëverifikimi duhet të refuzohet gjithmonë."}});
+  assert.equal(r.status,403);
+  r=await send("/api/dossiers/"+caseId+"/sources/"+sourceId+"/review",{method:"POST",cookie:reviewCookie,body:{decision:"accepted",note:"Burimi u hap dhe përputhja u kontrollua manualisht."}});
+  assert.equal(r.status,200);
+  r=await send("/api/dossiers/"+caseId+"/sources/"+sourceId+"/review",{method:"POST",cookie:reviewCookie,body:{decision:"accepted",note:"Vendim i dyfishtë nuk lejohet."}});
+  assert.equal(r.status,409);
+
   r=await send("/api/review/"+caseId,{method:"POST",cookie:reviewCookie,body:{decision:"published",note:"Short"}});assert.equal(r.status,422);
-  r=await send("/api/review/"+caseId,{method:"POST",cookie:reviewCookie,body:{decision:"published",note:"Burimi u verifikua dhe është i përshtatshëm për demonstrim."}});assert.equal(r.status,200);
+  const checklist={sourceReviewed:true,privacyReviewed:true,replyConsidered:true};
+  r=await send("/api/review/"+caseId,{method:"POST",cookie:reviewCookie,body:{decision:"published",note:"Burimi u verifikua, por mungon checklist."}});
+  assert.equal(r.status,422);
+  r=await send("/api/review/"+caseId,{method:"POST",cookie:reviewCookie,body:{decision:"published",note:"Burimi u verifikua dhe është i përshtatshëm për demonstrim.",checks:checklist}});assert.equal(r.status,200);
   r=await send("/api/review/"+caseId,{method:"POST",cookie:reviewCookie,body:{decision:"rejected",note:"A second decision must be rejected."}});assert.equal(r.status,409);
+  r=await send("/api/public/cases");assert.ok(r.json.items.some(x=>x.id===caseId));
+  r=await send("/api/dossiers/"+caseId+"/sources");
+  assert.equal(r.status,200);assert.equal(r.json.items.length,1);
+  assert.equal(r.json.items[0].state,"accepted");
+  r=await send("/api/corrections",{method:"POST",cookie:reporterCookie,body:{caseId,reason:"Kërkoj një kontroll tjetër mbi informacionin e paraqitur në këtë dosje."}});
+  assert.equal(r.status,201);const correctionId=r.json.item.id;
+  r=await send("/api/corrections/queue",{cookie:reporterCookie});assert.equal(r.status,403);
+  r=await send("/api/corrections/queue",{cookie:reviewCookie});assert.equal(r.status,200);
+  assert.ok(r.json.items.some(x=>x.id===correctionId));
+  r=await send("/api/corrections/review/"+correctionId,{method:"POST",cookie:reporterCookie,body:{decision:"accepted",note:"Unë nuk mund ta miratoj kërkesën time për korrigjim."}});
+  assert.equal(r.status,403);
+  r=await send("/api/corrections/review/"+correctionId,{method:"POST",cookie:reviewCookie,body:{decision:"rejected",note:"Kërkesa nuk përmban prova të reja të mjaftueshme."}});
+  assert.equal(r.status,200);
   r=await send("/api/public/cases");assert.ok(r.json.items.some(x=>x.id===caseId));
   const audit=await pool.query("SELECT count(*)::integer AS n FROM audit_entries WHERE object_id=$1",[caseId]);
   assert.equal(audit.rows[0].n,1);
@@ -86,6 +116,21 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
    description:"Tubim demonstrues për të testuar regjistrimin e një ngjarjeje pa pjesëmarrës realë."
   }});
   assert.equal(r.status,201);
+
+  // A second published case can be withdrawn by an accepted correction request.
+  r=await send("/api/cases",{method:"POST",cookie:reporterCookie,body:{...sample,title:"Rast i dytë për korrigjime"}});
+  assert.equal(r.status,201);const secondId=r.json.item.id;
+  r=await send("/api/dossiers/"+secondId+"/sources",{cookie:reviewCookie});
+  const secondSource=r.json.items[0].id;
+  r=await send("/api/dossiers/"+secondId+"/sources/"+secondSource+"/review",{method:"POST",cookie:reviewCookie,body:{decision:"accepted",note:"Burimi fiktiv i testit kaloi verifikimin."}});
+  assert.equal(r.status,200);
+  r=await send("/api/review/"+secondId,{method:"POST",cookie:reviewCookie,body:{decision:"published",note:"Kontrolli editorial për testin u përfundua.",checks:checklist}});
+  assert.equal(r.status,200);
+  r=await send("/api/corrections",{method:"POST",cookie:reporterCookie,body:{caseId:secondId,reason:"Dokumenti është kundërshtuar dhe rasti kërkon tërheqje për verifikim të ri."}});
+  assert.equal(r.status,201);const secondCorrection=r.json.item.id;
+  r=await send("/api/corrections/review/"+secondCorrection,{method:"POST",cookie:reviewCookie,body:{decision:"accepted",note:"Për arsye të provave të kundërta publikohet tërheqja."}});
+  assert.equal(r.status,200);
+  r=await send("/api/public/cases");assert.ok(!r.json.items.some(x=>x.id===secondId));
   r=await send("/api/auth/logout",{method:"POST",cookie:reporterCookie,body:{}});
   assert.equal(r.status,200);
   r=await send("/api/me",{cookie:reporterCookie});assert.equal(r.status,401);
