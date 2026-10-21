@@ -1,42 +1,31 @@
-# PROTESTO — RELEASE GATES
+# PROTESTO — EVIDENCE-BASED RELEASE GATES
 
-No real public launch unless all mandatory gates are satisfied and the owner separately approves public deployment and any costs.
+**Scope:** nonpartisan civic transparency platform, lawful peaceful participation, privacy-sensitive reporting. An automated passing test is evidence for the specific tested workflow, not a blanket approval for production.
 
-| Gate | Evidence required | Current |
+| Gate | Minimum production evidence | Status |
 |---|---|---|
-| Product | Real-user pilot validates critical reports workflow | OPEN |
-| Data integrity | Migration, concurrent update, retention and restore tests | PARTIAL |
-| Access control | Automated and manual authentication / RBAC verification | PARTIAL |
-| Editorial safety | Independent source review and corrections exist; appeals and formal right of reply still missing | PARTIAL |
-| Privacy/legal | Policies, DPIA where applicable, professional local review | OPEN |
-| Platform | HTTPS, secure cookies, CSP, isolation, service monitoring | PARTIAL |
-| QA | Domain, PostgreSQL integration and Chromium E2E automated; accessibility and independent audit pending | PARTIAL |
-| Operations | Backups, alerting, response owner, rollback playbook | OPEN |
-| Sources / AI | Manually reviewed URL references; document provenance and AI checks not yet available | PARTIAL |
-| Decision | Explicit merge and public deployment authorization | OPEN |
+| Browser demo correctness | Validated forms, navigation, filtering, storage and mobile behavior | VERIFIED for tested flows |
+| Pilot core workflow | Authentication, PostgreSQL, RBAC, moderated evidence, publication/retraction and audit | VERIFIED for automated cases; manual audit pending |
+| Data recovery test | Encrypted archive, tamper rejection, empty-database restore, row parity | VERIFIED in disposable CI database; operational backups still OPEN |
+| Dependency audit | No high/critical npm findings in the scoped dependency set | VERIFIED for runtime dependencies in run #39666863606; all-dependency scan running on newer commit |
+| JavaScript syntax | All JS module files syntax-checked in CI | VERIFIED |
+| Browser accessibility smoke | Unique IDs, accessible control labels/names, landmarks, basic keyboard focus, dialog focus | VERIFIED as smoke tests; full WCAG/accessibility audit OPEN |
+| Formal editorial safeguards | Provenance, redaction, right of reply, independent dispute/appeal workflow | PARTIAL / P0 |
+| Privacy and legal | Legal basis, data handling notices/rights, retention, necessary local counsel review | OPEN / P0 |
+| Identity/abuse | MFA where appropriate, distributed throttling, recovery/revocation, abuse review | PARTIAL / P0 |
+| Production security | Threat model, secrets management, independent security assessment, TLS validation | PARTIAL / P0 |
+| Operations | Secure offsite backup/retention, scheduled restore drills, monitoring, rollback, incident owner | PARTIAL / P0 |
+| External sources and AI | Reviewed source connectors, citations/provenance, model safety and human sign-off | NOT IMPLEMENTED / P1 |
+| Public deployment | Owner authorizes merge and launch separately | NOT AUTHORIZED |
 
-## Measurable acceptance test examples
-- Non-logged-in user cannot submit reports.
-- Reporter cannot read the moderation queue or publish content.
-- Reviewer cannot publish their own report.
-- Repeated review decisions cannot create duplicate publication entries.
-- Public pages do not expose pending reports.
-- Sensitive fields and credentials are not present in server logs or client bundles.
-- Backup restored in a separate environment matches expected data.
-- All published claims link to reviewed sources; corrections are traceable.
-- Every critical flow works on mobile and desktop with keyboard-only access.
+## Latest verified automated pipeline
 
-## Status language
-A passing unit test = a tested module, *not* a finished product. An integrated pilot with test accounts = pilot functionality, *not* production. Production-ready requires every relevant gate supported by evidence. Never use an arbitrary feature-count percentage as evidence of completeness.
+[Actions run #39666863606](https://github.com/titanfit102-bit/Protesto/actions/runs/39666863606) passed all stages for commit \`96b89f6a6f561072139498fbe7bccfe34cecafe2\`, including Chromium browser and backup/restore. A later commit extends npm audit to development dependencies; its green result, if achieved, should be cited separately.
 
-## Browser E2E details
+## What CI cannot complete
 
-The GitHub workflow uses a disposable PostgreSQL service and Chromium to test the pilot lifecycle and browser-only demo. Passing smoke tests does not establish legal compliance, content verification, resilience, production accessibility or safe public operation.
+GitHub Actions cannot itself establish that public allegations are factually correct, conduct legal/DPIA review, validate true local-government responses, obtain editorial consent, certify real backup operations, or authorize publication. These are external or human-controlled release gates.
 
-## Encrypted backup gate, October 21, 2026
+## Definition of done for production
 
-Backup encryption/decryption logic has standalone local unit-test evidence. Full PostgreSQL dump→encrypted archive→isolated restore parity is implemented as `npm run test:backup` and configured in GitHub Actions, but **has not yet run successfully on the new revision** because job initialization failed before any steps. This is **PARTIAL**, not verified operational recovery. Requires a green disposable-DB restore drill and independent offsite policy before production.
-
-## Follow-up verification: 2026-10-21
-
-Local Node crypto checks: 3/3 passed on recreated current crypto routines, including interruption and concurrent archive creation. End-to-end PostgreSQL restore and new public ledger checks cannot be counted as verified because GitHub Actions is failing at runner allocation; see [Issue #2](https://github.com/titanfit102-bit/Protesto/issues/2). Full production readiness remains **BLOCKED**.
+All P0 gates require reproducible evidence and independent review appropriate to risk, a functioning staging and production environment, documented owners and incident procedures, and the project's owner's explicit approval. Historical CI runs with failures should remain visible; a newer passing run is the current code verification baseline.

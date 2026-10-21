@@ -89,10 +89,14 @@ PROTESTO_BACKUP_SECRET=<generated-secret-of-24-or-more-characters>
 
 `npm run db:backup` creates a non-overwriting AES-256-GCM encrypted archive. `npm run db:verify-backup` verifies authentication but not restorable SQL. Only for a **new disposable database**, set `RESTORE_DATABASE_URL` and `PROTESTO_ALLOW_RESTORE=I_ACKNOWLEDGE_EMPTY_TEST_DATABASE`, then run `npm run db:restore-test`. The tool refuses nonempty targets and production mode. This is an operator-assisted pilot mechanism, not a scheduled/compliant production backup.
 
-The integration drill `npm run test:backup` requires `PROTESTO_BACKUP_TEST=1`, a throwaway PostgreSQL CI database and database creation rights. It must **never** run against real data. CI runner availability is currently unresolved; check `docs/STATUS.md` rather than assuming the restore drill passed.
+The integration drill `npm run test:backup` requires `PROTESTO_BACKUP_TEST=1`, a throwaway PostgreSQL CI database and database creation rights. It must **never** run against real data. A GitHub Actions isolated encrypted-restore drill passed in [run #39666863606](https://github.com/titanfit102-bit/Protesto/actions/runs/39666863606). This does not establish production backup readiness.
 
 ### Atomic backup publication and public ledger
 
 Backup archives are now written to a private temporary file and published only when fully encrypted and flushed, using atomic hard-link creation that refuses pre-existing destination paths. Filesystems must support local hard links. If a process crashes mid-backup, temporary `.part` files may remain and should be handled via an operator cleanup policy after inspection; they are never considered validated archives.
 
 `GET /api/public/ledger` and the pilot UI show previous publication/retraction status events without private review notes or identities. This **does not** replace a public, legally reviewed correction and appeals process. For current test evidence and blockers see `docs/STATUS.md`.
+
+## Automated quality gates
+
+GitHub Actions tests both the pilot and browser demo, checks JavaScript syntax, audits npm dependencies for high/critical findings, verifies basic accessibility and performs an isolated encrypted backup/restore drill. See [the verification matrix](docs/CI_VERIFICATION.md). Passing CI does not constitute legal, privacy or independent security certification.

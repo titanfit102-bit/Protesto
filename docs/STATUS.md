@@ -1,67 +1,49 @@
-# PROTESTO — VERIFIED PROJECT STATUS
+# PROTESTO — CURRENT VERIFIED STATUS
 
-**Recorded:** 2026-10-21  
-**Repository:** titanfit102-bit/Protesto (private)  
+**Updated:** 2026-10-21  
+**Repository:** titanfit102-bit/Protesto — **PUBLIC repository**, private-pilot application (not deployed)  
 **Working branch:** feat/protesto-foundation  
-**Review gate:** Draft PR #1; NO MERGE, NO PUBLIC DEPLOYMENT.
+**Pull request:** #1, DRAFT, unmerged. Main branch unchanged.
 
-## Real project fingerprint
-A neutral citizen reporting and peaceful participation platform. Current implementations: offline browser demo and *private* PostgreSQL pilot. The target product is larger than this pilot. The software must not be used as a covert political persuasion or voter-profiling instrument.
+## Current CI evidence
 
-## Implemented and checked
-- Responsive Albanian demo: civic cases, filters, initiatives, peaceful gatherings, local storage, JSON export and fictional examples.
-- PostgreSQL pilot: manually provisioned accounts, reporter/reviewer roles, session cookies, CSRF headers and parameterized queries.
-- Case evidence is pending until independently accepted. Case publication requires >=1 accepted source and a 3-part reviewer declaration.
-- Corrections are privately submitted and reviewed; acceptance withdraws the published case with audit history.
-- Civic initiatives and peaceful gatherings follow independent review and retraction paths. The system does not track attendees.
-- Account holder can export own pilot data without credential hashes.
-- Versioned checksum-verified SQL migrations, transactional execution and advisory lock.
-- Separate liveness/readiness endpoints.
-- Automated Node tests, PostgreSQL integration, and real Chromium browser E2E.
-- **Verification evidence:** GitHub Actions run #39639281476 passed on code commit 82b5efa6c08f0bbb0e4d59af6e52b099f5c135be, including two migration executions and browser tests. Later changes to documentation alone do not constitute new functional verification.
+- Last complete green run before expanded full dependency audit:
+  [GitHub Actions #39666863606](https://github.com/titanfit102-bit/Protesto/actions/runs/39666863606)
+  for commit \`96b89f6a6f561072139498fbe7bccfe34cecafe2\`.
+- Checks that passed: all 16 Node tests, repeatable PostgreSQL migrations, Chromium pilot and demo E2E including accessibility smoke and keyboard focus, JavaScript syntax, runtime dependency audit at high severity, AES-256-GCM encrypted archive and isolated PostgreSQL restore with matching data.
+- The earlier runner problem is **resolved** and recorded as [Issue #2](https://github.com/titanfit102-bit/Protesto/issues/2) (closed).
+- CI is now being extended to scan both runtime **and development** dependencies. See the latest run on PR #1 for that newer commit's result.
+- Historical failed runs remain in GitHub for audit purposes; they do **not** have to be rewritten as passed. Later green checks supersede earlier failures for the same tested behavior.
 
-## Maturity: separate dimensions
+## Implemented
+
+- Albanian browser-only civic demo with fictional source data.
+- Separate PostgreSQL private pilot with manually provisioned accounts, roles, sessions, CSRF protection, cases, sources, corrections, initiatives and peaceful gatherings.
+- Editorial case review and audit trail, independently accepted source URL required before publication.
+- Archival/retraction with private audit notes and minimal public status ledger.
+- GDPR-oriented own-data export as an early feature, **not** a complete legal process.
+- Encrypted PostgreSQL pilot backup, integrity verification, guarded restore into empty test databases.
+- Automated tests for logic, API authorization/integration, browser flows, simple accessibility heuristics, backup and source schema.
+
+## Four distinct maturity assessments
+
 | Dimension | Evidence-based assessment |
 |---|---|
-| Implementation | Browser demo and major private pilot paths implemented; target platform incomplete |
-| Verification | Unit + PostgreSQL integration + Chromium smoke E2E verified; external independent review absent |
-| Release readiness | BLOCKED for public production |
-| Professional maturity | Strong early code structure and traceable documentation; operations/legal controls incomplete |
+| Implementation | Working demo and private pilot; many target platform modules remain absent |
+| Verification | Core test flows verified in CI; accessibility smoke is not a comprehensive accessibility audit |
+| Release readiness | **BLOCKED** for public production |
+| Professional maturity | Modular structure and documented gates; operations, abuse prevention, compliance and editorial governance unfinished |
 
-## P0 release blockers
-1. Legal/privacy review (including sensitive political information risks, moderation and user rights).
-2. Formal independent editorial verification, source provenance, corrections, appeals and institutional right-of-reply process.
-3. Encrypted durable backups with verified restore and documented retention/recovery objectives.
-4. Operational safety: centralized rate limiting, MFA where appropriate, full incident response and independent security review.
-5. Real browser accessibility tests, staged environment and production monitoring.
-6. Explicit owner approval for merging or any public deployment. Financial charges require separate approval.
+## P0 / P1 outstanding
 
-## P1 strategic product gaps
-- Robust source ingestion with provenance and immutable archived snapshots.
-- AI document analysis with citations, hallucination tests and human editorial control.
-- Public request-to-information workflow and status audit trail.
-- Geospatial problem visualizations with privacy safeguards.
-- Pilot observation, real-user feedback and organizational governance.
+**P0 (required before public use):** independent security and accessibility audits; MFA/abuse defense and account lifecycle; authoritative source provenance, redaction and formal right-of-reply/appeals; privacy and legal review; backup retention/offsite storage with operational restore drill; production monitoring/incident response and explicitly approved public deployment.
 
-## Next most useful engineering slice
-Build and verify a safe backup/restore workflow in an isolated disposable database; add a real accessibility test and a corrections appeal/redaction workflow. Do not accept real whistleblower reports or launch publicly until the P0 release blockers are resolved.
+**P1 (product expansion):** official information requests and institutional response tracking; legitimate evidence ingestion; source-cited AI with human review; responsible privacy-safe maps; private pilot outcomes and governance.
 
-## Operational restrictions
-No merger to main, production modifications, public deployment, spending, or changes to other projects. Maintain a separate branch and PR evidence. Never claim 100% based on code or tests alone.
+## Execution boundary
 
-## Continuation: October 21, 2026 — encrypted recovery work
+No merge into main, public application deployment, expenses or changes to other repositories occurred in these commits. Repository **code visibility is currently public**, which is different from deploying a working public website. Do not commit secrets or sensitive documents.
 
-- Added streaming AES-256-GCM backup archive with random salt and nonce, and credentials passed as PostgreSQL environment variables rather than process command-line parameters.
-- Added offline archive authentication, a fail-closed restore command restricted to empty test databases, PostgreSQL dump/restore parity integration test, tamper refusal test and protections against overwriting existing backups.
-- Added CI step for automated restore drill and basic local crypto test results; **full database restore in the current revision remains unverified**.
-- **CI BLOCKER:** GitHub Actions workflow runs #39643094795, #39642967274 and #39642685683 ended with no runner steps and no job logs; retry of #39643094795 also had `steps=[]`. This is consistent with a runner provisioning / account-quota problem, but the underlying cause cannot be confirmed from the accessible data. Prior success was run #39639604577, **before** these new backup features. Do not treat newer commits as CI-verified.
-- Next priority: resolve GitHub runner provisioning, achieve a green encrypted restore drill, then establish recurring backups with documented retention, restore objectives and testing. There was no merge, production deployment or spending authorization executed.
+## Next engineering tranche
 
-## Follow-up: atomic archives and public status ledger — 2026-10-21
-
-- Fixed backup publication to write encrypted ciphertext to a private temporary file, fsync it and publish with an atomic hard link. This refuses overwrites and prevents incomplete archives appearing under the final filename.
-- Reproduced the repository crypto routines in an isolated Node 22 environment; **3/3 targeted crypto tests passed**: roundtrip/tamper/wrong-passphrase, connection environment parsing and interrupted/concurrent writers. This local test **does not** validate PostgreSQL restore.
-- Added a nonidentifying public status ledger at `GET /api/public/ledger` (publication/retraction event type, case UUID and timestamp, no reporter identity, notes or archived allegations). Pilot page displays the ledger.
-- Added PostgreSQL integration assertions for ledger privacy and Chromium end-to-end assertion for withdrawn entries. These new integration/E2E assertions remain **UNVERIFIED** while GitHub hosted runners are not allocated.
-- Latest CI run #39653030671 failed before steps with no runner; previous successful full pipeline #39639604577 predates backup and ledger code. Never conflate local crypto verification with a full clean PR test.
-- Still no public production deployment, merge, expenses or modifications to other projects.
+Prioritize meaningful release blockers rather than counting extra features as completion: improved identity and anti-abuse, accessible UX audit, formal correction/appeals workflow, source provenance, and real operational recovery policy. External legal judgment, human content verification and a genuine production environment cannot be certified by GitHub Actions alone.
