@@ -1,3 +1,4 @@
+import {attachEvidence,attachCorrection,displayCorrections} from "./pilot-evidence.mjs";
 const $=id=>document.getElementById(id);
 let user=null;
 const escapeHTML=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -15,6 +16,8 @@ function record(item,review=false){
  const state=item.state||"publikuar";
  const source=item.source_url&&/^https:\/\//.test(item.source_url)?'<a href="'+escapeHTML(item.source_url)+'" target="_blank" rel="noopener noreferrer">Shiko burimin ↗</a>':"";
  article.innerHTML='<div class="pilot-meta"><span>'+escapeHTML(item.category)+'</span><span>'+escapeHTML(state)+'</span><span>'+escapeHTML(item.area)+'</span></div><h3>'+escapeHTML(item.title)+'</h3><p>'+escapeHTML(item.description)+'</p>'+source;
+ attachEvidence(article,item,{user,review,call,notice,refresh});
+ attachCorrection(article,item,{user,call,notice,refresh});
  if(!review&&!item.state&&user&&(user.role==="reviewer"||user.role==="admin")){
   const div=document.createElement("div");div.className="pilot-review-actions";
   const button=document.createElement("button");button.type="button";button.className="btn subtle";button.textContent="Tërhiq publikimin";
@@ -29,6 +32,12 @@ function record(item,review=false){
  }
  if(review){
   const field=document.createElement("textarea");field.className="review-note";field.rows=3;field.maxLength=1000;field.placeholder="Arsyetim konkret për vendimin (minimumi 15 karaktere)...";field.setAttribute("aria-label","Arsyetimi i verifikimit");
+  const checklist=document.createElement("fieldset");checklist.className="pilot-checklist";
+  const legend=document.createElement("legend");legend.textContent="Kontrollet për publikim";checklist.append(legend);
+  const checks={};
+  for(const [key,label] of [["sourceReviewed","Kam kontrolluar provat"],["privacyReviewed","Kam kontrolluar privatësinë"],["replyConsidered","Kam marrë parasysh të drejtën e përgjigjes"]]){
+   const wrapper=document.createElement("label");const input=document.createElement("input");input.type="checkbox";wrapper.append(input,document.createTextNode(" "+label));checks[key]=input;checklist.append(wrapper);
+  }
   const actions=document.createElement("div");actions.className="pilot-review-actions";
   for(const [decision,label] of [["published","Publiko pas verifikimit"],["rejected","Refuzo"]]){
    const btn=document.createElement("button");btn.className="btn "+(decision==="published"?"primary":"subtle");btn.textContent=label;btn.type="button";
@@ -36,12 +45,12 @@ function record(item,review=false){
    btn.addEventListener("click",async()=>{
     if(field.value.trim().length<15){notice("Shkruaj arsyetim prej të paktën 15 karakteresh.",true);return;}
     btn.disabled=true;
-    try{await call("/api/review/"+encodeURIComponent(item.id),"POST",{decision,note:field.value});notice("Vendimi u regjistrua.");await refresh();}
+    try{await call("/api/review/"+encodeURIComponent(item.id),"POST",{decision,note:field.value,checks:{sourceReviewed:checks.sourceReviewed.checked,privacyReviewed:checks.privacyReviewed.checked,replyConsidered:checks.replyConsidered.checked}});notice("Vendimi u regjistrua.");await refresh();}
     catch(e){notice(e.message,true);}finally{btn.disabled=false;}
    });
    actions.appendChild(btn);
   }
-  article.append(field,actions);
+  article.append(field,checklist,actions);
  }
  return article;
 }
@@ -86,10 +95,12 @@ async function refresh(){
  const publicRows=await call("/api/public/cases");
  fill($("public-cases"),publicRows.items);
  if(!user)return;
+ const myCorrections=await call("/api/corrections/mine");displayCorrections($("my-corrections"),myCorrections.items,{review:false,call,notice,refresh,user});
  const myActions=await call("/api/actions/mine");fillActions($("my-actions"),myActions.items);
  const myRows=await call("/api/cases/mine");
  fill($("my-cases"),myRows.items);
  if(user.role==="reviewer"||user.role==="admin"){
+  const corrections=await call("/api/corrections/queue");displayCorrections($("review-corrections"),corrections.items,{review:true,call,notice,refresh,user});
   const actionQueue=await call("/api/actions/review/queue");fillActions($("review-actions"),actionQueue.items,true);
   const queue=await call("/api/review/queue");
   fill($("review-cases"),queue.items,true);
