@@ -34,7 +34,7 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
    title:"Raportim testimi i ndriçimit",description:"Raportim artificial për testimin e verifikimit dhe të drejtës së përgjigjes.",
    area:"Zona e testit",category:"Infrastrukturë",source:"https://example.org/source"
   };
-  r=await send("/api/cases",{method:"POST",body:sample});assert.equal(r.status,403);
+  r=await send("/api/cases",{method:"POST",body:sample});assert.equal(r.status,401);
   r=await send("/api/auth/login",{method:"POST",body:{email:reporter.email,password:"incorrect"}});assert.equal(r.status,401);
   r=await send("/api/auth/login",{method:"POST",body:{email:reporter.email,password:reporter.password}});
   assert.equal(r.status,200);assert.match(r.cookie,/HttpOnly/);
