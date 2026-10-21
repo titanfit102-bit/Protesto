@@ -9,14 +9,18 @@
     "pilot": "node tools/pilot-server.mjs",
     "db:migrate": "node tools/migrate.mjs",
     "db:user": "node tools/provision-user.mjs",
-    "test": "node --test",
+    "test": "node --test test/*.test.mjs",
     "check": "node tools/check.mjs",
-    "verify": "npm run check && npm test"
+    "verify": "npm run check && npm test",
+    "test:e2e": "node test/browser.e2e.mjs"
   },
   "engines": {
     "node": ">=22"
   },
   "dependencies": {
     "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^24.0.0"
   }
 }

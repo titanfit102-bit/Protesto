@@ -34,3 +34,11 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: npm run db:migrate
       - run: npm run verify
+      - name: Find preinstalled Chromium
+        shell: bash
+        run: |
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          if [ -z "$CHROME" ]; then echo 'Chrome is not installed in runner'; exit 1; fi
+          echo "CHROME_PATH=$CHROME" >> "$GITHUB_ENV"
+      - name: Chromium end-to-end journey
+        run: npm run test:e2e
