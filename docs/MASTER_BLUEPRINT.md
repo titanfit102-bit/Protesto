@@ -1,44 +1,45 @@
-# PROTESTO — MASTER BLUEPRINT v0.1
+# PROTESTO — MASTER BLUEPRINT v0.2
 
-## Mission
-A politically independent civic platform that makes public-interest problems traceable through reporting, independent verification, source evidence, requests for information, official responses and outcomes. Peaceful gatherings and lawful participation are supported without profiling political beliefs.
+## Problem
+Fragmented civic complaints, poor documentation of official responses and inconsistent tracking of commitments. Goal: a neutral, independently reviewed evidence trail from report to institutional response and documented outcome. Protesto is not a partisan mobilization or persuasion tool.
 
-## Prototype scope
-- Overview dashboard with fictional seed data
-- Civic case reporting, search and filters
-- Local initiatives
-- Peaceful gathering listing and local creation
-- Input validation, local browser persistence and export
-- Static development server and unit tests
+## Core journeys
+1. Citizen reports a problem with location, category and optional HTTPS source; it enters a pending queue.
+2. Different accredited reviewer verifies available evidence and privacy/legal risks, then publishes or rejects with internal justification.
+3. Public sees only published records. Reviewers can retract a published record, preserving internal audit.
+4. Citizens can also submit initiatives and lawful peaceful gatherings. Those follow the same independent approval/retraction process, without tracking attendees.
+5. Public documents, institutional answers and outcome history are a *future* stage, not implemented.
 
-## Strictly excluded from prototype
-- Public submissions, public alerts or messaging
-- User identities, voting preference collection or gathering attendance lists
-- Unverified real allegations
-- AI generated accusations
-- Petitions with actual signatures
-- Institutional API integration
-- Background geolocation
+## Current architecture
+- Browser-only demonstration: HTML/CSS/ES modules, fictional content, localStorage.
+- Private pilot: same-site HTTP server, PostgreSQL 16+, parameterized queries, scrypt password hashing, hashed server sessions, role checks, exact-origin POST control and transactional review audit.
+- `reporter` creates pending cases/actions; `reviewer` and `admin` review. No user can approve their own case/action.
+- PostgreSQL migrations 001 (users/cases), 002 (retractions), 003 (initiatives/gatherings). Shared DB is used only by pilot.
+- Frontend renders user input escaped. No attendee data or preference profiles are stored.
 
-## Next gates
-G1 browser E2E and accessibility testing
-G2 backend architecture with PostgreSQL, authorization and auditable moderation
-G3 lawful data sourcing, proof management and right-of-reply workflow
-G4 security and privacy review including GDPR applicability
-G5 private pilot and release readiness review
+## Release scope
+MUST for pilot: authenticated report submission, private draft review queue, safe public listing, approval and retraction, initiative/gathering parity, tests, documentation.
+MUST for production: secure hosting, durable encrypted backups with restore proof, centralized anti-abuse, content review/appeals, legal/privacy assessment, user rights, observability and E2E/accessibility checks.
+SHOULD after validation: evidence provenance, official source integrations, correction history, structured requests for information.
+LATER: AI-assisted document analysis with citations and human verification; geographic issue map.
+DELETE: covert campaigns, political microtargeting, participant geolocation, automated accusations, rage-optimized feeds.
 
-## Proof of completion
-A feature is complete only when code, tests, target environment and risks are verified. Prototype completeness is not equivalent to platform production readiness. No merges or public launch without owner authorization.
+## Product proof
+- Case/action is never public before review.
+- Authors cannot publish their own material.
+- Review/retraction decisions update DB and audit in the same transaction.
+- Authentication state is server-side and revocable.
+- Untrusted data is escaped in displayed public content.
+- No claims of "fully operational" without browser, security, legal and operational evidence.
 
-## Initial product flows
-1. Citizen opens demo and reads a clearly fictional report.
-2. Filters reports by status or category.
-3. Adds a local report with metadata and optional HTTPS evidence link.
-4. Adds a local initiative or peaceful gathering.
-5. Exports local data, resets to fictional seed state.
+## Current validation
+Node domain/security suites and PostgreSQL integration tests run in GitHub Actions. These validate targeted API behavior, not full release readiness.
 
-## Technical architecture
-Static HTML, CSS, JavaScript ES modules; domain validation separated from the UI; localStorage as non-durable prototype persistence only; Node local server with restrictive security headers. This is not a collaborative database.
+## Critical path from here
+1. E2E browser verification of every form and role, independent security review.
+2. Sources/document ingestion with immutable identifiers, provenance, editor tools and public correction/right-of-reply workflow.
+3. Professional identity, abuse defense, consent/deletion and policy implementation.
+4. Backup/restore drills, staging, monitoring, privacy and legal compliance gates.
+5. Closed pilot with real editorial staff; explicit owner approval before any public deployment or main branch merge.
 
-## Next production baseline
-Modular backend with Postgres, role-based authorization, review queue, content appeal / correction flow, document ingestion with provenance, observability, rate limits, backup and restore drill. Select stack after first pilot evidence.
+See `docs/RELEASE_GATES.md` for complete criteria. Prototype completion is not product completion.

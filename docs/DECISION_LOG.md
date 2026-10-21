@@ -1,9 +1,15 @@
-# Protesto — Decision Log
-| ID | Decision | Rationale |
-|---|---|---|
-| ADR-001 | Browser-only MVP prototype | Zero cost, test UX before production risks |
-| ADR-002 | Native JS modules and CSS | No external runtime dependencies in first iteration |
-| ADR-003 | Fictional seed data and local storage | Avoid publication of unverified claims and sensitive personal data |
-| ADR-004 | No participant lists or political profiling | Privacy-first and peaceful civic engagement |
-| ADR-005 | Separate feature branch and unmerged PR | Owner-controlled integration |
-| ADR-006 | AI postponed until evidence pipeline exists | Avoid unsupported allegations and hallucinated citations |
+# Protesto — Architecture Decision Record
+
+| ID | Decision | Why | Revisit when |
+|---|---|---|---|
+| ADR-001 | Two modes: browser demo and private PostgreSQL pilot | Isolate presentation tests from sensitive multi-user work | Public release plan |
+| ADR-002 | Native ES modules and CSS (no UI framework initially) | Avoid unnecessary complexity until workflows are validated | Accessibility/browser scale |
+| ADR-003 | Demo records are exclusively fictional and local | Prevent publication of unreviewed allegations | Pilot policy reviewed |
+| ADR-004 | PostgreSQL with parameterized queries | Transactional editorial workflow and audit | Measured database limitations |
+| ADR-005 | scrypt hashed passwords, opaque sessions, strict cookies and CSRF guard | Defend initial private identity boundary | External security audit |
+| ADR-006 | No public registration; operator provisions accounts | Prevent anonymous spam during pilot | Reviewed abuse and signup policy |
+| ADR-007 | Independent reviewer decision and retraction | Prevent immediate unverified publication | Mature editorial organization |
+| ADR-008 | Civic initiatives and gatherings require same moderation | No automatic mass publication; privacy for gatherings | Legal review |
+| ADR-009 | No attendee lists or political preference profiling | Minimize sensitive data and safety risks | Do not change without expert review |
+| ADR-010 | AI integration deferred until provenance and editorial verification | Avoid fabricated or misleading claims | Evidence pipeline proven |
+| ADR-011 | Work on feature branch and Draft PR | Owner retains control of merge/production | Explicit owner approval |
