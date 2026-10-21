@@ -6,3 +6,11 @@ node_modules/
 coverage/
 dist/
 .vercel/
+
+# Never commit backups, temporary encrypted archives or plaintext database exports.
+*.ptbk
+*.ptbk.*.part
+*.dump
+*.backup
+*.sql.gz
+backups/
