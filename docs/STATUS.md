@@ -62,3 +62,16 @@ Prioritize meaningful release blockers rather than counting extra features as co
 2. Formal public correction history, independent moderator SOP, evidence redaction and appeal escalation.
 3. End-to-end browser tests specifically for the appeal UI and abusive traffic conditions.
 4. Backup retention policy, verified offsite storage, monitoring, legal/privacy review and private pilot.
+
+
+## 2026-10-22 — Polis-inspired Dialogu Qytetar, phase 1
+
+**Implemented:** original civic dialogue module linked to published civic cases; reviewer-created neutral topics, citizen statements pending independent moderation, three-way responses, explicit privacy acknowledgment, no live aggregates, results only after topic close and per-statement minimum of ten participants, and deletion of all active individual vote rows in the same transaction as finalization. No statistical opinion clusters, targeting or AI are used.
+
+**Technical source:** db/007_civic_dialogue.sql, src/server/dialogue.mjs, src/pilot-dialogue.mjs, test/dialogue.integration.test.mjs, test/dialogue.browser.e2e.mjs and docs/POLIS_DESIGN_ADAPTATION.md. Polis AGPL code was not copied.
+
+**Verification:** [GitHub Actions #39687784143](https://github.com/titanfit102-bit/Protesto/actions/runs/39687784143) passed **18/18 Node tests**, PostgreSQL migration/replay, Chromium original and dialogue browser E2E, security audit, JS checks and encrypted PostgreSQL restore.
+
+**Limitations:** a ten-response threshold and finalized-only tally do not confer anonymity or statistically representative polling. Vote identifiers are keyed pseudonyms linked to accounts by the server's secret; vote records may survive on earlier backup copies. Critical open items: processing lawful basis/DPIA, informed participant notices, pseudonym and backup retention, countering fake accounts, editorial disputes, anti-harassment and unbiased discussion rules, independent threat assessment, manual accessibility testing and real user acceptance.
+
+**Next phases:** structured, independently reviewed institutional-response tracking plus source-cited aggregate reporting; only later consider any privacy-audited opinion clustering or human-reviewed AI. Never turn dialogue into individual political persuasion or targeting.
