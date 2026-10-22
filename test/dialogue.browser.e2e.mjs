@@ -54,7 +54,8 @@ try{
  const suffix=randomUUID().slice(0,8);
  const reviewer={id:randomUUID(),role:"reviewer",email:"browser-dialogue-review-"+suffix+"@example.org",password:"BrowserDialogueReviewer!2026"};
  const citizen={id:randomUUID(),role:"reporter",email:"browser-dialogue-citizen-"+suffix+"@example.org",password:"BrowserDialogueCitizen!2026"};
- for(const account of [reviewer,citizen]){
+ const secondReviewer={id:randomUUID(),role:"reviewer",email:"browser-dialogue-independent-"+suffix+"@example.org",password:"BrowserDialogueIndependent!2026"};
+ for(const account of [reviewer,citizen,secondReviewer]){
   await pool.query("INSERT INTO civic_users(id,email,password_hash,role) VALUES($1,$2,$3,$4)",[account.id,account.email,hashPassword(account.password),account.role]);
  }
  const caseId=randomUUID();
@@ -75,8 +76,16 @@ try{
 });
 await page.$eval('#dialogue-create-form [name="privacyReviewed"]',el=>el.click());
  await click(page,"#dialogue-create-form","Hap diskutimin");
+ await page.waitForFunction(()=>document.querySelector("#pilot-notice")?.textContent.includes("miratim të pavarur"),{timeout:12000});
+ assert.ok(!(await page.$$eval("#dialogue-topic-select option",options=>options.some(o=>o.textContent.includes("Konsultim sintetik për mjedisin")))),"Topic must not appear before independent review");
+ await logout(page);
+ await login(page,secondReviewer);
+ await page.waitForSelector("#review-dialogue-topics .dialogue-topic-review");
+ await page.$eval("#review-dialogue-topics .dialogue-topic-review textarea.dialogue-topic-note",el=>el.value="Kopja publike u shqyrtua nga verifikuesi i pavarur.");
+ await page.$$eval("#review-dialogue-topics .dialogue-topic-review input[type=checkbox]",xs=>xs.forEach(x=>x.click()));
+ await click(page,"#review-dialogue-topics .dialogue-topic-review","Mirato temën");
  await page.waitForFunction(()=>document.querySelector("#dialogue-details h3")?.textContent==="Konsultim sintetik për mjedisin",{timeout:15000});
- console.log("[dialogue browser] Reviewer created a topic linked to published case");
+ console.log("[dialogue browser] Topic approved by independent reviewer before appearing publicly");
  await logout(page);
  await login(page,citizen);
  await page.waitForSelector("#dialogue-statement-form:not([hidden])");

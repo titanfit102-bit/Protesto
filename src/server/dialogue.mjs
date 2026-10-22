@@ -12,12 +12,13 @@ const topic=/^\/api\/dialogue\/topics\/([^/]+)$/;
 const statementCreate=/^\/api\/dialogue\/topics\/([^/]+)\/statements$/;
 const topicClose=/^\/api\/dialogue\/topics\/([^/]+)\/close$/;
 const statementReview=/^\/api\/dialogue\/statements\/([^/]+)\/review$/;
+const topicReview=/^\/api\/dialogue\/topics\/([^/]+)\/review$/;
 const statementVote=/^\/api\/dialogue\/statements\/([^/]+)\/vote$/;
 const publicGet=new Set(["/api/dialogue/topics","/api/dialogue/report"]);
-const privateGet=new Set(["/api/dialogue/review/queue"]);
+const privateGet=new Set(["/api/dialogue/review/queue","/api/dialogue/topic-review/queue"]);
 const posts=new Set(["/api/dialogue/topics"]);
 export const dialogueGetRoute=path=>publicGet.has(path)||privateGet.has(path)||topic.test(path);
-export const dialoguePostRoute=path=>posts.has(path)||statementCreate.test(path)||topicClose.test(path)||statementReview.test(path)||statementVote.test(path);
+export const dialoguePostRoute=path=>posts.has(path)||statementCreate.test(path)||topicClose.test(path)||statementReview.test(path)||statementVote.test(path)||topicReview.test(path);
 const isUUID=v=>UUID.test(String(v||""));
 const jsonTopic="t.id,t.case_id,t.public_title AS title,t.public_description AS description,t.state,t.created_at,t.closed_at";
 
@@ -25,7 +26,7 @@ export async function dialogueRoute({pathname,req,res,pool,user,json,fail,readJS
  if(pathname==="/api/dialogue/report"&&req.method==="GET"){
   // A descriptive export of finalized counts only. It is not a population poll.
   const q=await pool.query(
-   "SELECT t.id AS topic_id,t.case_id,t.public_title AS topic_title,s.id AS statement_id,s.public_body AS statement,r.participants,r.agree_count,r.disagree_count,r.pass_count,t.closed_at,c.public_title AS case_title,c.public_source_url AS source_url FROM dialogue_results r JOIN dialogue_statements s ON s.id=r.statement_id JOIN dialogue_topics t ON t.id=s.topic_id JOIN civic_cases c ON c.id=t.case_id WHERE t.state='closed' AND t.public_title IS NOT NULL AND t.public_description IS NOT NULL AND s.state='accepted' AND s.public_body IS NOT NULL AND c.state='published' AND c.public_title IS NOT NULL AND c.public_description IS NOT NULL AND c.public_area IS NOT NULL AND c.public_title IS NOT NULL AND c.public_description IS NOT NULL AND c.public_area IS NOT NULL AND c.public_source_url IS NOT NULL AND EXISTS (SELECT 1 FROM case_sources cs WHERE cs.case_id=c.id AND cs.state='accepted' AND cs.public_title IS NOT NULL AND cs.public_url=c.public_source_url) AND r.participants>=10 ORDER BY t.closed_at DESC,s.created_at ASC LIMIT 100"
+   "SELECT t.id AS topic_id,t.case_id,t.public_title AS topic_title,s.id AS statement_id,s.public_body AS statement,r.participants,r.agree_count,r.disagree_count,r.pass_count,t.closed_at,c.public_title AS case_title,c.public_source_url AS source_url FROM dialogue_results r JOIN dialogue_statements s ON s.id=r.statement_id JOIN dialogue_topics t ON t.id=s.topic_id JOIN civic_cases c ON c.id=t.case_id WHERE t.state='closed' AND t.review_state='approved' AND t.public_title IS NOT NULL AND t.public_description IS NOT NULL AND s.state='accepted' AND s.public_body IS NOT NULL AND c.state='published' AND c.public_title IS NOT NULL AND c.public_description IS NOT NULL AND c.public_area IS NOT NULL AND c.public_title IS NOT NULL AND c.public_description IS NOT NULL AND c.public_area IS NOT NULL AND c.public_source_url IS NOT NULL AND EXISTS (SELECT 1 FROM case_sources cs WHERE cs.case_id=c.id AND cs.state='accepted' AND cs.public_title IS NOT NULL AND cs.public_url=c.public_source_url) AND r.participants>=10 ORDER BY t.closed_at DESC,s.created_at ASC LIMIT 100"
   );
   return json(res,200,{
    format:"protesto-dialogue-aggregates/1",
@@ -35,14 +36,14 @@ export async function dialogueRoute({pathname,req,res,pool,user,json,fail,readJS
   });
  }
  if(pathname==="/api/dialogue/topics"&&req.method==="GET"){
-  const data=await pool.query("SELECT "+jsonTopic+" FROM dialogue_topics t JOIN civic_cases c ON c.id=t.case_id WHERE t.public_title IS NOT NULL AND t.public_description IS NOT NULL AND c.state='published' AND c.public_title IS NOT NULL AND c.public_description IS NOT NULL AND c.public_area IS NOT NULL ORDER BY t.created_at DESC LIMIT 50");
+  const data=await pool.query("SELECT "+jsonTopic+" FROM dialogue_topics t JOIN civic_cases c ON c.id=t.case_id WHERE t.review_state='approved' AND t.public_title IS NOT NULL AND t.public_description IS NOT NULL AND c.state='published' AND c.public_title IS NOT NULL AND c.public_description IS NOT NULL AND c.public_area IS NOT NULL ORDER BY t.created_at DESC LIMIT 50");
   return json(res,200,{items:data.rows,disclaimer:"Pjesëmarrja është vullnetare; rezultatet nuk përfaqësojnë popullsinë."});
  }
  const topicMatch=pathname.match(topic);
  if(topicMatch&&req.method==="GET"){
   const id=topicMatch[1];
   if(!isUUID(id))return fail(res,400,"ID i pavlefshëm.");
-  const t=await pool.query("SELECT "+jsonTopic+" FROM dialogue_topics t JOIN civic_cases c ON c.id=t.case_id WHERE t.id=$1 AND t.public_title IS NOT NULL AND t.public_description IS NOT NULL AND c.state='published' AND c.public_title IS NOT NULL AND c.public_description IS NOT NULL AND c.public_area IS NOT NULL",[id]);
+  const t=await pool.query("SELECT "+jsonTopic+" FROM dialogue_topics t JOIN civic_cases c ON c.id=t.case_id WHERE t.id=$1 AND t.review_state='approved' AND t.public_title IS NOT NULL AND t.public_description IS NOT NULL AND c.state='published' AND c.public_title IS NOT NULL AND c.public_description IS NOT NULL AND c.public_area IS NOT NULL",[id]);
   if(!t.rowCount)return fail(res,404,"Tema nuk është publike.");
   const rows=await pool.query(
    "SELECT s.id,s.public_body AS body,s.created_at,CASE WHEN t.state='closed' AND r.participants>=10 THEN r.participants END AS participants,CASE WHEN t.state='closed' AND r.participants>=10 THEN r.agree_count END AS agree_count,CASE WHEN t.state='closed' AND r.participants>=10 THEN r.disagree_count END AS disagree_count,CASE WHEN t.state='closed' AND r.participants>=10 THEN r.pass_count END AS pass_count FROM dialogue_statements s JOIN dialogue_topics t ON t.id=s.topic_id LEFT JOIN dialogue_results r ON r.statement_id=s.id WHERE s.topic_id=$1 AND s.state='accepted' AND s.public_body IS NOT NULL ORDER BY s.created_at ASC LIMIT 100",
@@ -51,10 +52,54 @@ export async function dialogueRoute({pathname,req,res,pool,user,json,fail,readJS
   return json(res,200,{item:t.rows[0],statements:rows.rows,minimumParticipants:10,resultsPolicy:"Rezultatet publikohen vetëm pas mbylljes dhe me të paktën 10 përgjigje për deklaratë; jo sondazh përfaqësues."});
  }
  if(!user)return fail(res,401,"Kërkohet identifikim.");
+ if(pathname==="/api/dialogue/topic-review/queue"&&req.method==="GET"){
+  if(!canReview(user.role))return fail(res,403,"Kërkohet verifikues.");
+  const q=await pool.query(
+   "SELECT t.id,t.case_id,t.created_by,t.title,t.description,t.public_title,t.public_description,t.created_at,c.author_id AS case_author_id FROM dialogue_topics t JOIN civic_cases c ON c.id=t.case_id WHERE t.review_state='pending' AND t.state='open' AND c.state='published' AND c.public_title IS NOT NULL AND c.public_description IS NOT NULL AND c.public_area IS NOT NULL ORDER BY t.created_at ASC LIMIT 100"
+  );
+  return json(res,200,{items:q.rows});
+ }
+ const reviewTopic=pathname.match(topicReview);
+ if(reviewTopic&&req.method==="POST"){
+  if(!isUUID(reviewTopic[1]))return fail(res,400,"ID teme i pavlefshëm.");
+  if(!canReview(user.role))return fail(res,403,"Kërkohet verifikues.");
+  const body=await readJSON(req),decision=body.decision,note=cleanText(body.note,1001);
+  if(!["approved","rejected"].includes(decision)||note.length<20||note.length>1000)
+   return fail(res,422,"Kërkohet vendim dhe arsyetim editorial.");
+  const approved=decision==="approved"?reviewedTopicCopy(body):null;
+  if(decision==="approved"&&!approved)return fail(res,422,"Kërkohet kopje publike e rishikuar dhe dy konfirmime.");
+  const client=await pool.connect();
+  try{
+   await client.query("BEGIN");
+   const q=await client.query(
+    "SELECT t.id,t.review_state,t.state,t.created_by,c.author_id AS case_author_id,c.state AS case_state,c.public_title,c.public_description,c.public_area FROM dialogue_topics t JOIN civic_cases c ON c.id=t.case_id WHERE t.id=$1 FOR UPDATE OF c,t",
+    [reviewTopic[1]]
+   );
+   const current=q.rows[0];
+   if(!current||current.review_state!=="pending"||current.state!=="open"||current.case_state!=="published"||
+      !current.public_title||!current.public_description||!current.public_area){
+    await client.query("ROLLBACK");return fail(res,409,"Tema nuk mund të shqyrtohet.");
+   }
+   if(user.id===current.created_by||user.id===current.case_author_id){
+    await client.query("ROLLBACK");return fail(res,403,"Kërkohet verifikues i pavarur.");
+   }
+   const changed=await client.query(
+    "UPDATE dialogue_topics SET review_state=$1,reviewed_by=$2,review_note=$3,reviewed_at=now(),public_title=$4,public_description=$5 WHERE id=$6 AND review_state='pending' RETURNING id,review_state",
+    [decision,user.id,note,approved?.title??null,approved?.description??null,reviewTopic[1]]
+   );
+   await client.query(
+    "INSERT INTO audit_entries(id,actor_id,action,object_type,object_id) VALUES($1,$2,$3,'dialogue_topic',$4)",
+    [randomUUID(),user.id,"dialogue.topic."+decision,reviewTopic[1]]
+   );
+   await client.query("COMMIT");
+   return json(res,200,{item:changed.rows[0]});
+  }catch(error){try{await client.query("ROLLBACK");}catch{}throw error;}
+  finally{client.release();}
+ }
  if(pathname==="/api/dialogue/review/queue"&&req.method==="GET"){
   if(!canReview(user.role))return fail(res,403,"Kërkohet verifikues.");
   const q=await pool.query(
-   "SELECT s.id,s.topic_id,s.author_id,s.body,s.created_at,t.title FROM dialogue_statements s JOIN dialogue_topics t ON t.id=s.topic_id JOIN civic_cases c ON c.id=t.case_id WHERE s.state='pending' AND t.state='open' AND t.public_title IS NOT NULL AND t.public_description IS NOT NULL AND c.state='published' AND c.public_title IS NOT NULL AND c.public_description IS NOT NULL AND c.public_area IS NOT NULL ORDER BY s.created_at ASC LIMIT 100"
+   "SELECT s.id,s.topic_id,s.author_id,s.body,s.created_at,t.title FROM dialogue_statements s JOIN dialogue_topics t ON t.id=s.topic_id JOIN civic_cases c ON c.id=t.case_id WHERE s.state='pending' AND t.state='open' AND t.review_state='approved' AND t.public_title IS NOT NULL AND t.public_description IS NOT NULL AND c.state='published' AND c.public_title IS NOT NULL AND c.public_description IS NOT NULL AND c.public_area IS NOT NULL ORDER BY s.created_at ASC LIMIT 100"
   );
   return json(res,200,{items:q.rows});
  }
@@ -72,7 +117,7 @@ export async function dialogueRoute({pathname,req,res,pool,user,json,fail,readJS
    [randomUUID(),user.id,title,description,caseId,approved.title,approved.description]
   );
   if(!result.rowCount)return fail(res,409,"Dosja nuk është e publikuar.");
-  return json(res,201,{item:result.rows[0]});
+  return json(res,201,{item:{...result.rows[0],review_state:"pending"},message:"Tema u dërgua për miratim të pavarur dhe nuk është publike."});
  }
  const create=pathname.match(statementCreate);
  if(create&&req.method==="POST"){
@@ -83,7 +128,7 @@ export async function dialogueRoute({pathname,req,res,pool,user,json,fail,readJS
   try{
    await client.query("BEGIN");
    const parent=await client.query(
-    "SELECT t.id FROM dialogue_topics t JOIN civic_cases c ON c.id=t.case_id WHERE t.id=$1 AND t.state='open' AND t.public_title IS NOT NULL AND t.public_description IS NOT NULL AND c.state='published' AND c.public_title IS NOT NULL AND c.public_description IS NOT NULL AND c.public_area IS NOT NULL FOR UPDATE OF t",[create[1]]
+    "SELECT t.id FROM dialogue_topics t JOIN civic_cases c ON c.id=t.case_id WHERE t.id=$1 AND t.state='open' AND t.review_state='approved' AND t.public_title IS NOT NULL AND t.public_description IS NOT NULL AND c.state='published' AND c.public_title IS NOT NULL AND c.public_description IS NOT NULL AND c.public_area IS NOT NULL FOR UPDATE OF t",[create[1]]
    );
    if(!parent.rowCount){await client.query("ROLLBACK");return fail(res,409,"Tema është e mbyllur ose nuk ekziston.");}
    const quota=await client.query("SELECT count(*)::integer n FROM dialogue_statements WHERE author_id=$1 AND topic_id=$2 AND created_at>now()-interval '1 day'",[user.id,create[1]]);
@@ -107,7 +152,7 @@ export async function dialogueRoute({pathname,req,res,pool,user,json,fail,readJS
   try{
    await client.query("BEGIN");
    const q=await client.query(
-    "UPDATE dialogue_statements s SET state=$1,reviewed_by=$2,reviewed_at=now(),public_body=$4 FROM dialogue_topics t,civic_cases c WHERE s.id=$3 AND s.topic_id=t.id AND c.id=t.case_id AND s.state='pending' AND t.state='open' AND t.public_title IS NOT NULL AND t.public_description IS NOT NULL AND c.state='published' AND c.public_title IS NOT NULL AND c.public_description IS NOT NULL AND c.public_area IS NOT NULL AND s.author_id<>$2 RETURNING s.id,s.state",[decision,user.id,review[1],approved]
+    "UPDATE dialogue_statements s SET state=$1,reviewed_by=$2,reviewed_at=now(),public_body=$4 FROM dialogue_topics t,civic_cases c WHERE s.id=$3 AND s.topic_id=t.id AND c.id=t.case_id AND s.state='pending' AND t.state='open' AND t.review_state='approved' AND t.public_title IS NOT NULL AND t.public_description IS NOT NULL AND c.state='published' AND c.public_title IS NOT NULL AND c.public_description IS NOT NULL AND c.public_area IS NOT NULL AND s.author_id<>$2 RETURNING s.id,s.state",[decision,user.id,review[1],approved]
    );
    if(!q.rowCount){await client.query("ROLLBACK");return fail(res,409,"Deklarata nuk shqyrtohet ose të përket ty.");}
    await client.query("INSERT INTO dialogue_reviews(id,statement_id,reviewer_id,decision,note) VALUES($1,$2,$3,$4,$5)",[randomUUID(),review[1],user.id,decision,note]);
@@ -128,7 +173,7 @@ export async function dialogueRoute({pathname,req,res,pool,user,json,fail,readJS
   try{
    await client.query("BEGIN");
    const q=await client.query(
-    "SELECT t.id FROM dialogue_statements s JOIN dialogue_topics t ON t.id=s.topic_id JOIN civic_cases c ON c.id=t.case_id WHERE s.id=$1 AND s.state='accepted' AND s.public_body IS NOT NULL AND t.state='open' AND t.public_title IS NOT NULL AND t.public_description IS NOT NULL AND c.state='published' AND c.public_title IS NOT NULL AND c.public_description IS NOT NULL AND c.public_area IS NOT NULL FOR UPDATE OF t",
+    "SELECT t.id FROM dialogue_statements s JOIN dialogue_topics t ON t.id=s.topic_id JOIN civic_cases c ON c.id=t.case_id WHERE s.id=$1 AND s.state='accepted' AND s.public_body IS NOT NULL AND t.state='open' AND t.review_state='approved' AND t.public_title IS NOT NULL AND t.public_description IS NOT NULL AND c.state='published' AND c.public_title IS NOT NULL AND c.public_description IS NOT NULL AND c.public_area IS NOT NULL FOR UPDATE OF t",
     [vote[1]]
    );
    if(!q.rowCount){await client.query("ROLLBACK");return fail(res,409,"Votimi nuk është i hapur.");}
@@ -151,7 +196,7 @@ export async function dialogueRoute({pathname,req,res,pool,user,json,fail,readJS
   try{
    await client.query("BEGIN");
    const q=await client.query(
-    "UPDATE dialogue_topics t SET state='closed',closed_at=now(),closed_by=$1 FROM civic_cases c WHERE t.id=$2 AND t.case_id=c.id AND c.state='published' AND c.public_title IS NOT NULL AND c.public_description IS NOT NULL AND c.public_area IS NOT NULL AND t.state='open' RETURNING t.id",[user.id,close[1]]
+    "UPDATE dialogue_topics t SET state='closed',closed_at=now(),closed_by=$1 FROM civic_cases c WHERE t.id=$2 AND t.case_id=c.id AND c.state='published' AND c.public_title IS NOT NULL AND c.public_description IS NOT NULL AND c.public_area IS NOT NULL AND t.state='open' AND t.review_state='approved' RETURNING t.id",[user.id,close[1]]
    );
    if(!q.rowCount){await client.query("ROLLBACK");return fail(res,409,"Tema është mbyllur ose dosja nuk është më publike.");}
    // Totals are calculated only once and only for statements with >=10 distinct voters.
