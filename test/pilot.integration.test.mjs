@@ -135,6 +135,14 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
   const ledgerEntries=r.json.events.filter(x=>x.case_id===caseId);
   assert.equal(ledgerEntries.filter(x=>x.event_type==="published").length,1);
   assert.equal(ledgerEntries.filter(x=>x.event_type==="archived").length,1);
+  assert.deepEqual(Object.keys(ledgerEntries[0]).sort(),["case_id","created_at","event_type"]);
+  assert.ok(ledgerEntries.every(x=>x.case_id===caseId));
+  const publicationEvent=ledgerEntries.find(x=>x.event_type==="published");
+  const archiveEvent=ledgerEntries.find(x=>x.event_type==="archived");
+  assert.ok(Date.parse(archiveEvent.created_at)>=Date.parse(publicationEvent.created_at));
+  assert.equal(ledgerEntries[0].event_type,"archived","Latest event is first");
+  assert.equal(ledgerEntries[0].created_at,new Date(archiveEvent.created_at).toISOString());
+
   assert.equal(JSON.stringify(r.json).includes(reporter.email),false);
   assert.equal(JSON.stringify(r.json).includes("Retract the article"),false);
   const withdrawn=await pool.query("SELECT count(*)::integer AS n FROM retraction_history WHERE case_id=$1",[caseId]);

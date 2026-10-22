@@ -7,6 +7,7 @@ import {actionRoute,actionGetRoutes,actionPostRoute} from "./actions.mjs";
 import {dossierRoute,dossierGetRoute,dossierPostRoute} from "./dossiers.mjs";
 import {appealRoute,appealGetRoute,appealPostRoute} from "./appeals.mjs";
 import {dialogueRoute,dialogueGetRoute,dialoguePostRoute} from "./dialogue.mjs";
+import {publicLedgerEvents} from "./public-ledger.mjs";
 import {rateKey,consumeRateLimit} from "./rate-limits.mjs";
 import {normalizeEmail,verifyPassword,newSessionToken,tokenHash,parseSessionCookie,sessionCookie,clearSessionCookie,secureWrite,canReview,SESSION_AGE_SECONDS} from "./security.mjs";
 
@@ -129,7 +130,7 @@ export function createPilotServer(pool,{origin,production=false,rateLimitSecret=
       FROM retraction_history r JOIN civic_cases c ON c.id=r.case_id
       WHERE c.state='archived'
     ) events ORDER BY created_at DESC,case_id DESC LIMIT 100`);
-    return json(res,200,{events:result.rows,disclaimer:"Kjo listë regjistron ndryshimet e statusit; nuk provon vërtetësinë e pretendimeve."});
+    return json(res,200,{events:publicLedgerEvents(result.rows),disclaimer:"Kjo listë regjistron ndryshimet e statusit; nuk provon vërtetësinë e pretendimeve."});
    }
    if(pathname==="/api/public/cases"&&req.method==="GET"){
     const result=await pool.query("SELECT c.id,c.title,c.description,c.area,c.category,c.created_at,(SELECT s.url FROM case_sources s WHERE s.case_id=c.id AND s.state='accepted' ORDER BY s.created_at ASC LIMIT 1) AS source_url FROM civic_cases c WHERE c.state='published' ORDER BY c.created_at DESC LIMIT 100");
