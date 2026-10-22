@@ -117,6 +117,7 @@ try{
  await page.waitForFunction(s=>document.querySelector(s)?.textContent.includes("SHA-256 (deklaruar):"),{timeout:12000},selectCard+" .pilot-fingerprint");
  await page.$eval(selectCard+' > textarea.review-note',el=>el.value="Dosja demonstrative u kontrollua sipas procedurës dhe mund të publikohet.");
  await page.$$eval(selectCard+" .pilot-checklist input",els=>els.forEach(x=>x.checked=true));
+ await page.$eval(selectCard+" .pilot-public-copy input[type=checkbox]",el=>el.checked=true);
  await clickText(page,selectCard,"Publiko pas verifikimit");
  await page.waitForFunction(t=>[...document.querySelectorAll("#public-cases h3")].some(x=>x.textContent===t),{timeout:12000},title);
  log("independent reviewer verified source and published");
