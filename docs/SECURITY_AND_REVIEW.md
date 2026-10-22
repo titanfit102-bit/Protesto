@@ -36,3 +36,6 @@ Before processing live political or highly sensitive user information, complete 
 \`test/domain.test.mjs\` covers form validation and filtering.
 \`test/security.test.mjs\` checks password hashing, session cookies, origins and role logic.
 \`test/pilot.integration.test.mjs\` exercises PostgreSQL reporting, cross-origin defenses, publishing workflow, audit and logout. Passing CI does not replace external security review.
+
+## Atomic abuse defenses and session revocation — development tranche
+Case creation uses a shared PostgreSQL quota keyed with HMAC for 10 attempts/hour/user, replacing a race-prone count check. Authenticated users can explicitly invalidate **all** their sessions at `POST /api/me/sessions/revoke-all` (same-origin anti-CSRF required). This intentionally includes the current device, clears the cookie and returns a count. These controls reduce simple automation and provide containment; they do not replace IP reputation, trusted account recovery, MFA enrollment policy or external security assessment.
