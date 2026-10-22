@@ -1,0 +1,38 @@
+name: OpenCode pilot smoke (no AI usage)
+
+on:
+  pull_request:
+    branches:
+      - feat/protesto-foundation
+
+permissions:
+  contents: read
+
+concurrency:
+  group: opencode-pilot-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    if: github.head_ref == 'experiment/opencode-pilot'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Check out pull request code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install OpenCode CLI
+        run: npm install --global opencode-ai --no-audit --no-fund
+      - name: Verify OpenCode is runnable without credentials
+        run: |
+          command -v opencode
+          opencode --version
+      - name: Validate existing application
+        run: |
+          npm install --no-audit --no-fund
+          npm run check
