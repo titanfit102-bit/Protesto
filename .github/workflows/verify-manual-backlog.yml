@@ -1,0 +1,101 @@
+name: Protesto manual backlog recovery verification
+on:
+  pull_request:
+    branches: [feat/protesto-foundation]
+    paths:
+      - .github/workflows/verify-manual-backlog.yml
+      - tools/opencode-real-runner.mjs
+      - tools/opencode-real-publish.mjs
+
+permissions:
+  contents: read
+
+jobs:
+  manual-recovery-verify:
+    if: >-
+      github.head_ref == 'experiment/opencode-pilot' &&
+      github.event.pull_request.head.repo.full_name == 'titanfit102-bit/Protesto'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: protesto
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres -d protesto"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/protesto
+      APP_ORIGIN: http://127.0.0.1:4174
+      PROTESTO_RATE_LIMIT_SECRET: synthetic-ci-rate-limit-secret-for-isolated-postgres-only
+      PROTESTO_DIALOGUE_SECRET: synthetic-ci-dialogue-secret-for-isolated-postgres-only
+    steps:
+      - name: Checkout existing Protesto development architecture
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+      - name: Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Overlay only reviewed manual draft branch files — no main writes
+        shell: bash
+        run: |
+          set -euo pipefail
+          for id in \
+            dialogue-rounded-shares \
+            dialogue-public-row-adapter \
+            transparency-ledger-view \
+            evidence-review-gates \
+            correction-decision-policy \
+            independent-appeal-gates \
+            public-audit-sequence \
+            source-provenance-summary \
+            institution-reply-states \
+            institution-working-days \
+            institution-public-summary \
+            case-retention-rules \
+            privacy-export-allowlist \
+            initiative-status-logic \
+            peaceful-event-windows \
+            accessible-status-messages \
+            public-source-link-safety
+          do
+            branch="opencode/pilot-${id}"
+            git fetch --no-tags --depth=1 origin "refs/heads/${branch}"
+            git show "FETCH_HEAD:src/opencode-${id}.mjs" > "src/opencode-${id}.mjs"
+            git show "FETCH_HEAD:test/opencode-${id}.test.mjs" > "test/opencode-${id}.test.mjs"
+          done
+          test "$(find src -maxdepth 1 -name 'opencode-*.mjs' | wc -l)" -eq 17
+          test "$(find test -maxdepth 1 -name 'opencode-*.test.mjs' | wc -l)" -eq 17
+          echo "17 original manual modules and 17 synthetic test files loaded; no merge."
+      - name: Install dependencies without lockfile mutations
+        run: npm install --no-package-lock --no-audit --no-fund
+      - name: JavaScript syntax checks
+        run: find src tools test -type f -name '*.mjs' -print0 | xargs -0 -r -n 1 node --check
+      - name: PostgreSQL migration and replay
+        run: npm run db:migrate && npm run db:migrate
+      - name: Full native tests and source checks
+        run: npm run verify
+      - name: Chromium availability
+        shell: bash
+        run: |
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME"
+          echo "CHROME_PATH=$CHROME" >> "$GITHUB_ENV"
+      - name: Browser end-to-end tests
+        run: npm run test:e2e
+      - name: Encrypted backup and isolated restore
+        env:
+          PROTESTO_BACKUP_TEST: '1'
+        run: npm run test:backup
+      - name: Security audit
+        run: npm audit --audit-level=high
