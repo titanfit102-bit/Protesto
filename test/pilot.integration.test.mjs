@@ -143,7 +143,7 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
   const fingerprintAudit=await pool.query("SELECT count(*)::integer n FROM audit_entries WHERE object_id=$1 AND action='source.fingerprint.declared'",[sourceId]);
   assert.equal(fingerprintAudit.rows[0].n,1);
   r=await send(sourceReviewPath,{method:"POST",cookie:reviewCookie,body:{
-   decision:"accepted",note:"Vendim i dyfishtë nuk lejohet.",checks:sourceChecks
+   decision:"accepted",note:"Vendim i dyfishtë nuk lejohet.",checks:sourceChecks,publicMetadata:publicSource
   }});
   assert.equal(r.status,409);
 
