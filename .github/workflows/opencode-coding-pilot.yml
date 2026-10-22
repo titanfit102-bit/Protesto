@@ -1,10 +1,8 @@
 name: OpenCode autonomous coding pilot (artifact only)
 
+# Historical experiment kept for audit; no automatic PR-triggered runs.
 on:
-  pull_request:
-    branches: [feat/protesto-foundation]
-    paths:
-      - .github/workflows/opencode-coding-pilot.yml
+  workflow_dispatch:
 
 permissions:
   contents: read
