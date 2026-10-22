@@ -52,3 +52,6 @@ Public release gate remains **OPEN** pending privacy, GDPR, legal and independen
 
 ## Independent local comparison of a reviewer declaration
 After a source fingerprint has been recorded, a reviewer may select the same or another PDF to compare its locally computed SHA-256 with the stored declaration. Both match and mismatch are reported explicitly. No PDF bytes are transmitted; no external trust anchor, publisher certification or original-file custody is established. This is **content equality only**, not proof of provenance.
+
+## Citizen responses (experimental, not legal right of reply)
+Authenticated pilot users other than the case author can submit one private response per published dossier. A separate reviewer (neither respondent nor case author) can accept or reject it; acceptance requires a **distinct redacted public copy** and explicit privacy review. The public endpoint exposes only that reviewed text and dates, never identity or raw submission. No institutional identity verification, formal service timeline, legal right-of-reply delivery, or arbitration exists. Do not label these unverified accounts as officials.

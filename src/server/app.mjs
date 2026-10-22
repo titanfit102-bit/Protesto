@@ -8,6 +8,7 @@ import {dossierRoute,dossierGetRoute,dossierPostRoute} from "./dossiers.mjs";
 import {appealRoute,appealGetRoute,appealPostRoute} from "./appeals.mjs";
 import {dialogueRoute,dialogueGetRoute,dialoguePostRoute} from "./dialogue.mjs";
 import {publicLedgerEvents} from "./public-ledger.mjs";
+import {responseRoute,responseGetRoute,responsePostRoute} from "./responses.mjs";
 import {publicCopyDecision} from "./publication-privacy.mjs";
 import {rateKey,consumeRateLimit} from "./rate-limits.mjs";
 import {decryptTotpSecret,verifyTotpCode} from "./totp.mjs";
@@ -24,6 +25,7 @@ const publicAssets=new Map([
  ["/src/seed.mjs",["../seed.mjs","text/javascript; charset=utf-8"]],
  ["/src/pilot.mjs",["../pilot.mjs","text/javascript; charset=utf-8"]],
  ["/src/pilot-evidence.mjs",["../pilot-evidence.mjs","text/javascript; charset=utf-8"]],
+ ["/src/pilot-right-reply.mjs",["../pilot-right-reply.mjs","text/javascript; charset=utf-8"]],
  ["/src/source-integrity.mjs",["../source-integrity.mjs","text/javascript; charset=utf-8"]],
  ["/src/pilot-dialogue.mjs",["../pilot-dialogue.mjs","text/javascript; charset=utf-8"]]
 ]);
@@ -88,7 +90,7 @@ export function createPilotServer(pool,{origin,production=false,rateLimitSecret=
   const isArchive=/^\/api\/archive\/[^/]+$/.test(pathname);
   const getRoutes=["/api/public/cases","/api/public/ledger","/api/me","/api/me/export","/api/cases/mine","/api/review/queue"];
   const postRoutes=["/api/auth/login","/api/auth/logout","/api/me/sessions/revoke-all","/api/cases"];
-  if(!(req.method==="GET"&&(getRoutes.includes(pathname)||actionGetRoutes.includes(pathname)||dossierGetRoute(pathname)||appealGetRoute(pathname)||dialogueGetRoute(pathname)))&&!(req.method==="POST"&&(postRoutes.includes(pathname)||isReview||isArchive||actionPostRoute(pathname)||dossierPostRoute(pathname)||appealPostRoute(pathname)||dialoguePostRoute(pathname)))){
+  if(!(req.method==="GET"&&(getRoutes.includes(pathname)||actionGetRoutes.includes(pathname)||dossierGetRoute(pathname)||responseGetRoute(pathname)||appealGetRoute(pathname)||dialogueGetRoute(pathname)))&&!(req.method==="POST"&&(postRoutes.includes(pathname)||isReview||isArchive||actionPostRoute(pathname)||dossierPostRoute(pathname)||responsePostRoute(pathname)||appealPostRoute(pathname)||dialoguePostRoute(pathname)))){
    return fail(res,404,"API endpoint nuk ekziston.");
   }
   if(req.method==="POST"&&!secureWrite(req,origin))return fail(res,403,"Kërkesë e bllokuar nga mbrojtja CSRF.");
@@ -108,6 +110,10 @@ export function createPilotServer(pool,{origin,production=false,rateLimitSecret=
      const quota=await consumeRateLimit(pool,rateKey(rateLimitSecret,"write-user",currentUser.id),{limit:120,windowSeconds:3600});
      if(!quota.allowed)return json(res,429,{error:"Shumë kërkesa. Provo më vonë."},{"Retry-After":String(quota.retrySeconds)});
     }
+   }
+   if(responseGetRoute(pathname)||responsePostRoute(pathname)){
+    const current=await auth(req);
+    return await responseRoute({pathname,req,res,pool,user:current,readJSON,json,fail});
    }
    if(pathname==="/api/appeals"||pathname.startsWith("/api/appeals/")){
     const current=await auth(req);
