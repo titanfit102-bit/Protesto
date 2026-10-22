@@ -119,19 +119,19 @@ export async function dossierRoute({pathname,req,res,pool,user,json,fail,readJSO
       // correction from being reviewed after publication was withdrawn, and
       // serialize review with competing case archival transactions.
       const locked=await client.query(
-        "SELECT r.id,r.case_id,r.author_id,r.state AS correction_state,c.state AS case_state FROM case_corrections r JOIN civic_cases c ON c.id=r.case_id WHERE r.id=$1 FOR UPDATE OF c,r",
+        "SELECT r.id,r.case_id,r.author_id,c.author_id AS case_author_id,r.state AS correction_state,c.state AS case_state FROM case_corrections r JOIN civic_cases c ON c.id=r.case_id WHERE r.id=$1 FOR UPDATE OF c,r",
         [match[1]]
       );
       if(!locked.rowCount){await client.query("ROLLBACK");return fail(res,409,"Kërkesa nuk ekziston.");}
       const context=locked.rows[0];
       const policy=correctionDecisionPolicy({
         case_state:context.case_state,correction_state:context.correction_state,
-        author_id:context.author_id,reviewer_id:user.id
+        author_id:context.author_id,case_author_id:context.case_author_id,reviewer_id:user.id
       });
       if(!policy.mayReview){
         await client.query("ROLLBACK");
         if(policy.reasons.includes("independent_reviewer_required")){
-          return fail(res,403,"Nuk mund të shqyrtosh korrigjimin tënd.");
+          return fail(res,403,"Autori i dosjes ose i korrigjimit nuk mund të shqyrtojë kërkesën.");
         }
         return fail(res,409,"Dosja nuk është më e publikuar ose korrigjimi është shqyrtuar.");
       }
