@@ -1,14 +1,21 @@
 {
-  "version": 1,
+  "version": 2,
   "base": "feat/protesto-foundation",
-  "policy": "synthetic-tests-only",
-  "maxTasksPerRun": 2,
+  "policy": "guarded-module-or-tests",
+  "maxTasksPerRun": 4,
   "tasks": [
     {
       "id": "filter-final-e2e",
       "status": "approved",
       "target": "test/opencode-filter-final-e2e.test.mjs",
-      "brief": "Create at least four meaningful deterministic regression tests for the existing filterCases export in src/domain.mjs, using only synthetic records. Cover case-insensitive and Albanian diacritic-insensitive search, combined category/status/query filtering, descending createdAt ordering on a fresh returned array, and non-mutation of input array. Use node:test and node:assert/strict. Inspect the existing behavior and avoid assumptions, real political data, or changes to production code. Import only node:test, node:assert/strict, ../src/domain.mjs, and optionally ../src/seed.mjs. Do not duplicate the existing filterCases test exactly."
+      "brief": "Create at least four meaningful deterministic regression tests for the existing filterCases export in src/domain.mjs, using only synthetic records. Cover case-insensitive and Albanian diacritic-insensitive search, combined category/status/query filtering, descending createdAt ordering on a fresh returned array, and non-mutation of input array. Use node:test and node:assert/strict. Inspect the existing behavior and avoid assumptions, real political data, or changes to production code. Import only node:test, node:assert/strict, ../src/domain.mjs, and optionally ../src/seed.mjs. Do not duplicate the existing filterCases test exactly.",
+      "kind": "tests"
+    },
+    {
+      "id": "dialogue-report-metrics",
+      "status": "approved",
+      "kind": "pure-module",
+      "brief": "Implement a new original deterministic pure JavaScript function in src/opencode-dialogue-report-metrics.mjs that summarizes ONLY finalized anonymous aggregate civic-dialogue report items (agree_count, disagree_count, pass_count, participants). Return validated per-statement shares rounded sensibly, with an explicit nonrepresentative disclaimer and no population-level, individual-level or political profile inference. Enforce >=10 respondents, finite nonnegative safe integer counts, matching sum, and deterministic stable sorting; never mutate input. Export clearly named functions. Add test/opencode-dialogue-report-metrics.test.mjs with at least four synthetic node:test cases for valid aggregates, sub-threshold suppression, invalid/mismatched totals and input immutability/deterministic ordering. Do NOT edit src/server/dialogue.mjs, other existing source files, API endpoints or schemas. No I/O, network, identities, model calls or third-party code."
     }
   ]
 }
