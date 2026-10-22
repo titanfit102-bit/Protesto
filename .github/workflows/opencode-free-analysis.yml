@@ -1,0 +1,84 @@
+name: OpenCode free-model analysis (read-only)
+
+on:
+  pull_request:
+    branches:
+      - feat/protesto-foundation
+    paths:
+      - .github/workflows/opencode-free-analysis.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: protesto-free-agent-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    if: >-
+      github.head_ref == 'experiment/opencode-pilot' &&
+      github.event.pull_request.head.repo.full_name == 'titanfit102-bit/Protesto' &&
+      github.event.pull_request.user.login == 'titanfit102-bit'
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    env:
+      OPENCODE_DISABLE_AUTOUPDATE: 'true'
+      OPENCODE_AUTO_SHARE: 'false'
+      OPENCODE_CONFIG_CONTENT: '{"permission":{"*":"deny","read":"allow","glob":"allow","grep":"allow"}}'
+    steps:
+      - name: Checkout isolated experimental pull request
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install OpenCode
+        run: npm install --global opencode-ai --no-audit --no-fund
+      - name: Select a documented free model (prefer zero-retention providers)
+        id: model
+        shell: bash
+        run: |
+          set -euo pipefail
+          opencode models opencode > opencode-models.txt
+          cat opencode-models.txt
+          SELECTED=''
+          for candidate in \
+            'opencode/glm-5.3-flash-free' \
+            'opencode/deepseek-v4.1-flash-free' \
+            'opencode/longcat-2.5-preview-free' \
+            'opencode/minimax-m3.1-flash-free'; do
+            if grep -Fxq "$candidate" opencode-models.txt; then
+              SELECTED="$candidate"
+              break
+            fi
+          done
+          if [ -z "$SELECTED" ]; then
+            echo 'No listed free zero-retention model available anonymously. AI not executed.'
+            exit 1
+          fi
+          echo "model=$SELECTED" >> "$GITHUB_OUTPUT"
+      - name: Ask OpenCode to analyze Protesto without code changes
+        shell: bash
+        env:
+          FREE_MODEL: ${{ steps.model.outputs.model }}
+        run: |
+          set -euo pipefail
+          timeout 240s opencode run --agent plan --model "$FREE_MODEL" \
+            'You are auditing the PUBLIC repository Protesto in a read-only experiment. Read AGENTS.md, README.md, package.json, and docs/RELEASE_GATES.md. Do not access secrets or private personal data. Do not modify files, run shell commands, create commits, call external tools, or deploy. Answer briefly in Albanian: (1) Which project modules exist? (2) Name precisely two concrete technical release risks grounded in the files, citing repository paths. (3) Suggest the smallest safe implementation task for a later authorized PR. State that this is a prototype, not approved for launch.' \
+            2>&1 | tee opencode-analysis.txt
+          test -s opencode-analysis.txt
+          git diff --exit-code
+          git diff --cached --exit-code
+      - name: Preserve read-only test output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenCode-free-analysis
+          path: |
+            opencode-models.txt
+            opencode-analysis.txt
+          retention-days: 7
+          if-no-files-found: warn
