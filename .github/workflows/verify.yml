@@ -1,7 +1,7 @@
 name: Protesto verification
 on:
   pull_request:
-    branches: [main, feat/protesto-foundation, feat/protesto-pilot-integration-candidate, feat/protesto-source-disclosure-hardening]
+    branches: [main, feat/protesto-foundation, feat/protesto-pilot-integration-candidate, feat/protesto-source-disclosure-hardening, feat/protesto-source-fingerprint-attestations]
   workflow_dispatch:
 permissions:
   contents: read

@@ -18,7 +18,7 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
   await pool.query("INSERT INTO civic_users(id,email,password_hash,role) VALUES($1,$2,$3,$4)",[u.id,u.email,hashPassword(u.password),u===reporter?"reporter":"reviewer"]);
  }
  const applied=await pool.query("SELECT count(*)::integer n FROM schema_migrations");
- assert.equal(applied.rows[0].n,8,"Expected all eight versioned migrations");
+ assert.equal(applied.rows[0].n,9,"Expected all nine versioned migrations");
  const quotaKey=rateKey("synthetic-integration-rate-limit-key-longer-than-32","test-concurrent",randomUUID());
  const quota=await Promise.all([1,2,3].map(()=>consumeRateLimit(pool,quotaKey,{limit:2,windowSeconds:60})));
  assert.equal(quota.filter(x=>x.allowed).length,2,"Concurrent database quota must allow exactly two hits");
@@ -124,12 +124,20 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
   assert.equal(r.status,409);
 
   r=await send("/api/review/"+caseId,{method:"POST",cookie:reviewCookie,body:{decision:"published",note:"Short"}});assert.equal(r.status,422);
-  const checklist={sourceReviewed:true,privacyReviewed:true,replyConsidered:true};
+  const checklist={sourceReviewed:true,privacyReviewed:true,replyConsidered:true,publicCopyReviewed:true};
+  const publicCopy={title:sample.title,description:"Përmbajtje publike e rishikuar për testim, pa të dhëna identifikuese.",sourceUrl:sample.source};
+  r=await send("/api/review/"+caseId,{method:"POST",cookie:reviewCookie,body:{decision:"published",note:"Publikim pa kopje publike, duhet refuzuar.",checks:checklist}});
+  assert.equal(r.status,422);
+  r=await send("/api/review/"+caseId,{method:"POST",cookie:reviewCookie,body:{decision:"published",note:"Lidhje me parametra duhet të refuzohet.",checks:checklist,public:{...publicCopy,sourceUrl:"https://example.org/source?token=private"}}});
+  assert.equal(r.status,422);
   r=await send("/api/review/"+caseId,{method:"POST",cookie:reviewCookie,body:{decision:"published",note:"Burimi u verifikua, por mungon checklist."}});
   assert.equal(r.status,422);
-  r=await send("/api/review/"+caseId,{method:"POST",cookie:reviewCookie,body:{decision:"published",note:"Burimi u verifikua dhe është i përshtatshëm për demonstrim.",checks:checklist}});assert.equal(r.status,200);
+  r=await send("/api/review/"+caseId,{method:"POST",cookie:reviewCookie,body:{decision:"published",note:"Burimi u verifikua dhe është i përshtatshëm për demonstrim.",checks:checklist,public:publicCopy}});assert.equal(r.status,200);
   r=await send("/api/review/"+caseId,{method:"POST",cookie:reviewCookie,body:{decision:"rejected",note:"A second decision must be rejected."}});assert.equal(r.status,409);
   r=await send("/api/public/cases");assert.ok(r.json.items.some(x=>x.id===caseId));
+  const shown=r.json.items.find(x=>x.id===caseId);
+  assert.equal(shown.description,publicCopy.description);
+  assert.ok(!JSON.stringify(shown).includes(sample.description),"Raw case narrative cannot escape the public copy gate");
   r=await send(fpPath);assert.equal(r.status,404,"Public cannot read declared fingerprint");
   r=await send(fpPath,{method:"POST",cookie:reviewCookie,body:fingerprint});assert.equal(r.status,409,"Published case disallows new declaration");
   r=await send("/api/dossiers/"+caseId+"/sources");
@@ -251,7 +259,7 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
   const secondSource=r.json.items[0].id;
   r=await send("/api/dossiers/"+secondId+"/sources/"+secondSource+"/review",{method:"POST",cookie:reviewCookie,body:{decision:"accepted",note:"Burimi fiktiv i testit kaloi verifikimin.",checks:sourceChecks}});
   assert.equal(r.status,200);
-  r=await send("/api/review/"+secondId,{method:"POST",cookie:reviewCookie,body:{decision:"published",note:"Kontrolli editorial për testin u përfundua.",checks:checklist}});
+  r=await send("/api/review/"+secondId,{method:"POST",cookie:reviewCookie,body:{decision:"published",note:"Kontrolli editorial për testin u përfundua.",checks:checklist,public:publicCopy}});
   assert.equal(r.status,200);
   r=await send("/api/corrections",{method:"POST",cookie:reporterCookie,body:{caseId:secondId,reason:"Dokumenti është kundërshtuar dhe rasti kërkon tërheqje për verifikim të ri."}});
   assert.equal(r.status,201);const secondCorrection=r.json.item.id;
@@ -264,7 +272,7 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
   r=await send("/api/dossiers/"+appealCaseId+"/sources",{cookie:reviewCookie});const appealSource=r.json.items[0].id;
   r=await send("/api/dossiers/"+appealCaseId+"/sources/"+appealSource+"/review",{method:"POST",cookie:reviewCookie,body:{decision:"accepted",note:"Kontrolli i burimit demonstrues për apelim u krye.",checks:sourceChecks}});
   assert.equal(r.status,200);
-  r=await send("/api/review/"+appealCaseId,{method:"POST",cookie:reviewCookie,body:{decision:"published",note:"Për demonstrimin, verifikimi editorial është përfunduar.",checks:checklist}});
+  r=await send("/api/review/"+appealCaseId,{method:"POST",cookie:reviewCookie,body:{decision:"published",note:"Për demonstrimin, verifikimi editorial është përfunduar.",checks:checklist,public:publicCopy}});
   assert.equal(r.status,200);
   r=await send("/api/corrections",{method:"POST",cookie:reporterCookie,body:{caseId:appealCaseId,reason:"Kjo dosje demonstrimi përmban një pretendim që kërkon rivlerësim të plotë."}});
   assert.equal(r.status,201);const disputedCorrection=r.json.item.id;

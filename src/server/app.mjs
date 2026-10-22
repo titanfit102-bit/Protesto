@@ -8,6 +8,7 @@ import {dossierRoute,dossierGetRoute,dossierPostRoute} from "./dossiers.mjs";
 import {appealRoute,appealGetRoute,appealPostRoute} from "./appeals.mjs";
 import {dialogueRoute,dialogueGetRoute,dialoguePostRoute} from "./dialogue.mjs";
 import {publicLedgerEvents} from "./public-ledger.mjs";
+import {publicCopyDecision} from "./publication-privacy.mjs";
 import {rateKey,consumeRateLimit} from "./rate-limits.mjs";
 import {normalizeEmail,verifyPassword,newSessionToken,tokenHash,parseSessionCookie,sessionCookie,clearSessionCookie,secureWrite,canReview,SESSION_AGE_SECONDS} from "./security.mjs";
 
@@ -133,7 +134,7 @@ export function createPilotServer(pool,{origin,production=false,rateLimitSecret=
     return json(res,200,{events:publicLedgerEvents(result.rows),disclaimer:"Kjo listë regjistron ndryshimet e statusit; nuk provon vërtetësinë e pretendimeve."});
    }
    if(pathname==="/api/public/cases"&&req.method==="GET"){
-    const result=await pool.query("SELECT c.id,c.title,c.description,c.area,c.category,c.created_at,(SELECT s.url FROM case_sources s WHERE s.case_id=c.id AND s.state='accepted' ORDER BY s.created_at ASC LIMIT 1) AS source_url FROM civic_cases c WHERE c.state='published' ORDER BY c.created_at DESC LIMIT 100");
+    const result=await pool.query("SELECT c.id,c.public_title AS title,c.public_description AS description,c.area,c.category,c.created_at,c.public_source_url AS source_url FROM civic_cases c WHERE c.state='published' AND c.public_title IS NOT NULL AND c.public_description IS NOT NULL ORDER BY c.created_at DESC LIMIT 100");
     return json(res,200,{items:result.rows});
    }
    if(pathname==="/api/auth/login"&&req.method==="POST"){
@@ -199,14 +200,19 @@ export function createPilotServer(pool,{origin,production=false,rateLimitSecret=
     const body=await readJSON(req),decision=body.decision,note=cleanText(body.note,1001);
     if(!["published","rejected"].includes(decision)||note.length<15||note.length>1000)return fail(res,422,"Vendimi dhe arsyetimi 15–1000 karaktere janë të detyrueshëm.");
     if(decision==="published" && !(body.checks?.sourceReviewed===true && body.checks?.privacyReviewed===true && body.checks?.replyConsidered===true))return fail(res,422,"Konfirmo kontrollin e burimit, privatësisë dhe të drejtën e përgjigjes.");
+    const approved=decision==="published"?publicCopyDecision(body):null;
+    if(decision==="published"&&!approved)return fail(res,422,"Kërkohet një kopje publike e rishikuar dhe URL pa parametra privatë.");
     const client=await pool.connect();
     try{
      await client.query("BEGIN");
      if(decision==="published"){
       const accepted=await client.query("SELECT 1 FROM case_sources WHERE case_id=$1 AND state='accepted' LIMIT 1",[caseId]);
       if(!accepted.rowCount){await client.query("ROLLBACK");return fail(res,422,"Të paktën një burim duhet verifikuar para publikimit.");}
+      const selected=await client.query("SELECT 1 FROM case_sources WHERE case_id=$1 AND state='accepted' AND url=$2 LIMIT 1",[caseId,approved.sourceUrl]);
+      if(!selected.rowCount){await client.query("ROLLBACK");return fail(res,422,"URL publike duhet të jetë një burim i pranuar dhe pa parametra.");}
      }
-     const updated=await client.query("UPDATE civic_cases SET state=$1,reviewed_at=now(),reviewed_by=$2 WHERE id=$3 AND state='pending' AND author_id<>$2 RETURNING id,state",[decision,user.id,caseId]);
+     const updated=await client.query("UPDATE civic_cases SET state=$1,reviewed_at=now(),reviewed_by=$2,public_title=$4,public_description=$5,public_source_url=$6 WHERE id=$3 AND state='pending' AND author_id<>$2 RETURNING id,state",
+      [decision,user.id,caseId,approved?.title??null,approved?.description??null,approved?.sourceUrl??null]);
      if(!updated.rowCount){await client.query("ROLLBACK");return fail(res,409,"Dosja nuk është në pritje ose është e jotja.");}
      await client.query("INSERT INTO review_history(id,case_id,reviewer_id,decision,note) VALUES($1,$2,$3,$4,$5)",[randomUUID(),caseId,user.id,decision,note]);
      await client.query("INSERT INTO audit_entries(id,actor_id,action,object_type,object_id) VALUES($1,$2,$3,'case',$4)",[randomUUID(),user.id,"case.review."+decision,caseId]);
