@@ -28,7 +28,7 @@ test("operational counts require admin and exclude identities",{skip:!process.en
   const x=await req("/api/ops/status",{cookie:logins[0]});
   assert.equal(x.status,200);
   assert.deepEqual(Object.keys(x.json.counts),["casesPending","correctionsPending","appealsPending","responsesPending","activeSessions","migrations"]);
-  assert.equal(x.json.counts.migrations,15);
+  assert.equal(x.json.counts.migrations,16);
   assert.ok(Object.values(x.json.counts).every(Number.isSafeInteger));
   assert.ok(!JSON.stringify(x.json).includes(admin.email));
   assert.ok(!JSON.stringify(x.json).includes(reporter.email));

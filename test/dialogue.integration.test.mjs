@@ -14,7 +14,8 @@ test("Dialogu Qytetar: independent moderation, consent, vote threshold and delet
  const u=randomUUID().slice(0,8);
  const reviewer={id:randomUUID(),email:"dialogue-review-"+u+"@example.org",role:"reviewer"};
  const author={id:randomUUID(),email:"dialogue-author-"+u+"@example.org",role:"reporter"};
- const identities=[reviewer,author,...Array.from({length:10},(_,i)=>({id:randomUUID(),email:"dialogue-voter-"+i+"-"+u+"@example.org",role:"reporter"}))];
+ const secondReviewer={id:randomUUID(),email:"dialogue-independent-"+u+"@example.org",role:"reviewer"};
+ const identities=[reviewer,author,...Array.from({length:10},(_,i)=>({id:randomUUID(),email:"dialogue-voter-"+i+"-"+u+"@example.org",role:"reporter"})),secondReviewer];
  const cookies=new Map();
  const sharedHash=hashPassword("ExampleStrongPassword!2026");
  for(const person of identities){
@@ -59,10 +60,45 @@ test("Dialogu Qytetar: independent moderation, consent, vote threshold and delet
   r=await send("/api/dialogue/topics",{method:"POST",body:topicData,as:reviewer,csrf:false});assert.equal(r.status,403);
   r=await send("/api/dialogue/topics",{method:"POST",body:topicData,as:reviewer});
   assert.equal(r.status,201);const topicId=r.data.item.id;
+  assert.equal(r.data.item.review_state,"pending");
+  r=await send("/api/dialogue/topics");
+  assert.ok(!r.data.items.some(x=>x.id===topicId),"Proposed topic must stay private");
+  r=await send("/api/dialogue/topics/"+topicId);assert.equal(r.status,404);
+  r=await send("/api/dialogue/topics/"+topicId+"/statements",{method:"POST",as:author,body:{body:"Ky është tekst sintetik për një temë ende të pamiratuar."}});
+  assert.equal(r.status,409,"No submissions before independent approval");
+  r=await send("/api/dialogue/topic-review/queue");
+  assert.equal(r.status,401,"Review queue not public");
+  r=await send("/api/dialogue/topic-review/queue",{as:author});
+  assert.equal(r.status,403);
+  r=await send("/api/dialogue/topic-review/queue",{as:secondReviewer});
+  assert.ok(r.data.items.some(x=>x.id===topicId),"Independent reviewer can view pending proposal");
+  const reviewedTopic={title:"Diskutim publik i verifikuar në mënyrë të pavarur",
+    description:"Kontekst publik sintetik, i redaktuar nga një verifikues tjetër."};
+  const reviewPayload={decision:"approved",note:"Kontrolli i pavarur i përmbajtjes dhe privatësisë është përfunduar.",
+    public:reviewedTopic,checks:{privacyReviewed:true,publicCopyReviewed:true}};
+  const reviewPath="/api/dialogue/topics/"+topicId+"/review";
+  r=await send(reviewPath,{method:"POST",as:reviewer,body:reviewPayload});
+  assert.equal(r.status,403,"Creator cannot approve own topic");
+  r=await send(reviewPath,{method:"POST",as:author,body:reviewPayload});
+  assert.equal(r.status,403,"A reporter cannot approve a topic");
+  r=await send(reviewPath,{method:"POST",as:secondReviewer,body:{...reviewPayload,checks:{privacyReviewed:false,publicCopyReviewed:true}}});
+  assert.equal(r.status,422,"Both attestation checks required");
+  r=await send(reviewPath,{method:"POST",as:secondReviewer,body:reviewPayload});
+  assert.equal(r.status,200);assert.equal(r.data.item.review_state,"approved");
+  r=await send(reviewPath,{method:"POST",as:secondReviewer,body:{decision:"rejected",note:"Nuk lejohet vendim i dytë për të njëjtën temë."}});
+  assert.equal(r.status,409,"Decisions are immutable through the review endpoint");
+  const reviewDb=await pool.query("SELECT created_by,reviewed_by,review_state,public_title FROM dialogue_topics WHERE id=$1",[topicId]);
+  assert.equal(reviewDb.rows[0].created_by,reviewer.id);
+  assert.equal(reviewDb.rows[0].reviewed_by,secondReviewer.id);
+  assert.equal(reviewDb.rows[0].public_title,reviewedTopic.title);
+  const audit=await pool.query("SELECT count(*)::integer n FROM audit_entries WHERE object_id=$1 AND action='dialogue.topic.approved'",[topicId]);
+  assert.equal(audit.rows[0].n,1);
+  r=await send("/api/dialogue/topic-review/queue",{as:secondReviewer});
+  assert.ok(!r.data.items.some(x=>x.id===topicId));
   r=await send("/api/dialogue/topics");assert.ok(r.data.items.some(x=>x.id===topicId));assert.equal(JSON.stringify(r.data).includes(author.email),false);
   const visibleTopic=r.data.items.find(x=>x.id===topicId);
-  assert.equal(visibleTopic.title,topicData.public.title);
-  assert.equal(visibleTopic.description,topicData.public.description);
+  assert.equal(visibleTopic.title,reviewedTopic.title);
+  assert.equal(visibleTopic.description,reviewedTopic.description);
   assert.ok(!JSON.stringify(visibleTopic).includes("PRIVATE"));
   const statementData={body:"PRIVATE source statement: citizen identifying street, not for public release."};
   const approvedStatement="Publikisht kërkojmë raporte mujore të verifikueshme për shërbimet.";
@@ -144,7 +180,7 @@ test("Dialogu Qytetar: independent moderation, consent, vote threshold and delet
   assert.equal(entry.statement_id,statementId);
   assert.equal(entry.topic_id,topicId);
   assert.equal(entry.statement,approvedStatement);
-  assert.equal(entry.topic_title,topicData.public.title);
+  assert.equal(entry.topic_title,reviewedTopic.title);
   assert.ok(!JSON.stringify(r.data).includes("PRIVATE"));
   assert.equal(entry.case_title,"Dosje publike e rishikuar për dialog");
   assert.equal(entry.source_url,"https://example.org/public-dialogue");
@@ -157,7 +193,7 @@ test("Dialogu Qytetar: independent moderation, consent, vote threshold and delet
   assert.equal(privateOriginal.rows[0].body,statementData.body);
   assert.equal(privateOriginal.rows[0].public_body,approvedStatement);
   assert.equal(privateOriginal.rows[0].title,topicData.title);
-  assert.equal(privateOriginal.rows[0].public_title,topicData.public.title);
+  assert.equal(privateOriginal.rows[0].public_title,reviewedTopic.title);
   const q=await pool.query("SELECT count(*)::integer n FROM dialogue_votes WHERE statement_id IN($1,$2)",[statementId,smallId]);
   assert.equal(q.rows[0].n,0,"All individual vote records purged on close");
   r=await send("/api/dialogue/statements/"+statementId+"/vote",{method:"POST",as:author,body:{choice:"agree",acknowledge:true}});
