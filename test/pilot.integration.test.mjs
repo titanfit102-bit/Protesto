@@ -223,7 +223,7 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
   assert.equal(r.status,201);const secondId=r.json.item.id;
   r=await send("/api/dossiers/"+secondId+"/sources",{cookie:reviewCookie});
   const secondSource=r.json.items[0].id;
-  r=await send("/api/dossiers/"+secondId+"/sources/"+secondSource+"/review",{method:"POST",cookie:reviewCookie,body:{decision:"accepted",note:"Burimi fiktiv i testit kaloi verifikimin."}});
+  r=await send("/api/dossiers/"+secondId+"/sources/"+secondSource+"/review",{method:"POST",cookie:reviewCookie,body:{decision:"accepted",note:"Burimi fiktiv i testit kaloi verifikimin.",checks:sourceChecks}});
   assert.equal(r.status,200);
   r=await send("/api/review/"+secondId,{method:"POST",cookie:reviewCookie,body:{decision:"published",note:"Kontrolli editorial për testin u përfundua.",checks:checklist}});
   assert.equal(r.status,200);
@@ -236,7 +236,7 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
   r=await send("/api/cases",{method:"POST",cookie:reporterCookie,body:{...sample,title:"Dosja e tretë për apelim"}});
   assert.equal(r.status,201);const appealCaseId=r.json.item.id;
   r=await send("/api/dossiers/"+appealCaseId+"/sources",{cookie:reviewCookie});const appealSource=r.json.items[0].id;
-  r=await send("/api/dossiers/"+appealCaseId+"/sources/"+appealSource+"/review",{method:"POST",cookie:reviewCookie,body:{decision:"accepted",note:"Kontrolli i burimit demonstrues për apelim u krye."}});
+  r=await send("/api/dossiers/"+appealCaseId+"/sources/"+appealSource+"/review",{method:"POST",cookie:reviewCookie,body:{decision:"accepted",note:"Kontrolli i burimit demonstrues për apelim u krye.",checks:sourceChecks}});
   assert.equal(r.status,200);
   r=await send("/api/review/"+appealCaseId,{method:"POST",cookie:reviewCookie,body:{decision:"published",note:"Për demonstrimin, verifikimi editorial është përfunduar.",checks:checklist}});
   assert.equal(r.status,200);
