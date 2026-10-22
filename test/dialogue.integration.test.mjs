@@ -24,9 +24,17 @@ test("Dialogu Qytetar: independent moderation, consent, vote threshold and delet
  }
  const publishedCase=randomUUID(),pendingCase=randomUUID();
  for(const [id,state] of [[publishedCase,"published"],[pendingCase,"pending"]]){
-  await pool.query("INSERT INTO civic_cases(id,author_id,title,description,area,category,state) VALUES($1,$2,$3,$4,$5,$6,$7)",
-   [id,author.id,"Dosje sintetike për dialog","Regjistrim sintetik për testimin e konsultimit qytetar.",u,"Mjedis",state]);
+  await pool.query("INSERT INTO civic_cases(id,author_id,title,description,area,category,state,public_title,public_description,public_source_url) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
+   [id,author.id,"PRIVATE synthetic case title","Regjistrim origjinal PRIVAT për kontroll API.",u,"Mjedis",state,
+    state==="published"?"Dosje publike e rishikuar për dialog":null,
+    state==="published"?"Kopje publike sintetike e rishikuar për raportin qytetar.":null,
+    state==="published"?"https://example.org/public-dialogue":null]);
  }
+ await pool.query("INSERT INTO case_sources(id,case_id,submitted_by,title,url,context,state,public_title,public_url) VALUES($1,$2,$3,$4,$5,$6,'accepted',$7,$8)",[
+  randomUUID(),publishedCase,author.id,"PRIVATE identifying source title",
+  "https://example.org/original?private=token","Sintetik për të provuar privatësinë e API-së publike.",
+  "Dokument publik i rishikuar","https://example.org/public-dialogue"
+ ]);
  const send=async(path,{method="GET",body,as,csrf=true}={})=>{
   const headers={};if(as)headers.Cookie=cookies.get(as.id);
   if(method==="POST"){
@@ -113,6 +121,10 @@ test("Dialogu Qytetar: independent moderation, consent, vote threshold and delet
   assert.equal(entry.statement_id,statementId);
   assert.equal(entry.topic_id,topicId);
   assert.equal(entry.statement,statementData.body);
+  assert.equal(entry.case_title,"Dosje publike e rishikuar për dialog");
+  assert.equal(entry.source_url,"https://example.org/public-dialogue");
+  assert.ok(!JSON.stringify(r.data).includes("PRIVATE"));
+  assert.ok(!JSON.stringify(r.data).includes("private=token"));
   assert.ok(!r.data.items.some(x=>x.statement_id===smallId),"Single-vote statement must never be reported");
   assert.equal(JSON.stringify(r.data).includes(author.email),false,"No private identities in aggregate report");
 
@@ -122,6 +134,19 @@ test("Dialogu Qytetar: independent moderation, consent, vote threshold and delet
   assert.equal(r.status,409);
   r=await send("/api/dialogue/topics/"+topicId+"/statements",{method:"POST",as:author,body:statementData});
   assert.equal(r.status,409);
+  // An old case missing reviewed fields must be withheld by public endpoints.
+  await pool.query("UPDATE civic_cases SET public_title=NULL,public_description=NULL WHERE id=$1",[publishedCase]);
+  r=await send("/api/dialogue/report");
+  assert.ok(!r.data.items.some(x=>x.topic_id===topicId));
+  r=await send("/api/dialogue/topics");
+  assert.ok(!r.data.items.some(x=>x.id===topicId));
+  r=await send("/api/dialogue/topics/"+topicId);
+  assert.equal(r.status,404);
+  r=await send("/api/dossiers/"+publishedCase+"/responses");
+  assert.equal(r.status,404);
+  await pool.query("UPDATE civic_cases SET public_title=$1,public_description=$2 WHERE id=$3",[
+   "Dosje publike e rishikuar për dialog","Kopje publike sintetike e rishikuar për raportin qytetar.",publishedCase
+  ]);
   await pool.query("UPDATE civic_cases SET state='archived' WHERE id=$1",[publishedCase]);
   r=await send("/api/dialogue/topics/"+topicId);assert.equal(r.status,404);
   r=await send("/api/dialogue/topics");assert.ok(!r.data.items.some(x=>x.id===topicId));
