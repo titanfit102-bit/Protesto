@@ -1,12 +1,13 @@
 import {randomUUID} from "node:crypto";
 import {cleanText,validateInitiative,validateGathering} from "../domain.mjs";
 import {canReview} from "./security.mjs";
+import {reviewedActionCopy} from "./action-publication.mjs";
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export const actionGetRoutes=["/api/actions/public","/api/actions/mine","/api/actions/review/queue"];
 export const actionPostRoute=pathname=>pathname==="/api/actions"||/^\/api\/actions\/review\/[^/]+$/.test(pathname)||/^\/api\/actions\/archive\/[^/]+$/.test(pathname);
 export async function actionRoute({pathname,req,res,pool,user,json,fail,readJSON}){
  if(pathname==="/api/actions/public"&&req.method==="GET"){
-  const rows=await pool.query("SELECT id,kind,subtype,title,description,area,event_date,created_at FROM civic_actions WHERE state='published' ORDER BY created_at DESC LIMIT 100");
+  const rows=await pool.query("SELECT id,kind,subtype,public_title AS title,public_description AS description,public_area AS area,event_date,created_at FROM civic_actions WHERE state='published' AND public_title IS NOT NULL AND public_description IS NOT NULL AND public_area IS NOT NULL ORDER BY created_at DESC LIMIT 100");
   return json(res,200,{items:rows.rows});
  }
  if(!user)return fail(res,401,"Kërkohet identifikim.");
@@ -41,11 +42,17 @@ export async function actionRoute({pathname,req,res,pool,user,json,fail,readJSON
  const minimum=operation==="archive"?20:15;
  if(!["published","rejected","archived"].includes(decision)||note.length<minimum||note.length>1000)return fail(res,422,"Vendimi ose arsyetimi nuk është i vlefshëm.");
  if(operation==="review"&&decision==="archived")return fail(res,422,"Përdor tërheqjen për një publikim ekzistues.");
+ const approved=operation==="review"&&decision==="published"?reviewedActionCopy(body):null;
+ if(operation==="review"&&decision==="published"&&!approved)
+  return fail(res,422,"Kërkohet kopje publike e redaktuar dhe kontrolle privatësie.");
  const expectedState=operation==="archive"?"published":"pending";
  const client=await pool.connect();
  try{
   await client.query("BEGIN");
-  const updated=await client.query("UPDATE civic_actions SET state=$1,reviewer_id=$2,reviewed_at=now() WHERE id=$3 AND state=$4 AND author_id<>$2 RETURNING id,kind,state",[decision,user.id,id,expectedState]);
+  const updated=operation==="archive"
+    ?await client.query("UPDATE civic_actions SET state=$1,reviewer_id=$2,reviewed_at=now() WHERE id=$3 AND state=$4 AND author_id<>$2 RETURNING id,kind,state",[decision,user.id,id,expectedState])
+    :await client.query("UPDATE civic_actions SET state=$1,reviewer_id=$2,reviewed_at=now(),public_title=$5,public_description=$6,public_area=$7 WHERE id=$3 AND state=$4 AND author_id<>$2 RETURNING id,kind,state",
+      [decision,user.id,id,expectedState,approved?.title??null,approved?.description??null,approved?.area??null]);
   if(!updated.rowCount){await client.query("ROLLBACK");return fail(res,409,"Regjistrimi nuk mund të shqyrtohet, është shqyrtuar ose të përket ty.");}
   await client.query("INSERT INTO action_reviews(id,action_id,reviewer_id,decision,note) VALUES($1,$2,$3,$4,$5)",[randomUUID(),id,user.id,decision,note]);
   await client.query("INSERT INTO audit_entries(id,actor_id,action,object_type,object_id) VALUES($1,$2,$3,'action',$4)",[randomUUID(),user.id,"action."+decision,id]);

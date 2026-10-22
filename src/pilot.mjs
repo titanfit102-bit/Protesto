@@ -78,14 +78,28 @@ function actionCard(item,review=false){
  div.innerHTML='<div class="pilot-meta"><span>'+escapeHTML(kind)+'</span><span>'+escapeHTML(item.area)+'</span>'+date+'</div><h3>'+escapeHTML(item.title)+'</h3><p>'+escapeHTML(item.description)+'</p>';
  if(review){
   const note=document.createElement("textarea");note.rows=3;note.className="review-note";note.maxLength=1000;note.placeholder="Arsyetimi i verifikimit (të paktën 15 karaktere)";note.setAttribute("aria-label","Arsyetimi");
+  const copy=document.createElement("fieldset");copy.className="pilot-public-copy";
+  const legend=document.createElement("legend");legend.textContent="Kopje publike e nismës/tubimit";copy.append(legend);
+  const edit=(label,value,multiline=false)=>{
+   const wrap=document.createElement("label");wrap.textContent=label+" ";
+   const input=document.createElement(multiline?"textarea":"input");
+   input.value=value||"";if(multiline)input.rows=3;wrap.append(input);copy.append(wrap);return input;
+  };
+  const pt=edit("Titulli publik",item.title),pd=edit("Përshkrimi publik i redaktuar",item.description,true);
+  const pa=edit("Zona publike pa adresë private",item.area);
+  const consent=document.createElement("input");consent.type="checkbox";
+  const label=document.createElement("label");label.append(consent,document.createTextNode(" Kontrollova privatësinë dhe miratoj kopjen publike."));copy.append(label);
   const buttons=document.createElement("div");buttons.className="pilot-review-actions";
   for(const [decision,label] of [["published","Publiko pas kontrollit"],["rejected","Refuzo"]]){
    const btn=document.createElement("button");btn.type="button";btn.className="btn "+(decision==="published"?"primary":"subtle");btn.textContent=label;
    if(item.author_id===user.id)btn.disabled=true;
-   btn.addEventListener("click",async()=>{btn.disabled=true;try{await call("/api/actions/review/"+encodeURIComponent(item.id),"POST",{decision,note:note.value});notice("Vendimi u regjistrua.");await refresh();}catch(e){notice(e.message,true);}finally{btn.disabled=false;}});
+   btn.addEventListener("click",async()=>{btn.disabled=true;try{await call("/api/actions/review/"+encodeURIComponent(item.id),"POST",{
+      decision,note:note.value,checks:{privacyReviewed:consent.checked,publicCopyReviewed:consent.checked},
+      public:{title:pt.value,description:pd.value,area:pa.value}
+     });notice("Vendimi u regjistrua.");await refresh();}catch(e){notice(e.message,true);}finally{btn.disabled=false;}});
    buttons.appendChild(btn);
   }
-  div.append(note,buttons);
+  div.append(note,copy,buttons);
  }else if(!item.state&&user&&(user.role==="reviewer"||user.role==="admin")){
   const btn=document.createElement("button");btn.type="button";btn.className="btn subtle";btn.textContent="Tërhiq publikimin";
   btn.addEventListener("click",async()=>{
