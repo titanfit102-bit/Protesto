@@ -145,7 +145,7 @@ export function createPilotServer(pool,{origin,production=false,rateLimitSecret=
     return json(res,200,{events:publicLedgerEvents(result.rows),disclaimer:"Kjo listë regjistron ndryshimet e statusit; nuk provon vërtetësinë e pretendimeve."});
    }
    if(pathname==="/api/public/cases"&&req.method==="GET"){
-    const result=await pool.query("SELECT c.id,c.public_title AS title,c.public_description AS description,c.area,c.category,c.created_at,c.public_source_url AS source_url FROM civic_cases c WHERE c.state='published' AND c.public_title IS NOT NULL AND c.public_description IS NOT NULL ORDER BY c.created_at DESC LIMIT 100");
+    const result=await pool.query("SELECT c.id,c.public_title AS title,c.public_description AS description,c.public_area AS area,c.category,c.created_at,c.public_source_url AS source_url FROM civic_cases c WHERE c.state='published' AND c.public_title IS NOT NULL AND c.public_description IS NOT NULL AND c.public_area IS NOT NULL ORDER BY c.created_at DESC LIMIT 100");
     return json(res,200,{items:result.rows});
    }
    if(pathname==="/api/auth/login"&&req.method==="POST"){
@@ -264,8 +264,8 @@ export function createPilotServer(pool,{origin,production=false,rateLimitSecret=
       const selected=await client.query("SELECT 1 FROM case_sources WHERE case_id=$1 AND state='accepted' AND public_url=$2 AND public_title IS NOT NULL LIMIT 1",[caseId,approved.sourceUrl]);
       if(!selected.rowCount){await client.query("ROLLBACK");return fail(res,422,"URL publike duhet të jetë një burim i pranuar dhe pa parametra.");}
      }
-     const updated=await client.query("UPDATE civic_cases SET state=$1,reviewed_at=now(),reviewed_by=$2,public_title=$4,public_description=$5,public_source_url=$6 WHERE id=$3 AND state='pending' AND author_id<>$2 RETURNING id,state",
-      [decision,user.id,caseId,approved?.title??null,approved?.description??null,approved?.sourceUrl??null]);
+     const updated=await client.query("UPDATE civic_cases SET state=$1,reviewed_at=now(),reviewed_by=$2,public_title=$4,public_description=$5,public_source_url=$6,public_area=$7 WHERE id=$3 AND state='pending' AND author_id<>$2 RETURNING id,state",
+      [decision,user.id,caseId,approved?.title??null,approved?.description??null,approved?.sourceUrl??null,approved?.area??null]);
      if(!updated.rowCount){await client.query("ROLLBACK");return fail(res,409,"Dosja nuk është në pritje ose është e jotja.");}
      await client.query("INSERT INTO review_history(id,case_id,reviewer_id,decision,note) VALUES($1,$2,$3,$4,$5)",[randomUUID(),caseId,user.id,decision,note]);
      await client.query("INSERT INTO audit_entries(id,actor_id,action,object_type,object_id) VALUES($1,$2,$3,'case',$4)",[randomUUID(),user.id,"case.review."+decision,caseId]);
