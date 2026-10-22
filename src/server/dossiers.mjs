@@ -1,6 +1,7 @@
 import {randomUUID} from "node:crypto";
 import {cleanText, validateSourceUrl} from "../domain.mjs";
 import {canReview} from "./security.mjs";
+import {correctionDecisionPolicy} from "./correction-policy.mjs";
 
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const sourceList=/^\/api\/dossiers\/([^/]+)\/sources$/;
@@ -101,7 +102,7 @@ export async function dossierRoute({pathname,req,res,pool,user,json,fail,readJSO
   }
   if(pathname==="/api/corrections/queue"&&req.method==="GET"){
     if(!canReview(user.role))return fail(res,403,"Kërkohet verifikues.");
-    const items=await pool.query("SELECT r.id,r.case_id,r.author_id,r.reason,r.counter_source_url,r.created_at,c.title FROM case_corrections r JOIN civic_cases c ON c.id=r.case_id WHERE r.state='pending' ORDER BY r.created_at ASC LIMIT 100");
+    const items=await pool.query("SELECT r.id,r.case_id,r.author_id,r.reason,r.counter_source_url,r.created_at,c.title FROM case_corrections r JOIN civic_cases c ON c.id=r.case_id WHERE r.state='pending' AND c.state='published' ORDER BY r.created_at ASC LIMIT 100");
     return json(res,200,{items:items.rows});
   }
   const match=pathname.match(correctionReview);
@@ -114,8 +115,31 @@ export async function dossierRoute({pathname,req,res,pool,user,json,fail,readJSO
     const client=await pool.connect();
     try{
       await client.query("BEGIN");
-      const r=await client.query("UPDATE case_corrections SET state=$1,reviewer_id=$2,review_note=$3,reviewed_at=now() WHERE id=$4 AND state='pending' AND author_id<>$2 RETURNING id,case_id,state",[decision,user.id,note,match[1]]);
-      if(!r.rowCount){await client.query("ROLLBACK");return fail(res,409,"Kërkesa është shqyrtuar ose të përket ty.");}
+      // Lock the parent case and correction before deciding. Prevent a rejected
+      // correction from being reviewed after publication was withdrawn, and
+      // serialize review with competing case archival transactions.
+      const locked=await client.query(
+        "SELECT r.id,r.case_id,r.author_id,c.author_id AS case_author_id,r.state AS correction_state,c.state AS case_state FROM case_corrections r JOIN civic_cases c ON c.id=r.case_id WHERE r.id=$1 FOR UPDATE OF c,r",
+        [match[1]]
+      );
+      if(!locked.rowCount){await client.query("ROLLBACK");return fail(res,409,"Kërkesa nuk ekziston.");}
+      const context=locked.rows[0];
+      const policy=correctionDecisionPolicy({
+        case_state:context.case_state,correction_state:context.correction_state,
+        author_id:context.author_id,case_author_id:context.case_author_id,reviewer_id:user.id
+      });
+      if(!policy.mayReview){
+        await client.query("ROLLBACK");
+        if(policy.reasons.includes("independent_reviewer_required")){
+          return fail(res,403,"Autori i dosjes ose i korrigjimit nuk mund të shqyrtojë kërkesën.");
+        }
+        return fail(res,409,"Dosja nuk është më e publikuar ose korrigjimi është shqyrtuar.");
+      }
+      const r=await client.query(
+        "UPDATE case_corrections SET state=$1,reviewer_id=$2,review_note=$3,reviewed_at=now() WHERE id=$4 AND state='pending' RETURNING id,case_id,state",
+        [decision,user.id,note,match[1]]
+      );
+      if(!r.rowCount){await client.query("ROLLBACK");return fail(res,409,"Kërkesa është shqyrtuar tashmë.");}
       if(decision==="accepted"){
         const c=await client.query("UPDATE civic_cases SET state='archived',reviewed_at=now(),reviewed_by=$1 WHERE id=$2 AND state='published' RETURNING id",[user.id,r.rows[0].case_id]);
         if(!c.rowCount){await client.query("ROLLBACK");return fail(res,409,"Dosja nuk mund të tërhiqet.");}
