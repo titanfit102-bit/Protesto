@@ -29,19 +29,37 @@ export function attachEvidence(article,item,{user,review,call,notice,refresh}){
     const entry=node("div","pilot-source");
     const title=node("strong","",source.title);
     const url=node("a","pilot-evidence-link","Hap burimin ↗");url.href=source.url;url.target="_blank";url.rel="noopener noreferrer";
-    const description=node("p","",source.context);
-    const status=node("small","",source.state==="accepted"?"Burim i verifikuar":source.state==="rejected"?"Burim i refuzuar":"Në pritje të verifikimit");
-    entry.append(title,url,description,status);
+    const status=node("small","",source.state==="accepted"?"Burim i shqyrtuar (jo provë e autenticitetit)":source.state==="rejected"?"Burim i refuzuar":"Në pritje të verifikimit");
+    entry.append(title,url);
+    // Source context is private: the public API omits it and the UI does not render empty copies.
+    if(typeof source.context==="string"&&source.context)entry.append(node("p","",source.context));
+    entry.append(status);
     if(review&&source.state==="pending"&&item.author_id!==user?.id){
-     const note=field("Shpjego verifikimin (20+ karaktere)","note",true,"textarea");
+     const note=field("Shpjego verifikimin (20–900 karaktere)","note",true,"textarea");
+     note.querySelector("textarea").maxLength=900;
+     const attestation=node("fieldset","pilot-checklist");
+     attestation.append(node("legend","","Kontrolle të detyrueshme vetëm për pranimin"));
+     const checks={};
+     for(const [key,label] of [
+      ["sourceOpened","E hapa dhe e shqyrtova burimin"],
+      ["privacyReviewed","Kontrollova privatësinë dhe të dhënat personale"],
+      ["publicMetadataReviewed","Kontrollova titullin, URL-në dhe tekstet që do të shfaqen publikisht"]
+     ]){
+      const wrapper=node("label"),input=node("input");input.type="checkbox";
+      wrapper.append(input,document.createTextNode(" "+label));attestation.append(wrapper);checks[key]=input;
+     }
      const controls=node("div","pilot-review-actions");
      for(const [decision,label] of [["accepted","Prano burimin"],["rejected","Refuzo burimin"]]){
       controls.append(button(label,async()=>{
-       try{await call("/api/dossiers/"+encodeURIComponent(item.id)+"/sources/"+encodeURIComponent(source.id)+"/review","POST",{decision,note:note.querySelector("textarea").value});notice("Burimi u shqyrtua.");await reload();}
+       try{await call("/api/dossiers/"+encodeURIComponent(item.id)+"/sources/"+encodeURIComponent(source.id)+"/review","POST",{decision,note:note.querySelector("textarea").value,checks:{
+        sourceOpened:checks.sourceOpened.checked,
+        privacyReviewed:checks.privacyReviewed.checked,
+        publicMetadataReviewed:checks.publicMetadataReviewed.checked
+       }});notice("Vendimi u regjistrua; shqyrtimi nuk provon autenticitetin e burimit.");await reload();}
        catch(e){notice(e.message,true);}
       }));
      }
-     entry.append(note,controls);
+     entry.append(note,attestation,controls);
     }
     list.append(entry);
    }

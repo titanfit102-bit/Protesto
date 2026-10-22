@@ -79,9 +79,24 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
   assert.equal(r.json.items[0].state,"pending");
   r=await send("/api/dossiers/"+caseId+"/sources/"+sourceId+"/review",{method:"POST",cookie:reporterCookie,body:{decision:"accepted",note:"Vetëverifikimi duhet të refuzohet gjithmonë."}});
   assert.equal(r.status,403);
-  r=await send("/api/dossiers/"+caseId+"/sources/"+sourceId+"/review",{method:"POST",cookie:reviewCookie,body:{decision:"accepted",note:"Burimi u hap dhe përputhja u kontrollua manualisht."}});
+  const sourceChecks={sourceOpened:true,privacyReviewed:true,publicMetadataReviewed:true};
+  const sourceReviewPath="/api/dossiers/"+caseId+"/sources/"+sourceId+"/review";
+  const sourceReviewBody={decision:"accepted",note:"Burimi u hap dhe përputhja u kontrollua manualisht.",checks:sourceChecks};
+  r=await send(sourceReviewPath,{method:"POST",cookie:reviewCookie,body:{
+   decision:"accepted",note:sourceReviewBody.note
+  }});
+  assert.equal(r.status,422,"No source accepted without all editorial attestations");
+  r=await send(sourceReviewPath,{method:"POST",cookie:reviewCookie,body:{
+   ...sourceReviewBody,checks:{...sourceChecks,privacyReviewed:false}
+  }});
+  assert.equal(r.status,422,"Privacy acknowledgement cannot be omitted");
+  r=await send(sourceReviewPath,{method:"POST",cookie:reviewCookie,body:sourceReviewBody});
   assert.equal(r.status,200);
-  r=await send("/api/dossiers/"+caseId+"/sources/"+sourceId+"/review",{method:"POST",cookie:reviewCookie,body:{decision:"accepted",note:"Vendim i dyfishtë nuk lejohet."}});
+  const sourceAudit=await pool.query("SELECT review_note FROM case_sources WHERE id=$1",[sourceId]);
+  assert.match(sourceAudit.rows[0].review_note,/SOURCE_CHECKS_V1:opened,privacy,public-metadata/);
+  r=await send(sourceReviewPath,{method:"POST",cookie:reviewCookie,body:{
+   decision:"accepted",note:"Vendim i dyfishtë nuk lejohet.",checks:sourceChecks
+  }});
   assert.equal(r.status,409);
 
   r=await send("/api/review/"+caseId,{method:"POST",cookie:reviewCookie,body:{decision:"published",note:"Short"}});assert.equal(r.status,422);
@@ -94,6 +109,15 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
   r=await send("/api/dossiers/"+caseId+"/sources");
   assert.equal(r.status,200);assert.equal(r.json.items.length,1);
   assert.equal(r.json.items[0].state,"accepted");
+  assert.deepEqual(Object.keys(r.json.items[0]),["id","title","url","state","created_at"]);
+  assert.ok(!JSON.stringify(r.json).includes(sample.description),"Original case context must not be in public source response");
+  assert.ok(!JSON.stringify(r.json).includes("SOURCE_CHECKS_V1"),"Private reviewer checklist must not be public");
+  r=await send("/api/dossiers/"+caseId+"/sources",{cookie:reporterCookie});
+  assert.equal(r.status,200);
+  assert.equal(r.json.items[0].context,sample.description);
+  r=await send("/api/dossiers/"+caseId+"/sources",{cookie:reviewCookie});
+  assert.equal(r.status,200);
+  assert.equal(r.json.items[0].context,sample.description);
   r=await send("/api/corrections",{method:"POST",cookie:reporterCookie,body:{caseId,reason:"Kërkoj një kontroll tjetër mbi informacionin e paraqitur në këtë dosje."}});
   assert.equal(r.status,201);const correctionId=r.json.item.id;
   r=await send("/api/corrections/queue",{cookie:reporterCookie});assert.equal(r.status,403);
@@ -199,7 +223,7 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
   assert.equal(r.status,201);const secondId=r.json.item.id;
   r=await send("/api/dossiers/"+secondId+"/sources",{cookie:reviewCookie});
   const secondSource=r.json.items[0].id;
-  r=await send("/api/dossiers/"+secondId+"/sources/"+secondSource+"/review",{method:"POST",cookie:reviewCookie,body:{decision:"accepted",note:"Burimi fiktiv i testit kaloi verifikimin."}});
+  r=await send("/api/dossiers/"+secondId+"/sources/"+secondSource+"/review",{method:"POST",cookie:reviewCookie,body:{decision:"accepted",note:"Burimi fiktiv i testit kaloi verifikimin.",checks:sourceChecks}});
   assert.equal(r.status,200);
   r=await send("/api/review/"+secondId,{method:"POST",cookie:reviewCookie,body:{decision:"published",note:"Kontrolli editorial për testin u përfundua.",checks:checklist}});
   assert.equal(r.status,200);
@@ -212,7 +236,7 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
   r=await send("/api/cases",{method:"POST",cookie:reporterCookie,body:{...sample,title:"Dosja e tretë për apelim"}});
   assert.equal(r.status,201);const appealCaseId=r.json.item.id;
   r=await send("/api/dossiers/"+appealCaseId+"/sources",{cookie:reviewCookie});const appealSource=r.json.items[0].id;
-  r=await send("/api/dossiers/"+appealCaseId+"/sources/"+appealSource+"/review",{method:"POST",cookie:reviewCookie,body:{decision:"accepted",note:"Kontrolli i burimit demonstrues për apelim u krye."}});
+  r=await send("/api/dossiers/"+appealCaseId+"/sources/"+appealSource+"/review",{method:"POST",cookie:reviewCookie,body:{decision:"accepted",note:"Kontrolli i burimit demonstrues për apelim u krye.",checks:sourceChecks}});
   assert.equal(r.status,200);
   r=await send("/api/review/"+appealCaseId,{method:"POST",cookie:reviewCookie,body:{decision:"published",note:"Për demonstrimin, verifikimi editorial është përfunduar.",checks:checklist}});
   assert.equal(r.status,200);
