@@ -24,11 +24,11 @@ test("Dialogu Qytetar: independent moderation, consent, vote threshold and delet
  }
  const publishedCase=randomUUID(),pendingCase=randomUUID();
  for(const [id,state] of [[publishedCase,"published"],[pendingCase,"pending"]]){
-  await pool.query("INSERT INTO civic_cases(id,author_id,title,description,area,category,state,public_title,public_description,public_source_url) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
+  await pool.query("INSERT INTO civic_cases(id,author_id,title,description,area,category,state,public_title,public_description,public_source_url,public_area) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)",
    [id,author.id,"PRIVATE synthetic case title","Regjistrim origjinal PRIVAT për kontroll API.",u,"Mjedis",state,
     state==="published"?"Dosje publike e rishikuar për dialog":null,
     state==="published"?"Kopje publike sintetike e rishikuar për raportin qytetar.":null,
-    state==="published"?"https://example.org/public-dialogue":null]);
+    state==="published"?"https://example.org/public-dialogue":null,state==="published"?"Zona publike e testit":null]);
  }
  await pool.query("INSERT INTO case_sources(id,case_id,submitted_by,title,url,context,state,public_title,public_url) VALUES($1,$2,$3,$4,$5,$6,'accepted',$7,$8)",[
   randomUUID(),publishedCase,author.id,"PRIVATE identifying source title",

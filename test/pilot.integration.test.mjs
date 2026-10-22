@@ -20,7 +20,7 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
   await pool.query("INSERT INTO civic_users(id,email,password_hash,role) VALUES($1,$2,$3,$4)",[u.id,u.email,hashPassword(u.password),u===reporter?"reporter":"reviewer"]);
  }
  const applied=await pool.query("SELECT count(*)::integer n FROM schema_migrations");
- assert.equal(applied.rows[0].n,13,"Expected all thirteen versioned migrations");
+ assert.equal(applied.rows[0].n,14,"Expected all fourteen versioned migrations");
  const quotaKey=rateKey("synthetic-integration-rate-limit-key-longer-than-32","test-concurrent",randomUUID());
  const quota=await Promise.all([1,2,3].map(()=>consumeRateLimit(pool,quotaKey,{limit:2,windowSeconds:60})));
  assert.equal(quota.filter(x=>x.allowed).length,2,"Concurrent database quota must allow exactly two hits");
@@ -149,7 +149,9 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
 
   r=await send("/api/review/"+caseId,{method:"POST",cookie:reviewCookie,body:{decision:"published",note:"Short"}});assert.equal(r.status,422);
   const checklist={sourceReviewed:true,privacyReviewed:true,replyConsidered:true,publicCopyReviewed:true};
-  const publicCopy={title:sample.title,description:"Përmbajtje publike e rishikuar për testim, pa të dhëna identifikuese.",sourceUrl:sample.source};
+  const publicCopy={title:sample.title,description:"Përmbajtje publike e rishikuar për testim, pa të dhëna identifikuese.",
+   area:"Zona e përgjithshme publike",sourceUrl:sample.source};
+  await pool.query("UPDATE civic_cases SET area='PRIVATE apartment 4B' WHERE id=$1",[caseId]);
   r=await send("/api/review/"+caseId,{method:"POST",cookie:reviewCookie,body:{decision:"published",note:"Publikim pa kopje publike, duhet refuzuar.",checks:checklist}});
   assert.equal(r.status,422);
   r=await send("/api/review/"+caseId,{method:"POST",cookie:reviewCookie,body:{decision:"published",note:"Lidhje me parametra duhet të refuzohet.",checks:checklist,public:{...publicCopy,sourceUrl:"https://example.org/source?token=private"}}});
@@ -161,6 +163,8 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
   r=await send("/api/public/cases");assert.ok(r.json.items.some(x=>x.id===caseId));
   const shown=r.json.items.find(x=>x.id===caseId);
   assert.equal(shown.description,publicCopy.description);
+  assert.equal(shown.area,publicCopy.area);
+  assert.ok(!JSON.stringify(shown).includes("PRIVATE apartment"),"Raw area must remain internal");
   assert.ok(!JSON.stringify(shown).includes(sample.description),"Raw case narrative cannot escape the public copy gate");
   r=await send(fpPath);assert.equal(r.status,404,"Public cannot read declared fingerprint");
   r=await send(fpPath,{method:"POST",cookie:reviewCookie,body:fingerprint});assert.equal(r.status,409,"Published case disallows new declaration");
