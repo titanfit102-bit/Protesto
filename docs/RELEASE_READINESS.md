@@ -38,3 +38,6 @@ Avoid artificial percentage precision or treating PR number as completion.
 
 ## 8. Done when
 All P0 gates are evidenced by test artifacts **and independent human review**, production configuration is isolated, backups/restore are operational, stakeholders approve the public data policy, and the owner explicitly authorizes release.
+
+## Security-review checkpoint — source metadata privacy
+The post-#42 audit identified and fixed a raw source title/URL disclosure route. See Draft PR #43 and migration 012. The public sources route is now fail-closed for historical accepted records missing independently approved fields. This is an **internal code review**, not an external independent security certification. Production release remains blocked.

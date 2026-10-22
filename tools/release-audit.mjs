@@ -10,7 +10,7 @@ const required=[
 ];
 for(const filename of required)await access(new URL("../"+filename,import.meta.url));
 const migrations=(await readdir(new URL("../db/",import.meta.url))).filter(x=>/^\d{3}_.*\.sql$/.test(x)).sort();
-if(migrations.length!==11||migrations[0]!=="001_initial.sql"||migrations.at(-1)!=="011_case_responses.sql")
+if(migrations.length!==12||migrations[0]!=="001_initial.sql"||migrations.at(-1)!=="012_public_source_metadata.sql")
  throw new Error("Unexpected migration manifest for this release candidate");
 const workflow=await readFile(new URL("../.github/workflows/verify.yml",import.meta.url),"utf8");
 if(/\bdeploy\b|\bproduction\b/i.test(workflow))throw new Error("Verification workflow must not deploy");
