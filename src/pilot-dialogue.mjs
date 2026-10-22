@@ -72,11 +72,10 @@ async function loadAggregateReport(){
  for(const item of report.items){
   const card=make("article","pilot-card");
   card.append(make("h3","",item.topic_title),make("p","",item.statement));
-  const percent=Math.round(1000*item.agree_count/item.participants)/10;
   card.append(make("p","pilot-dialogue-disclaimer",
    "Vetëm pjesëmarrësit e kësaj teme: "+item.participants+
-   " përgjigje, "+item.agree_count+" pajtohen ("+percent+
-   "%), "+item.disagree_count+" kundërshtojnë, "+item.pass_count+" e kaluan."));
+   " përgjigje, "+item.agree_count+" pajtohen ("+item.agree_percent+
+   "%), "+item.disagree_count+" kundërshtojnë ("+item.disagree_percent+"%), "+item.pass_count+" e kaluan ("+item.pass_percent+"%)."));
   const buttons=make("div","pilot-review-actions");
   const show=make("button","btn subtle","Shiko diskutimin");show.type="button";
   show.addEventListener("click",async()=>{
