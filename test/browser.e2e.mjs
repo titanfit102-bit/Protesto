@@ -94,7 +94,7 @@ try{
  await page.click(selectCard+" .pilot-evidence summary");
  await page.waitForSelector(selectCard+" .pilot-source");
  await page.$eval(selectCard+" .pilot-source textarea",el=>el.value="Burimi testues është kontrolluar manualisht për demonstrimin.");
- await page.$eval(selectCard+" .pilot-source .pilot-checklist input",els=>{
+ await page.$$eval(selectCard+" .pilot-source .pilot-checklist input",els=>{
   if(els.length!==3)throw Error("Three source-review checkboxes required");
   els.forEach(el=>el.click());
  });
