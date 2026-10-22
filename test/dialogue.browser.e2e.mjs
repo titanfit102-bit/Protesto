@@ -80,10 +80,17 @@ await page.$eval('#dialogue-create-form [name="privacyReviewed"]',el=>el.click()
  assert.ok(!(await page.$$eval("#dialogue-topic-select option",options=>options.some(o=>o.textContent.includes("Konsultim sintetik për mjedisin")))),"Topic must not appear before independent review");
  await logout(page);
  await login(page,secondReviewer);
- await page.waitForSelector("#review-dialogue-topics .dialogue-topic-review");
- await page.$eval("#review-dialogue-topics .dialogue-topic-review textarea.dialogue-topic-note",el=>el.value="Kopja publike u shqyrtua nga verifikuesi i pavarur.");
- await page.$$eval("#review-dialogue-topics .dialogue-topic-review input[type=checkbox]",xs=>xs.forEach(x=>x.click()));
- await click(page,"#review-dialogue-topics .dialogue-topic-review","Mirato temën");
+ await page.waitForFunction(()=>[...document.querySelectorAll("#review-dialogue-topics .dialogue-topic-review h3")]
+  .some(h=>h.textContent==="Konsultim sintetik për mjedisin"),{timeout:15000});
+ await page.$$eval("#review-dialogue-topics .dialogue-topic-review",cards=>{
+  const selected=cards.find(card=>card.querySelector("h3")?.textContent==="Konsultim sintetik për mjedisin");
+  if(!selected)throw new Error("Expected exact synthetic topic review card");
+  selected.classList.add("dialogue-e2e-target");
+ });
+ const target="#review-dialogue-topics .dialogue-e2e-target";
+ await page.$eval(target+" textarea.dialogue-topic-note",el=>el.value="Kopja publike u shqyrtua nga verifikuesi i pavarur.");
+ await page.$$eval(target+" input[type=checkbox]",xs=>xs.forEach(x=>x.click()));
+ await click(page,target,"Mirato temën");
  await page.waitForFunction(()=>document.querySelector("#dialogue-details h3")?.textContent==="Konsultim sintetik për mjedisin",{timeout:15000});
  console.log("[dialogue browser] Topic approved by independent reviewer before appearing publicly");
  await logout(page);

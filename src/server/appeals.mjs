@@ -1,6 +1,7 @@
 import {randomUUID} from "node:crypto";
 import {cleanText} from "../domain.mjs";
 import {canReview} from "./security.mjs";
+import {lockAuthorQuota} from "./author-quotas.mjs";
 
 const UUID=/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
 const reviewPath=/^\/api\/appeals\/review\/([^/]+)$/;
@@ -24,20 +25,31 @@ export async function appealRoute({pathname,req,res,pool,user,json,fail,readJSON
   const reason=cleanText(body.reason,2001);
   if(!UUID.test(correctionId)||reason.length<30||reason.length>2000)
    return fail(res,422,"Kërkohet ID e korrigjimit dhe arsyetim 30–2000 karaktere.");
-  const row=await pool.query(
-   "SELECT r.id FROM case_corrections r JOIN civic_cases c ON c.id=r.case_id WHERE r.id=$1 AND r.author_id=$2 AND r.state='rejected' AND c.state='published'",
-   [correctionId,user.id]
-  );
-  if(!row.rowCount)return fail(res,409,"Apelimi lejohet vetëm për korrigjimin tënd të refuzuar mbi dosje ende të publikuar.");
-  const recent=await pool.query("SELECT count(*)::integer n FROM correction_appeals WHERE author_id=$1 AND created_at>now()-interval '1 day'",[user.id]);
-  if(recent.rows[0].n>=3)return fail(res,429,"Maksimumi 3 apelime në ditë.");
+  const client=await pool.connect();
   try{
-   const created=await pool.query(
+   await client.query("BEGIN");
+   // Synchronize correction and parent-case states with archival.
+   const locked=await client.query(
+    "SELECT r.id,r.state AS correction_state,r.author_id,c.state AS case_state FROM civic_cases c JOIN case_corrections r ON r.case_id=c.id WHERE r.id=$1 FOR UPDATE OF c,r",[correctionId]
+   );
+   if(!locked.rowCount||locked.rows[0].author_id!==user.id||
+      locked.rows[0].correction_state!=="rejected"||locked.rows[0].case_state!=="published"){
+    await client.query("ROLLBACK");return fail(res,409,"Apelimi lejohet vetëm për korrigjimin tënd të refuzuar mbi dosje ende të publikuar.");
+   }
+   await lockAuthorQuota(client,"appeal-create",user.id);
+   const recent=await client.query("SELECT count(*)::integer n FROM correction_appeals WHERE author_id=$1 AND created_at>now()-interval '1 day'",[user.id]);
+   if(recent.rows[0].n>=3){await client.query("ROLLBACK");return fail(res,429,"Maksimumi 3 apelime në ditë.");}
+   const created=await client.query(
     "INSERT INTO correction_appeals(id,correction_id,author_id,reason) VALUES($1,$2,$3,$4) RETURNING id,state,created_at",
     [randomUUID(),correctionId,user.id,reason]
    );
+   await client.query("COMMIT");
    return json(res,201,{item:created.rows[0],message:"Apelimi u dërgua për verifikim të pavarur."});
-  }catch(e){if(e.code==="23505")return fail(res,409,"Për këtë korrigjim është dërguar tashmë një apelim.");throw e;}
+  }catch(e){
+   try{await client.query("ROLLBACK");}catch{}
+   if(e.code==="23505")return fail(res,409,"Për këtë korrigjim është dërguar tashmë një apelim.");
+   throw e;
+  }finally{client.release();}
  }
  if(!canReview(user.role))return fail(res,403,"Kërkohet rol i verifikuesit.");
  if(pathname==="/api/appeals/queue"&&req.method==="GET"){
