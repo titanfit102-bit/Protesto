@@ -251,8 +251,8 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
   assert.equal(staleAppeal.rows[0].state,"pending");
   assert.equal(staleAppeal.rows[0].reviewer_id,null);
   assert.equal(staleAppeal.rows[0].reviewed_at,null);
-  const appealAudit=await pool.query("SELECT count(*)::integer n FROM audit_entries WHERE object_id=$1",[staleAppealId]);
-  assert.equal(appealAudit.rows[0].n,0);
+  const staleAppealAudit=await pool.query("SELECT count(*)::integer n FROM audit_entries WHERE object_id=$1",[staleAppealId]);
+  assert.equal(staleAppealAudit.rows[0].n,0);
   r=await send("/api/appeals/queue",{cookie:independentCookie});
   assert.ok(!r.json.items.some(x=>x.id===staleAppealId),"Archived parent must leave active queue");
   for(const decision of ["accepted","rejected"]){
