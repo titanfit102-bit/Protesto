@@ -29,3 +29,6 @@
 | ADR-025 | No real-time counts; show finalized totals only when 10+ responses | Reduce exposure and participant bandwagon effects without implying anonymity | Formal privacy/statistical review |
 | ADR-026 | Store keyed per-statement vote pseudonyms, then purge vote rows on closure | No plaintext participant ID in vote table and no ongoing post-close individual responses | Backup retention and data rights |
 | ADR-027 | Original code inspired only by Polis concepts; no AGPL source-code reuse | Keep IP/licensing obligations explicit | Any later source-code integration requires legal review |
+
+## 2026-10-22 — Integrated release gate
+Decision: keep PR #34 through #42 in a stacked, reviewable Draft chain without merging. GitHub Actions validates software behavior but does not authorize Production. The release gate in `src/ops/release-gate.mjs` is fail-closed even if hypothetical manual flags are supplied. External P0 risks, legal governance and owner release authorization remain separate requirements. Do not use OpenCode or modify other projects.
