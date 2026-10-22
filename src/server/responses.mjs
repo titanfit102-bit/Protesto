@@ -10,22 +10,46 @@ export async function responseRoute({pathname,req,res,pool,user,readJSON,json,fa
  const match=pathname.match(casePath);
  if(match){
   if(!UUID.test(match[1]))return fail(res,400,"ID dosjeje i pavlefshëm.");
-  const c=await pool.query("SELECT id,state,author_id,public_title,public_description,public_area FROM civic_cases WHERE id=$1",[match[1]]);
-  if(!c.rowCount||c.rows[0].state!=="published"||!c.rows[0].public_title||!c.rows[0].public_description||!c.rows[0].public_area)return fail(res,404,"Dosja nuk është publike.");
   if(req.method==="GET"){
-   const r=await pool.query("SELECT id,public_body AS body,reviewed_at FROM case_responses WHERE case_id=$1 AND state='accepted' AND public_body IS NOT NULL ORDER BY reviewed_at ASC,id ASC LIMIT 50",[match[1]]);
+   // Select publication state and public responses in one SQL snapshot. An
+   // earlier separate case check could become stale after archival.
+   const c=await pool.query("SELECT id FROM civic_cases WHERE id=$1 AND state='published' AND public_title IS NOT NULL AND public_description IS NOT NULL AND public_area IS NOT NULL",[match[1]]);
+   if(!c.rowCount)return fail(res,404,"Dosja nuk është publike.");
+   const r=await pool.query(
+    "SELECT r.id,r.public_body AS body,r.reviewed_at FROM case_responses r JOIN civic_cases c ON c.id=r.case_id WHERE r.case_id=$1 AND r.state='accepted' AND r.public_body IS NOT NULL AND c.state='published' AND c.public_title IS NOT NULL AND c.public_description IS NOT NULL AND c.public_area IS NOT NULL ORDER BY r.reviewed_at ASC,r.id ASC LIMIT 50",[match[1]]
+   );
    return json(res,200,{items:r.rows,disclaimer:"Përgjigje qytetare e moderuar, pa verifikim institucional."});
   }
   if(!user)return fail(res,401,"Kërkohet identifikim.");
   const body=await readJSON(req),statement=cleanText(body.body,1801);
   let source="";try{source=body.sourceUrl?validateSourceUrl(body.sourceUrl):"";}catch{return fail(res,422,"URL e pavlefshme.");}
   if(statement.length<40||statement.length>1800)return fail(res,422,"Përgjigjja duhet të ketë 40–1800 karaktere.");
-  if(user.id===c.rows[0].author_id)return fail(res,403,"Autori i dosjes duhet të përdorë procesin e korrigjimit.");
+  const client=await pool.connect();
   try{
-   const r=await pool.query("INSERT INTO case_responses(id,case_id,author_id,body,source_url) VALUES($1,$2,$3,$4,$5) RETURNING id,state,created_at",
-    [randomUUID(),match[1],user.id,statement,source]);
+   await client.query("BEGIN");
+   // Serialize the pending submission with case archival. A preliminary
+   // SELECT without FOR UPDATE would allow a late orphaned response.
+   const c=await client.query(
+    "SELECT id,state,author_id,public_title,public_description,public_area FROM civic_cases WHERE id=$1 FOR UPDATE",[match[1]]
+   );
+   if(!c.rowCount||c.rows[0].state!=="published"||
+      !c.rows[0].public_title||!c.rows[0].public_description||!c.rows[0].public_area){
+    await client.query("ROLLBACK");return fail(res,409,"Dosja nuk është më publike.");
+   }
+   if(user.id===c.rows[0].author_id){
+    await client.query("ROLLBACK");return fail(res,403,"Autori i dosjes duhet të përdorë procesin e korrigjimit.");
+   }
+   const r=await client.query(
+    "INSERT INTO case_responses(id,case_id,author_id,body,source_url) VALUES($1,$2,$3,$4,$5) RETURNING id,state,created_at",
+    [randomUUID(),match[1],user.id,statement,source]
+   );
+   await client.query("COMMIT");
    return json(res,201,{item:r.rows[0],message:"Përgjigjja u ruajt privatisht për verifikim."});
-  }catch(e){if(e.code==="23505")return fail(res,409,"Ke dorëzuar tashmë një përgjigje për këtë dosje.");throw e;}
+  }catch(e){
+   try{await client.query("ROLLBACK");}catch{}
+   if(e.code==="23505")return fail(res,409,"Ke dorëzuar tashmë një përgjigje për këtë dosje.");
+   throw e;
+  }finally{client.release();}
  }
  if(!user)return fail(res,401,"Kërkohet identifikim.");
  if(pathname==="/api/editorial/responses/mine"){

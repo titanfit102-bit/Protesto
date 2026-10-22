@@ -160,15 +160,36 @@ export async function dossierRoute({pathname,req,res,pool,user,json,fail,readJSO
     const source=input.source?checkedUrl(input.source):"";
     if(!UUID.test(caseId)||reason.length<30||reason.length>2000||source===null)
       return fail(res,422,"ID, arsye 30–2000 karaktere dhe një URL HTTPS opsionale kërkohen.");
-    const item=await pool.query("SELECT id FROM civic_cases WHERE id=$1 AND state='published'",[caseId]);
-    if(!item.rowCount)return fail(res,404,"Dosja nuk është publike.");
-    const recent=await pool.query("SELECT count(*)::integer n FROM case_corrections WHERE author_id=$1 AND created_at>now()-interval '1 day'",[user.id]);
-    if(recent.rows[0].n>=5)return fail(res,429,"Lejohen deri në 5 kërkesa korrigjimi në ditë.");
-    const created=await pool.query(
-      "INSERT INTO case_corrections(id,case_id,author_id,reason,counter_source_url) VALUES($1,$2,$3,$4,$5) RETURNING id,state,created_at",
-      [randomUUID(),caseId,user.id,reason,source]
-    );
-    return json(res,201,{item:created.rows[0],message:"Kërkesa u dërgua për vlerësim, jo për publikim."});
+    const client=await pool.connect();
+    try{
+      await client.query("BEGIN");
+      // A correction cannot be created after a concurrent case withdrawal.
+      const locked=await client.query(
+        "SELECT id,state FROM civic_cases WHERE id=$1 FOR UPDATE",[caseId]
+      );
+      if(!locked.rowCount||locked.rows[0].state!=="published"){
+        await client.query("ROLLBACK");return fail(res,409,"Dosja nuk është më publike.");
+      }
+      // Serialize an author's daily quota even when several different cases
+      // are targeted concurrently from distinct application workers.
+      await client.query(
+        "SELECT pg_advisory_xact_lock(hashtextextended($1::text,0))",
+        ["correction-author:"+user.id]
+      );
+      const recent=await client.query(
+        "SELECT count(*)::integer n FROM case_corrections WHERE author_id=$1 AND created_at>now()-interval '1 day'",[user.id]
+      );
+      if(recent.rows[0].n>=5){
+        await client.query("ROLLBACK");return fail(res,429,"Lejohen deri në 5 kërkesa korrigjimi në ditë.");
+      }
+      const created=await client.query(
+        "INSERT INTO case_corrections(id,case_id,author_id,reason,counter_source_url) VALUES($1,$2,$3,$4,$5) RETURNING id,state,created_at",
+        [randomUUID(),caseId,user.id,reason,source]
+      );
+      await client.query("COMMIT");
+      return json(res,201,{item:created.rows[0],message:"Kërkesa u dërgua për vlerësim, jo për publikim."});
+    }catch(e){try{await client.query("ROLLBACK");}catch{}throw e;}
+    finally{client.release();}
   }
   if(pathname==="/api/corrections/mine"&&req.method==="GET"){
     const items=await pool.query("SELECT id,case_id,state,reason,created_at FROM case_corrections WHERE author_id=$1 ORDER BY created_at DESC LIMIT 50",[user.id]);
