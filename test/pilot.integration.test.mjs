@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {randomUUID} from "node:crypto";
+import {randomUUID,createHash} from "node:crypto";
 import {hashPassword} from "../src/server/security.mjs";
 import {createPilotServer} from "../src/server/app.mjs";
 import {rateKey,consumeRateLimit} from "../src/server/rate-limits.mjs";
@@ -18,7 +18,7 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
   await pool.query("INSERT INTO civic_users(id,email,password_hash,role) VALUES($1,$2,$3,$4)",[u.id,u.email,hashPassword(u.password),u===reporter?"reporter":"reviewer"]);
  }
  const applied=await pool.query("SELECT count(*)::integer n FROM schema_migrations");
- assert.equal(applied.rows[0].n,7,"Expected all seven versioned migrations");
+ assert.equal(applied.rows[0].n,8,"Expected all eight versioned migrations");
  const quotaKey=rateKey("synthetic-integration-rate-limit-key-longer-than-32","test-concurrent",randomUUID());
  const quota=await Promise.all([1,2,3].map(()=>consumeRateLimit(pool,quotaKey,{limit:2,windowSeconds:60})));
  assert.equal(quota.filter(x=>x.allowed).length,2,"Concurrent database quota must allow exactly two hits");
@@ -94,6 +94,30 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
   assert.equal(r.status,200);
   const sourceAudit=await pool.query("SELECT review_note FROM case_sources WHERE id=$1",[sourceId]);
   assert.match(sourceAudit.rows[0].review_note,/SOURCE_CHECKS_V1:opened,privacy,public-metadata/);
+  // Browser-hashed synthetic PDF: backend stores only declared digest/metadata.
+  const pdf=Buffer.from("%PDF-1.7\\n1 0 obj\\n<<>>\\nendobj\\n%%EOF\\n");
+  const fingerprint={sha256:createHash("sha256").update(pdf).digest("hex"),byteLength:pdf.length,
+   mediaType:"application/pdf",acknowledgedCorrespondence:true,acknowledgedPrivacy:true};
+  const fpPath="/api/dossiers/"+caseId+"/sources/"+sourceId+"/fingerprint";
+  r=await send(fpPath);assert.equal(r.status,404,"Digest declarations are private");
+  r=await send(fpPath,{cookie:reviewCookie});assert.equal(r.status,200);assert.equal(r.json.item,null);
+  r=await send(fpPath,{method:"POST",cookie:reporterCookie,body:fingerprint});assert.equal(r.status,403);
+  r=await send(fpPath,{method:"POST",cookie:reviewCookie,body:{...fingerprint,acknowledgedPrivacy:false}});assert.equal(r.status,422);
+  r=await send(fpPath,{method:"POST",cookie:reviewCookie,body:{...fingerprint,sha256:"b".repeat(63)}});assert.equal(r.status,422);
+  r=await send(fpPath,{method:"POST",cookie:reviewCookie,body:fingerprint});assert.equal(r.status,201);
+  assert.equal(r.json.item.sha256,fingerprint.sha256);
+  assert.ok(!JSON.stringify(r.json).includes(reviewer.email));
+  r=await send(fpPath,{cookie:reporterCookie});assert.equal(r.status,200);
+  assert.equal(r.json.item.sha256,fingerprint.sha256);
+  assert.equal(r.json.item.status,"reviewer-declared-not-independently-verified");
+  r=await send(fpPath,{method:"POST",cookie:reviewCookie,body:fingerprint});assert.equal(r.status,409);
+  await assert.rejects(pool.query("UPDATE source_fingerprints SET sha256_hex=$1 WHERE source_id=$2",
+    ["c".repeat(64),sourceId]),/Source fingerprint attestations cannot be edited/);
+  const preserved=await pool.query("SELECT sha256_hex,reviewed_by FROM source_fingerprints WHERE source_id=$1",[sourceId]);
+  assert.equal(preserved.rows[0].sha256_hex,fingerprint.sha256);
+  assert.equal(preserved.rows[0].reviewed_by,reviewer.id);
+  const fingerprintAudit=await pool.query("SELECT count(*)::integer n FROM audit_entries WHERE object_id=$1 AND action='source.fingerprint.declared'",[sourceId]);
+  assert.equal(fingerprintAudit.rows[0].n,1);
   r=await send(sourceReviewPath,{method:"POST",cookie:reviewCookie,body:{
    decision:"accepted",note:"Vendim i dyfishtë nuk lejohet.",checks:sourceChecks
   }});
@@ -106,6 +130,8 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
   r=await send("/api/review/"+caseId,{method:"POST",cookie:reviewCookie,body:{decision:"published",note:"Burimi u verifikua dhe është i përshtatshëm për demonstrim.",checks:checklist}});assert.equal(r.status,200);
   r=await send("/api/review/"+caseId,{method:"POST",cookie:reviewCookie,body:{decision:"rejected",note:"A second decision must be rejected."}});assert.equal(r.status,409);
   r=await send("/api/public/cases");assert.ok(r.json.items.some(x=>x.id===caseId));
+  r=await send(fpPath);assert.equal(r.status,404,"Public cannot read declared fingerprint");
+  r=await send(fpPath,{method:"POST",cookie:reviewCookie,body:fingerprint});assert.equal(r.status,409,"Published case disallows new declaration");
   r=await send("/api/dossiers/"+caseId+"/sources");
   assert.equal(r.status,200);assert.equal(r.json.items.length,1);
   assert.equal(r.json.items[0].state,"accepted");
