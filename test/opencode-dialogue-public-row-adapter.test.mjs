@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {adaptPublicDialogueRows} from '../src/opencode-dialogue-public-row-adapter.mjs';
+const topic_id='343f22aa-2de0-4d29-8a1b-fadfa30f0417';
+const statement_id='f34f22aa-2de0-4d29-8a1b-fadfa30f0418';
+const valid=()=>({topic_id,statement_id,statement:'Qyteti duhet të publikojë llogaritë e shërbimeve.',participants:11,agree_count:7,disagree_count:3,pass_count:1});
+test('only public fields are transferred',()=>{const raw={...valid(),email:'private@sample.invalid',voter_key:'secret',review_note:'private'};const result=adaptPublicDialogueRows([raw]); assert.deepEqual(Object.keys(result.items[0]),['topic_id','statement_id','statement','participants','agree_count','disagree_count','pass_count']); assert.equal(JSON.stringify(result).includes('private@'),false);});
+test('a small sample never appears',()=>{ const raw={...valid(),participants:9,agree_count:5,disagree_count:3,pass_count:1};assert.equal(adaptPublicDialogueRows([raw]).items.length,0); });
+test('rejects inconsistent and malformed counts',()=>{for(const row of [{...valid(),participants:12},{...valid(),agree_count:-2},{...valid(),pass_count:2.5}]) assert.throws(()=>adaptPublicDialogueRows([row]));});
+test('retains stable input order and public identifiers',()=>{const a=valid(),b={...valid(),statement_id:'343f22aa-2de0-4d29-8a1b-fadfa30f0416'};const result=adaptPublicDialogueRows([b,a]);assert.deepEqual(result.items.map(x=>x.statement_id),[b.statement_id,a.statement_id]);});
+test('rejects missing statement metadata, preserves inputs',()=>{const a=Object.freeze(valid());assert.deepEqual(adaptPublicDialogueRows([a]).items[0],a);assert.throws(()=>adaptPublicDialogueRows([{...valid(),statement:' '}]))});
