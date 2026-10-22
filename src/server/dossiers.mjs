@@ -131,6 +131,18 @@ export async function dossierRoute({pathname,req,res,pool,user,json,fail,readJSO
     const client=await pool.connect();
     try{
       await client.query("BEGIN");
+      // Serialize source review with case publication/withdrawal. Reading
+      // c.state through UPDATE ... FROM alone does not lock the parent case.
+      const parent=await client.query(
+        "SELECT c.id,c.state AS case_state,c.author_id,s.state AS source_state FROM civic_cases c JOIN case_sources s ON s.case_id=c.id WHERE c.id=$1 AND s.id=$2 FOR UPDATE OF c,s",
+        [caseId,sourceId]
+      );
+      if(!parent.rowCount||parent.rows[0].case_state!=="pending"||parent.rows[0].source_state!=="pending"){
+        await client.query("ROLLBACK");return fail(res,409,"Burimi nuk mund të shqyrtohet pas vendimit mbi dosjen.");
+      }
+      if(parent.rows[0].author_id===user.id){
+        await client.query("ROLLBACK");return fail(res,403,"Nuk mund të shqyrtosh burimin e dosjes tënde.");
+      }
       const row=await client.query(
         "UPDATE case_sources s SET state=$1,reviewed_by=$2,reviewed_at=now(),review_note=$3,public_title=$6,public_url=$7 FROM civic_cases c WHERE s.id=$4 AND s.case_id=$5 AND c.id=s.case_id AND c.state='pending' AND c.author_id<>$2 AND s.state='pending' RETURNING s.id,s.state,s.case_id",
         [decision,user.id,attestation.reviewNote,sourceId,caseId,attestation.publicTitle??null,attestation.publicUrl??null]
