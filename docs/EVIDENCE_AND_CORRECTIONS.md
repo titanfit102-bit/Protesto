@@ -55,3 +55,8 @@ After a source fingerprint has been recorded, a reviewer may select the same or 
 
 ## Citizen responses (experimental, not legal right of reply)
 Authenticated pilot users other than the case author can submit one private response per published dossier. A separate reviewer (neither respondent nor case author) can accept or reject it; acceptance requires a **distinct redacted public copy** and explicit privacy review. The public endpoint exposes only that reviewed text and dates, never identity or raw submission. No institutional identity verification, formal service timeline, legal right-of-reply delivery, or arbitration exists. Do not label these unverified accounts as officials.
+
+## Security audit follow-up: public source metadata (migration 012)
+Previously, approved dossier public copies were separate but a case's source list still projected the submitter-supplied source title and URL after source approval. **Migration 012** introduces reviewer-approved `case_sources.public_title` and `public_url`. Source review now requires explicit redacted metadata; the anonymous source endpoint **never** falls back to the original source URL, title, context or review notes. Historical accepted sources with no new approved metadata are withheld until reviewed through an authorized process. Public case approval checks that its outbound source URL belongs to an accepted source's separately approved public metadata.
+
+This closes one specific privacy leak, but does not prove the redacted link is authentic or free of identifying path components; independent editorial and legal review remain P0.

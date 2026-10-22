@@ -27,7 +27,7 @@ export async function dossierRoute({pathname,req,res,pool,user,json,fail,readJSO
     const record=item.rows[0], privileged=!!user&&(user.id===record.author_id||canReview(user.role));
     if((record.state!=="published"||!record.public_title)&&!privileged)return fail(res,404,"Dosja nuk është publike.");
     const sources=await pool.query(
-      "SELECT id,title,url,context,state,created_at FROM case_sources WHERE case_id=$1 AND ($2::boolean OR state='accepted') ORDER BY created_at ASC LIMIT 20",
+      "SELECT id,title,url,context,state,created_at,public_title,public_url FROM case_sources WHERE case_id=$1 AND ($2::boolean OR state='accepted') ORDER BY created_at ASC LIMIT 20",
       [srcMatch[1],privileged]
     );
     return json(res,200,{
@@ -125,15 +125,15 @@ export async function dossierRoute({pathname,req,res,pool,user,json,fail,readJSO
     if(!canReview(user.role))return fail(res,403,"Kërkohet verifikues.");
     const input=await readJSON(req);
     const note=cleanText(input.note,1001),decision=input.decision;
-    const attestation=sourceReviewAttestation({decision,note,checks:input.checks});
+    const attestation=sourceReviewAttestation({decision,note,checks:input.checks,publicMetadata:input.publicMetadata});
     if(!attestation.valid)
       return fail(res,422,"Jep arsyetimin (20–1000 karaktere); për pranim konfirmo kontrollin e lidhjes, privatësisë dhe fushave publike.");
     const client=await pool.connect();
     try{
       await client.query("BEGIN");
       const row=await client.query(
-        "UPDATE case_sources s SET state=$1,reviewed_by=$2,reviewed_at=now(),review_note=$3 FROM civic_cases c WHERE s.id=$4 AND s.case_id=$5 AND c.id=s.case_id AND c.state='pending' AND c.author_id<>$2 AND s.state='pending' RETURNING s.id,s.state,s.case_id",
-        [decision,user.id,attestation.reviewNote,sourceId,caseId]
+        "UPDATE case_sources s SET state=$1,reviewed_by=$2,reviewed_at=now(),review_note=$3,public_title=$6,public_url=$7 FROM civic_cases c WHERE s.id=$4 AND s.case_id=$5 AND c.id=s.case_id AND c.state='pending' AND c.author_id<>$2 AND s.state='pending' RETURNING s.id,s.state,s.case_id",
+        [decision,user.id,attestation.reviewNote,sourceId,caseId,attestation.publicTitle??null,attestation.publicUrl??null]
       );
       if(!row.rowCount){await client.query("ROLLBACK");return fail(res,409,"Burimi nuk mund të shqyrtohet.");}
       await client.query("INSERT INTO audit_entries(id,actor_id,action,object_type,object_id) VALUES($1,$2,$3,'source',$4)",[randomUUID(),user.id,"source."+decision,sourceId]);

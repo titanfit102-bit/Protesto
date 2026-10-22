@@ -98,6 +98,7 @@ try{
   if(els.length!==3)throw Error("Three source-review checkboxes required");
   els.forEach(el=>el.click());
  });
+ await page.$eval(selectCard+" .pilot-source input[name=publicTitle]",el=>el.value="Burim publik i redaktuar për demonstrim");
  await clickText(page,selectCard+" .pilot-source","Prano burimin");
  await page.waitForFunction(s=>document.querySelector(s)?.textContent.includes("Burim i shqyrtuar"),{timeout:12000},selectCard+" .pilot-source small");
  // The browser computes SHA-256 from synthetic local bytes; no PDF file content

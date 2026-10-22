@@ -261,7 +261,7 @@ export function createPilotServer(pool,{origin,production=false,rateLimitSecret=
      if(decision==="published"){
       const accepted=await client.query("SELECT 1 FROM case_sources WHERE case_id=$1 AND state='accepted' LIMIT 1",[caseId]);
       if(!accepted.rowCount){await client.query("ROLLBACK");return fail(res,422,"Të paktën një burim duhet verifikuar para publikimit.");}
-      const selected=await client.query("SELECT 1 FROM case_sources WHERE case_id=$1 AND state='accepted' AND url=$2 LIMIT 1",[caseId,approved.sourceUrl]);
+      const selected=await client.query("SELECT 1 FROM case_sources WHERE case_id=$1 AND state='accepted' AND public_url=$2 AND public_title IS NOT NULL LIMIT 1",[caseId,approved.sourceUrl]);
       if(!selected.rowCount){await client.query("ROLLBACK");return fail(res,422,"URL publike duhet të jetë një burim i pranuar dhe pa parametra.");}
      }
      const updated=await client.query("UPDATE civic_cases SET state=$1,reviewed_at=now(),reviewed_by=$2,public_title=$4,public_description=$5,public_source_url=$6 WHERE id=$3 AND state='pending' AND author_id<>$2 RETURNING id,state",
