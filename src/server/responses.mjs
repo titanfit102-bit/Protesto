@@ -11,14 +11,21 @@ export async function responseRoute({pathname,req,res,pool,user,readJSON,json,fa
  if(match){
   if(!UUID.test(match[1]))return fail(res,400,"ID dosjeje i pavlefshëm.");
   if(req.method==="GET"){
-   // Select publication state and public responses in one SQL snapshot. An
-   // earlier separate case check could become stale after archival.
-   const c=await pool.query("SELECT id FROM civic_cases WHERE id=$1 AND state='published' AND public_title IS NOT NULL AND public_description IS NOT NULL AND public_area IS NOT NULL",[match[1]]);
-   if(!c.rowCount)return fail(res,404,"Dosja nuk është publike.");
-   const r=await pool.query(
-    "SELECT r.id,r.public_body AS body,r.reviewed_at FROM case_responses r JOIN civic_cases c ON c.id=r.case_id WHERE r.case_id=$1 AND r.state='accepted' AND r.public_body IS NOT NULL AND c.state='published' AND c.public_title IS NOT NULL AND c.public_description IS NOT NULL AND c.public_area IS NOT NULL ORDER BY r.reviewed_at ASC,r.id ASC LIMIT 50",[match[1]]
+   // Eligibility and approved replies are read in ONE SQL statement. Separate
+   // queries could cross a case withdrawal between the two snapshots.
+   const visible=await pool.query(
+    "SELECT COALESCE(("+
+    "SELECT json_agg(row_to_json(items) ORDER BY items.reviewed_at ASC,items.id ASC) FROM ("+
+    "SELECT r.id,r.public_body AS body,r.reviewed_at FROM case_responses r "+
+    "WHERE r.case_id=c.id AND r.state='accepted' AND r.public_body IS NOT NULL "+
+    "ORDER BY r.reviewed_at ASC,r.id ASC LIMIT 50"+
+    ") items),'[]'::json) AS items "+
+    "FROM civic_cases c WHERE c.id=$1 AND c.state='published' "+
+    "AND c.public_title IS NOT NULL AND c.public_description IS NOT NULL AND c.public_area IS NOT NULL",
+    [match[1]]
    );
-   return json(res,200,{items:r.rows,disclaimer:"Përgjigje qytetare e moderuar, pa verifikim institucional."});
+   if(!visible.rowCount)return fail(res,404,"Dosja nuk është publike.");
+   return json(res,200,{items:visible.rows[0].items,disclaimer:"Përgjigje qytetare e moderuar, pa verifikim institucional."});
   }
   if(!user)return fail(res,401,"Kërkohet identifikim.");
   const body=await readJSON(req),statement=cleanText(body.body,1801);
