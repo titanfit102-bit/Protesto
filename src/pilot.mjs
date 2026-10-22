@@ -1,5 +1,6 @@
 import {attachEvidence,attachCorrection,displayCorrections,displayAppeals} from "./pilot-evidence.mjs";
 import {initDialogue,renderDialogue} from "./pilot-dialogue.mjs";
+import {attachCitizenResponse,displayCitizenResponseQueue} from "./pilot-right-reply.mjs";
 const $=id=>document.getElementById(id);
 let user=null;
 const escapeHTML=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -18,6 +19,7 @@ function record(item,review=false){
  const source=item.source_url&&/^https:\/\//.test(item.source_url)?'<a href="'+escapeHTML(item.source_url)+'" target="_blank" rel="noopener noreferrer">Shiko burimin ↗</a>':"";
  article.innerHTML='<div class="pilot-meta"><span>'+escapeHTML(item.category)+'</span><span>'+escapeHTML(state)+'</span><span>'+escapeHTML(item.area)+'</span></div><h3>'+escapeHTML(item.title)+'</h3><p>'+escapeHTML(item.description)+'</p>'+source;
  attachEvidence(article,item,{user,review,call,notice,refresh});
+ if(!review)attachCitizenResponse(article,item,{user,call,notice,refresh});
  attachCorrection(article,item,{user,call,notice,refresh});
  if(!review&&!item.state&&user&&(user.role==="reviewer"||user.role==="admin")){
   const div=document.createElement("div");div.className="pilot-review-actions";
@@ -134,6 +136,7 @@ async function refresh(){
  const myRows=await call("/api/cases/mine");
  fill($("my-cases"),myRows.items);
  if(user.role==="reviewer"||user.role==="admin"){
+  const replies=await call("/api/editorial/responses/queue");displayCitizenResponseQueue($("review-responses"),replies.items,{call,notice,refresh,user});
   const appeals=await call("/api/appeals/queue");displayAppeals($("review-appeals"),appeals.items,{review:true,call,notice,refresh,user});
   const corrections=await call("/api/corrections/queue");displayCorrections($("review-corrections"),corrections.items,{review:true,call,notice,refresh,user});
   const actionQueue=await call("/api/actions/review/queue");fillActions($("review-actions"),actionQueue.items,true);

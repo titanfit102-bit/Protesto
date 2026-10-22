@@ -19,7 +19,7 @@ const admin=new pg.Pool({connectionString:adminURL.toString(),max:2});
 const restoredURL=new URL(process.env.DATABASE_URL);restoredURL.pathname='/'+database;
 const env={...process.env,PROTESTO_BACKUP_FILE:file,PROTESTO_BACKUP_SECRET:secret,RESTORE_DATABASE_URL:restoredURL.toString(),PROTESTO_ALLOW_RESTORE:'I_ACKNOWLEDGE_EMPTY_TEST_DATABASE'};
 const run=async(script,overrides={})=>exec(process.execPath,[script],{env:{...env,...overrides},maxBuffer:1024*1024});
-const tables=['civic_users','civic_cases','case_sources','source_fingerprints','case_corrections','civic_actions','schema_migrations','audit_entries'];
+const tables=['civic_users','civic_cases','case_sources','source_fingerprints','case_responses','case_corrections','civic_actions','schema_migrations','audit_entries'];
 const getCounts=async pool=>{
  const out={};
  for(const table of tables)out[table]=Number((await pool.query('SELECT count(*)::integer AS n FROM "'+table+'"')).rows[0].n);
@@ -30,7 +30,7 @@ try{
  const syntheticId=randomUUID();
  await source.query('INSERT INTO civic_users(id,email,password_hash,role) VALUES ($1,$2,$3,$4)',[syntheticId,'drill-'+randomBytes(6).toString('hex')+'@example.org','fictional-hash-not-used','reporter']);
  const original=await getCounts(source);
- assert.equal(original.schema_migrations,10);
+ assert.equal(original.schema_migrations,11);
  const sourceDigests=await source.query("SELECT source_id,sha256_hex,byte_length,media_type FROM source_fingerprints ORDER BY source_id");
  await admin.query('CREATE DATABASE "'+database+'"');created=true;
  await run('tools/backup.mjs');
