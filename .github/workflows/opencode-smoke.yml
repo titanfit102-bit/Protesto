@@ -1,9 +1,8 @@
 name: OpenCode pilot smoke (no AI usage)
 
+# Historical experiment kept for audit; no automatic PR-triggered runs.
 on:
-  pull_request:
-    branches:
-      - feat/protesto-foundation
+  workflow_dispatch:
 
 permissions:
   contents: read
