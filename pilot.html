@@ -25,6 +25,7 @@
    <form id="login-form" class="pilot-form">
     <label>Email<input name="email" type="email" autocomplete="username" required></label>
     <label>Fjalëkalimi<input name="password" type="password" autocomplete="current-password" minlength="12" required></label>
+    <label>Kod i aplikacionit autentikues (nëse aktivizohet MFA)<input name="totpCode" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code"></label>
     <button class="btn primary" type="submit">Hyr në pilot</button>
    </form>
   </section>

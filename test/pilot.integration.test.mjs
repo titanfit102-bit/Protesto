@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {randomUUID,createHash} from "node:crypto";
 import {hashPassword} from "../src/server/security.mjs";
+import {encryptTotpSecret,totpCodeAt} from "../src/server/totp.mjs";
 import {createPilotServer} from "../src/server/app.mjs";
 import {rateKey,consumeRateLimit} from "../src/server/rate-limits.mjs";
 const enabled=!!process.env.DATABASE_URL;
@@ -9,7 +10,8 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
  const {default:pg}=await import("pg");
  const pool=new pg.Pool({connectionString:process.env.DATABASE_URL,max:8});
  const origin="http://127.0.0.1:4174";
- const server=createPilotServer(pool,{origin,rateLimitSecret:"synthetic-integration-rate-limit-key-longer-than-32",dialogueSecret:"synthetic-dialogue-test-secret-longer-than-32"});
+ const syntheticMfaKey=Buffer.alloc(32,7).toString("base64url");
+ const server=createPilotServer(pool,{origin,rateLimitSecret:"synthetic-integration-rate-limit-key-longer-than-32",dialogueSecret:"synthetic-dialogue-test-secret-longer-than-32",mfaKey:syntheticMfaKey});
  const suffix=randomUUID().slice(0,8);
  const reporter={id:randomUUID(),email:"reporter-"+suffix+"@example.org",password:"ReporterSecret!123"};
  const reviewer={id:randomUUID(),email:"reviewer-"+suffix+"@example.org",password:"ReviewerSecret!123"};
@@ -18,7 +20,7 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
   await pool.query("INSERT INTO civic_users(id,email,password_hash,role) VALUES($1,$2,$3,$4)",[u.id,u.email,hashPassword(u.password),u===reporter?"reporter":"reviewer"]);
  }
  const applied=await pool.query("SELECT count(*)::integer n FROM schema_migrations");
- assert.equal(applied.rows[0].n,9,"Expected all nine versioned migrations");
+ assert.equal(applied.rows[0].n,10,"Expected all ten versioned migrations");
  const quotaKey=rateKey("synthetic-integration-rate-limit-key-longer-than-32","test-concurrent",randomUUID());
  const quota=await Promise.all([1,2,3].map(()=>consumeRateLimit(pool,quotaKey,{limit:2,windowSeconds:60})));
  assert.equal(quota.filter(x=>x.allowed).length,2,"Concurrent database quota must allow exactly two hits");
@@ -44,6 +46,17 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
   r=await send("/api/public/ledger");assert.equal(r.status,200);
   r=await send("/api/me");assert.equal(r.status,401);
   r=await send("/api/me/export");assert.equal(r.status,401);
+  const mfaAccount={id:randomUUID(),email:"totp-reviewer-"+suffix+"@example.org",password:"MfaReviewerSecret!123"};
+  const mfaSecret=Buffer.alloc(20,9);
+  await pool.query("INSERT INTO civic_users(id,email,password_hash,role,totp_secret_encrypted) VALUES($1,$2,$3,'reviewer',$4)",
+   [mfaAccount.id,mfaAccount.email,hashPassword(mfaAccount.password),encryptTotpSecret(mfaSecret,syntheticMfaKey)]);
+  r=await send("/api/auth/login",{method:"POST",body:{email:mfaAccount.email,password:mfaAccount.password}});
+  assert.equal(r.status,401,"MFA-enrolled reviewer cannot login with password alone");
+  const mfaCode=totpCodeAt(mfaSecret,Math.floor(Date.now()/30000));
+  r=await send("/api/auth/login",{method:"POST",body:{email:mfaAccount.email,password:mfaAccount.password,totpCode:mfaCode}});
+  assert.equal(r.status,200,"Correct one-time code permits login");
+  r=await send("/api/auth/login",{method:"POST",body:{email:mfaAccount.email,password:mfaAccount.password,totpCode:mfaCode}});
+  assert.equal(r.status,401,"Consumed code is rejected");
   const sample={
    title:"Raportim testimi i ndriçimit",description:"Raportim artificial për testimin e verifikimit dhe të drejtës së përgjigjes.",
    area:"Zona e testit",category:"Infrastrukturë",source:"https://example.org/source"
