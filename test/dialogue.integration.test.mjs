@@ -46,7 +46,13 @@ test("Dialogu Qytetar: independent moderation, consent, vote threshold and delet
  };
  await new Promise((resolve,reject)=>server.listen(4176,"127.0.0.1",e=>e?reject(e):resolve()));
  try{
-  const topicData={caseId:publishedCase,title:"Diskutim për transparencën e qytetit",description:"Konsultim sintetik për zgjidhje të verifikueshme, jo sondazh përfaqësues."};
+  const topicData={caseId:publishedCase,
+    title:"PRIVATE topic title from reviewer",description:"PRIVATE original internal context; not intended for publication.",
+    public:{title:"Diskutim publik për transparencën",description:"Përmbajtje e redaktuar publike e këtij diskutimi sintetik."},
+    checks:{privacyReviewed:true,publicCopyReviewed:true}};
+   let hidden=await send("/api/dialogue/topics",{method:"POST",as:reviewer,body:{
+    ...topicData,public:undefined
+   }});assert.equal(hidden.status,422,"Topic requires reviewed public copy");
   let r=await send("/api/dialogue/topics",{method:"POST",body:topicData});assert.equal(r.status,401);
   r=await send("/api/dialogue/topics",{method:"POST",body:topicData,as:author});assert.equal(r.status,403);
   r=await send("/api/dialogue/topics",{method:"POST",body:{...topicData,caseId:pendingCase},as:reviewer});assert.equal(r.status,409);
@@ -54,7 +60,12 @@ test("Dialogu Qytetar: independent moderation, consent, vote threshold and delet
   r=await send("/api/dialogue/topics",{method:"POST",body:topicData,as:reviewer});
   assert.equal(r.status,201);const topicId=r.data.item.id;
   r=await send("/api/dialogue/topics");assert.ok(r.data.items.some(x=>x.id===topicId));assert.equal(JSON.stringify(r.data).includes(author.email),false);
-  const statementData={body:"Bashkia duhet të publikojë raporte të qarta mujore për shërbimet publike."};
+  const visibleTopic=r.data.items.find(x=>x.id===topicId);
+  assert.equal(visibleTopic.title,topicData.public.title);
+  assert.equal(visibleTopic.description,topicData.public.description);
+  assert.ok(!JSON.stringify(visibleTopic).includes("PRIVATE"));
+  const statementData={body:"PRIVATE source statement: citizen identifying street, not for public release."};
+  const approvedStatement="Publikisht kërkojmë raporte mujore të verifikueshme për shërbimet.";
   r=await send("/api/dialogue/topics/"+topicId+"/statements",{method:"POST",body:{body:"too short"},as:author});assert.equal(r.status,422);
   r=await send("/api/dialogue/topics/"+topicId+"/statements",{method:"POST",body:statementData,as:author});
   assert.equal(r.status,201);const statementId=r.data.item.id;
@@ -63,17 +74,29 @@ test("Dialogu Qytetar: independent moderation, consent, vote threshold and delet
   r=await send("/api/dialogue/review/queue",{as:reviewer});assert.ok(r.data.items.some(x=>x.id===statementId));
   r=await send("/api/dialogue/statements/"+statementId+"/review",{method:"POST",as:author,body:{decision:"accepted",note:"Vetëmoderimi nuk duhet të jetë i mundur."}});
   assert.equal(r.status,403);
-  r=await send("/api/dialogue/statements/"+statementId+"/review",{method:"POST",as:reviewer,body:{decision:"accepted",note:"Deklarata nuk përmban të dhëna private dhe është e përshtatshme."}});
+  r=await send("/api/dialogue/statements/"+statementId+"/review",{method:"POST",as:reviewer,body:{
+   decision:"accepted",note:"Përmbajtje e shqyrtuar për publikim, mungon kopja publike."
+  }});
+  assert.equal(r.status,422,"Cannot accept raw statement without approved public text");
+  r=await send("/api/dialogue/statements/"+statementId+"/review",{method:"POST",as:reviewer,body:{
+   decision:"accepted",note:"Përmbajtje e shqyrtuar për publikim me redaktim.",
+   privacyReviewed:true,publicBody:approvedStatement
+  }});
   assert.equal(r.status,200);
   r=await send("/api/dialogue/statements/"+statementId+"/review",{method:"POST",as:reviewer,body:{decision:"rejected",note:"Vendimi nuk mund të ndryshohet dy herë."}});
   assert.equal(r.status,409);
   const smallStatement={body:"Institucioni duhet të tregojë publikisht afatet e kërkesave qytetare."};
   r=await send("/api/dialogue/topics/"+topicId+"/statements",{method:"POST",as:author,body:smallStatement});
   assert.equal(r.status,201);const smallId=r.data.item.id;
-  r=await send("/api/dialogue/statements/"+smallId+"/review",{method:"POST",as:reviewer,body:{decision:"accepted",note:"Deklaratë e përshtatshme për testimin e pragut të privatësisë."}});
+  r=await send("/api/dialogue/statements/"+smallId+"/review",{method:"POST",as:reviewer,body:{
+   decision:"accepted",note:"Deklaratë e përshtatshme për testimin e pragut të privatësisë.",
+   privacyReviewed:true,publicBody:smallStatement.body
+  }});
   assert.equal(r.status,200);
   r=await send("/api/dialogue/topics/"+topicId);
   assert.equal(r.data.statements.length,2);
+  assert.equal(r.data.statements.find(x=>x.id===statementId).body,approvedStatement);
+  assert.ok(!JSON.stringify(r.data).includes("PRIVATE"));
   assert.ok(r.data.statements.every(s=>s.participants===null&&s.agree_count===null));
   r=await send("/api/dialogue/statements/"+statementId+"/vote",{method:"POST",as:author,body:{choice:"agree"}});
   assert.equal(r.status,422,"Consent acknowledgement required");
@@ -120,7 +143,9 @@ test("Dialogu Qytetar: independent moderation, consent, vote threshold and delet
   assert.equal(entry.agree_percent,64);
   assert.equal(entry.statement_id,statementId);
   assert.equal(entry.topic_id,topicId);
-  assert.equal(entry.statement,statementData.body);
+  assert.equal(entry.statement,approvedStatement);
+  assert.equal(entry.topic_title,topicData.public.title);
+  assert.ok(!JSON.stringify(r.data).includes("PRIVATE"));
   assert.equal(entry.case_title,"Dosje publike e rishikuar për dialog");
   assert.equal(entry.source_url,"https://example.org/public-dialogue");
   assert.ok(!JSON.stringify(r.data).includes("PRIVATE"));
@@ -128,6 +153,11 @@ test("Dialogu Qytetar: independent moderation, consent, vote threshold and delet
   assert.ok(!r.data.items.some(x=>x.statement_id===smallId),"Single-vote statement must never be reported");
   assert.equal(JSON.stringify(r.data).includes(author.email),false,"No private identities in aggregate report");
 
+  const privateOriginal=await pool.query("SELECT s.body,s.public_body,t.title,t.public_title FROM dialogue_statements s JOIN dialogue_topics t ON t.id=s.topic_id WHERE s.id=$1",[statementId]);
+  assert.equal(privateOriginal.rows[0].body,statementData.body);
+  assert.equal(privateOriginal.rows[0].public_body,approvedStatement);
+  assert.equal(privateOriginal.rows[0].title,topicData.title);
+  assert.equal(privateOriginal.rows[0].public_title,topicData.public.title);
   const q=await pool.query("SELECT count(*)::integer n FROM dialogue_votes WHERE statement_id IN($1,$2)",[statementId,smallId]);
   assert.equal(q.rows[0].n,0,"All individual vote records purged on close");
   r=await send("/api/dialogue/statements/"+statementId+"/vote",{method:"POST",as:author,body:{choice:"agree",acknowledge:true}});
