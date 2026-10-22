@@ -16,6 +16,120 @@
       "status": "approved",
       "kind": "pure-module",
       "brief": "Implement a new original deterministic pure JavaScript function in src/opencode-dialogue-report-metrics.mjs that summarizes ONLY finalized anonymous aggregate civic-dialogue report items (agree_count, disagree_count, pass_count, participants). Return validated per-statement shares rounded sensibly, with an explicit nonrepresentative disclaimer and no population-level, individual-level or political profile inference. Enforce >=10 respondents, finite nonnegative safe integer counts, matching sum, and deterministic stable sorting; never mutate input. Export clearly named functions. Add test/opencode-dialogue-report-metrics.test.mjs with at least four synthetic node:test cases for valid aggregates, sub-threshold suppression, invalid/mismatched totals and input immutability/deterministic ordering. Do NOT edit src/server/dialogue.mjs, other existing source files, API endpoints or schemas. No I/O, network, identities, model calls or third-party code."
+    },
+    {
+      "id": "dialogue-rounded-shares",
+      "status": "approved",
+      "kind": "pure-module",
+      "stream": "privacy",
+      "brief": "Design an original pure helper for turning three validated aggregate response counts into integer display percentages that always sum to exactly 100 using deterministic largest-remainder distribution and fixed tie-breaking. Accept only safe nonnegative integers, require a total of at least ten, never mutate inputs, and never infer opinions about any wider population. Create the named module and at least four synthetic Node native tests covering ties, zeros, thirds, invalid counts and deterministic behavior."
+    },
+    {
+      "id": "dialogue-public-row-adapter",
+      "status": "approved",
+      "kind": "pure-module",
+      "stream": "privacy",
+      "brief": "Create a pure deterministic adapter of public finalized dialogue result records: retain only explicit topic_id, statement_id, neutral statement text, participant count and three aggregate counts from an allowlist; never retain emails, voters, device keys, actor identifiers or unreviewed metadata. Hide any row with fewer than ten respondents, reject malformed aggregate totals, preserve public statement identity and stable order, and include non-representative disclosure. Add at least four synthetic tests for privacy fields, invalid input, threshold and order."
+    },
+    {
+      "id": "transparency-ledger-view",
+      "status": "approved",
+      "kind": "pure-module",
+      "stream": "accountability",
+      "brief": "Implement a pure formatter for the Protesto public publication/retraction ledger. Accept only synthetic civic case identifiers, event type published or archived and explicit timestamp; validate and chronologically order events without mutating input. Return a narrow public field allowlist without reviewer names, reporters or review notes. Handle duplicate and malformed events deterministically without implying that publication proves truth. Include at least four synthetic Node tests for transitions, sorting, duplicate handling and privacy."
+    },
+    {
+      "id": "evidence-review-gates",
+      "status": "approved",
+      "kind": "pure-module",
+      "stream": "trust",
+      "brief": "Create an original pure rule evaluator for whether a synthetic civic case is eligible for human editorial publication review. Require at least one independently accepted documentary source plus three explicit boolean checklist outcomes, reject missing or malformed fields, and return transparent blocking reasons without asserting that allegations are factually verified. It is advice for a human moderator, never auto-publish and never inspect or fetch source material. Supply four or more deterministic synthetic tests including own-review conflict, rejected sources, missing checks and valid case."
+    },
+    {
+      "id": "correction-decision-policy",
+      "status": "approved",
+      "kind": "pure-module",
+      "stream": "trust",
+      "brief": "Implement a pure policy decision helper for correction requests on public synthetic cases: validate allowed statuses and return which actions are eligible for a separate human reviewer, with explicit explanations. Never automatically retract or republish a case, never infer guilt or truth, and avoid returning personal metadata. Test rejected corrections, accepted corrections, archived cases, conflicting author/reviewer identities using synthetic ids, and invalid states in at least four native tests."
+    },
+    {
+      "id": "independent-appeal-gates",
+      "status": "approved",
+      "kind": "pure-module",
+      "stream": "trust",
+      "brief": "Implement a pure deterministic checker for independent editorial appeals. Accept synthetic appeal author, case author, first reviewer and candidate second reviewer identifiers and decision state; allow only a distinct authorized second reviewer to consider a pending appeal, reject self-review and repeated decisions, and return stable machine-readable reasons. Do not make or persist decisions or publish anything. Include four or more synthetic Node tests for each conflict, role status and valid second reviewer."
+    },
+    {
+      "id": "public-audit-sequence",
+      "status": "approved",
+      "kind": "pure-module",
+      "stream": "trust",
+      "brief": "Build a pure verifier of synthetic public-facing civic case timeline order for publication, correction and withdrawal. Accept an array of public event types, time values and non-identifying case ids, flag impossible ordering, unknown event types, duplicate retractions and malformed times, and produce explanatory diagnostics without asserting that underlying claims are true. No I/O, account details or reviewer notes. Add at least four Node tests for valid history, order conflict, duplicates and input immutability."
+    },
+    {
+      "id": "source-provenance-summary",
+      "status": "approved",
+      "kind": "pure-module",
+      "stream": "trust",
+      "brief": "Build a pure format validator for structured, human-reviewed source provenance labels in civic cases, using synthetic source identifiers, source type, title, publisher label, review state and date. Separate accepted from pending sources, never treat existence of a label as proof of authenticity, and exclude submitter identities and private review comments from returned public summaries. No external network calls or URL fetching. Add at least four tests for disclosure policy, malformed fields, pending suppression and stable deterministic output."
+    },
+    {
+      "id": "institution-reply-states",
+      "status": "approved",
+      "kind": "pure-module",
+      "stream": "institutions",
+      "brief": "Create a pure, explicit state machine specification for the proposed institutional-response tracking feature. Model draft request, submitted, acknowledged, answered, disputed and closed with a small allowlisted transition graph and human review requirements. Return allowed next states and reason codes only; do not send requests, make legal deadline claims or access institutions. Include four or more synthetic tests for valid progress, forbidden leaps, disputed response and terminal states."
+    },
+    {
+      "id": "institution-working-days",
+      "status": "approved",
+      "kind": "pure-module",
+      "stream": "institutions",
+      "brief": "Implement a pure configurable calendar helper for project-defined institutional follow-up reminders, not legal deadlines. Given a valid ISO calendar date, a nonnegative finite count of working days and an optional explicit list of closure dates, compute a deterministic deadline excluding weekends and supplied closures; reject impossible dates and ambiguous formats, preserve inputs and avoid time zone drift. Add at least five synthetic tests for month/year boundaries, holidays, zero days, invalid dates and stable output."
+    },
+    {
+      "id": "institution-public-summary",
+      "status": "approved",
+      "kind": "pure-module",
+      "stream": "institutions",
+      "brief": "Design a pure public-view adapter for synthetic institutional case follow-ups. Keep only neutral institution label, public request id, declared status, last public update and evidence-reference label, excluding citizen email, internal contacts, notes and account fields. Require explicit state values and stable ordering, never claim an institution responded without a recorded event, and make no lawfulness determinations. Add at least four synthetic tests including data-leak regression, malformed state, empty records and ordering."
+    },
+    {
+      "id": "case-retention-rules",
+      "status": "approved",
+      "kind": "pure-module",
+      "stream": "privacy",
+      "brief": "Create a pure configurable retention-policy evaluator for synthetic civic case content categories and their explicit creation/closure times. Output a proposed retain, review or eligible-for-deletion label based only on caller-supplied policy duration, no implicit legal period or actual deletion, and flag archived/retracted records requiring human privacy review. Keep account identities and private evidence out of output. Test boundaries, invalid dates, archived cases and retention changes in four or more native tests."
+    },
+    {
+      "id": "privacy-export-allowlist",
+      "status": "approved",
+      "kind": "pure-module",
+      "stream": "privacy",
+      "brief": "Implement a pure allowlist-based transformation for a simulated user's own civic-activity data export. Retain only declared safe fields such as own case title, status, created date and public reference id; strip session tokens, password hashes, reviewer private notes, other people's records and unknown keys recursively or explicitly. Do not access files or servers, and do not promise regulatory compliance. Supply five or more synthetic tests for nested private keys, foreign records, malformed input, legitimate fields and non-mutation."
+    },
+    {
+      "id": "initiative-status-logic",
+      "status": "approved",
+      "kind": "pure-module",
+      "stream": "participation",
+      "brief": "Create a pure deterministic status-transition validator for a peaceful civic initiative, with draft, under-review, published, completed and archived states. Require separate reviewer acknowledgment before publication, return reason codes and never publish automatically, collect signatures or infer attendance. All input must be synthetic records, no real institutions or political profiling. Provide at least four Node native tests for authorized progression, forbidden states, archiving and input immutability."
+    },
+    {
+      "id": "peaceful-event-windows",
+      "status": "approved",
+      "kind": "pure-module",
+      "stream": "participation",
+      "brief": "Create a pure validation and display helper for scheduled lawful peaceful civic events using explicit ISO timestamps, start/end comparison and duration limits supplied by the caller. Require end strictly after start, refuse malformed or ambiguous timestamp strings, and never track participants, attendance or locations. Do not issue claims of legal approval or automatically schedule events. Include at least four synthetic tests on overlap/ordering, midnight, invalid dates and duration boundaries."
+    },
+    {
+      "id": "accessible-status-messages",
+      "status": "approved",
+      "kind": "pure-module",
+      "stream": "quality",
+      "brief": "Develop a pure mapping from predefined Protesto public UI operation results to understandable Albanian status messages and semantic severity (info, success, warning, error). Provide safe deterministic text for loading, empty results, unauthorized action, rate limited request, pending editorial review and finalized public aggregates; never interpolate untrusted markup, personal data or accusations. Include at least five Node native tests for allowed states, safe unknown fallback, stable formatting and non-mutation."
     }
-  ]
+  ],
+  "batch": "BATCH-2026-10-22-CIVIC-FOUNDATIONS",
+  "batchIntent": "16 additive independently verified pure code modules; no production integration or merge"
 }
