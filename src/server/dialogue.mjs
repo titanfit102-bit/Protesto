@@ -1,3 +1,4 @@
+import {publicDialogueReportItems} from "./dialogue-report.mjs";
 import {randomUUID} from "node:crypto";
 import {cleanText} from "../domain.mjs";
 import {canReview} from "./security.mjs";
@@ -29,7 +30,7 @@ export async function dialogueRoute({pathname,req,res,pool,user,json,fail,readJS
    format:"protesto-dialogue-aggregates/1",
    disclaimer:"Përgjigje vullnetare nga pjesëmarrësit e kësaj platforme. Nuk janë përfaqësuese për popullsinë dhe nuk vërtetojnë fakte.",
    methodology:{minimumRespondents:10,visibility:"Vetëm diskutime të mbyllura dhe deklarata me 10+ përgjigje.",choices:["agree","disagree","pass"],identifiers:"Asnjë identifikues votuesi nuk përfshihet."},
-   items:q.rows
+   items:publicDialogueReportItems(q.rows)
   });
  }
  if(pathname==="/api/dialogue/topics"&&req.method==="GET"){
