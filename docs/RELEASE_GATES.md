@@ -55,3 +55,6 @@ In [run #39670591638](https://github.com/titanfit102-bit/Protesto/actions/runs/3
 
 ## Descriptive dialogue export, October 22, 2026
 The public dialogue report includes only closed-topic aggregates with >=10 respondents, and filters out cases subsequently archived. Unit/integration checks plus browser smoke passed on the implementation revision ([run #39688457772](https://github.com/titanfit102-bit/Protesto/actions/runs/39688457772)). This does not make it a representative survey, a consensus across opinion clusters, a general civic mandate, or a legally approved sensitive-data program.
+
+## Local reviewer PDF fingerprint (experimental, 2026-10-22)
+The optional reviewer-declared PDF SHA-256 metadata workflow has Node, PostgreSQL and Chromium coverage in the development branch. No file is uploaded or fetched by the server. An editor declaration is **not** an authentic document snapshot, externally attested proof, or content-truth verification. Private pilot only; immutable external archival, privacy-safe redaction, independent custody and operational deletion/retention policies remain OPEN / P0.

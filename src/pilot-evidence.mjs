@@ -61,6 +61,50 @@ export function attachEvidence(article,item,{user,review,call,notice,refresh}){
      }
      entry.append(note,attestation,controls);
     }
+    if(review&&source.state==="accepted"&&item.author_id!==user?.id){
+     const fp=node("section","pilot-fingerprint");
+     const fpPath="/api/dossiers/"+encodeURIComponent(item.id)+"/sources/"+encodeURIComponent(source.id)+"/fingerprint";
+     const previous=await call(fpPath);
+     fp.append(node("h4","","Gjurmë integriteti e dokumentit (PDF)"));
+     if(previous.item){
+      fp.append(node("p","","SHA-256 (deklaruar): "+previous.item.sha256));
+      fp.append(node("small","","Nuk certifikon origjinën. Skedari nuk ruhet në Protesto."));
+     }else{
+      const input=node("input");input.type="file";input.accept=".pdf,application/pdf";
+      input.setAttribute("aria-label","Zgjidh dokumentin PDF vetëm për llogaritje lokale të SHA-256");
+      const intro=node("p","","Zgjidh PDF deri 8 MiB: përmbajtja nuk ngarkohet në server. Vetëm SHA-256 dhe madhësia ruhen privatisht.");
+      const declarations=node("fieldset","pilot-checklist");
+      declarations.append(node("legend","","Konfirmime editoriale për gjurmën"));
+      const matching=node("input"),privacy=node("input");
+      matching.type="checkbox";privacy.type="checkbox";
+      const one=node("label"),two=node("label");
+      one.append(matching,document.createTextNode(" E krahasova këtë PDF me burimin e shqyrtuar"));
+      two.append(privacy,document.createTextNode(" Kontrollova privatësinë; skedari nuk do të publikohet nga kjo veprimtari"));
+      declarations.append(one,two);
+      const save=button("Regjistro SHA-256",async()=>{
+       try{
+        const file=input.files?.[0];
+        if(!file||file.size<5||file.size>8*1024*1024)throw Error("Zgjidh PDF me madhësi 5 bajte deri 8 MiB.");
+        if(!matching.checked||!privacy.checked)throw Error("Konfirmo dy kontrollet editoriale.");
+        if(!globalThis.crypto?.subtle)throw Error("Kërkohet mjedis i sigurt (HTTPS ose localhost) për SHA-256.");
+        const bytes=await file.arrayBuffer();
+        const magic=String.fromCharCode(...new Uint8Array(bytes.slice(0,5)));
+        if(magic!=="%PDF-")throw Error("Skedari nuk ka firmën bazë të një PDF-je.");
+        const digest=new Uint8Array(await crypto.subtle.digest("SHA-256",bytes));
+        const sha256=[...digest].map(x=>x.toString(16).padStart(2,"0")).join("");
+        await call(fpPath,"POST",{
+         sha256,byteLength:bytes.byteLength,mediaType:"application/pdf",
+         acknowledgedCorrespondence:true,acknowledgedPrivacy:true
+        });
+        input.value="";
+        notice("SHA-256 u regjistrua privatisht. Origjina e PDF-së nuk është certifikuar.");
+        await reload();
+       }catch(error){notice(error.message,true);}
+      });
+      fp.append(intro,input,declarations,save);
+     }
+     entry.append(fp);
+    }
     list.append(entry);
    }
    if(!result.items.length)list.append(node("p","pilot-empty","Nuk ka burime ende. Publikimi kërkon të paktën një burim të kontrolluar."));

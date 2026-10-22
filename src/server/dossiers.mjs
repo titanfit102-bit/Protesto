@@ -3,13 +3,15 @@ import {cleanText, validateSourceUrl} from "../domain.mjs";
 import {canReview} from "./security.mjs";
 import {correctionDecisionPolicy} from "./correction-policy.mjs";
 import {publicSourceItems,sourceReviewAttestation} from "./source-publication.mjs";
+import {validateSourceFingerprint,privateFingerprintRecord} from "./source-fingerprint.mjs";
 
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const sourceList=/^\/api\/dossiers\/([^/]+)\/sources$/;
 const sourceReview=/^\/api\/dossiers\/([^/]+)\/sources\/([^/]+)\/review$/;
+const sourceFingerprint=/^\/api\/dossiers\/([^/]+)\/sources\/([^/]+)\/fingerprint$/;
 const correctionReview=/^\/api\/corrections\/review\/([^/]+)$/;
-export const dossierGetRoute=path=>sourceList.test(path)||["/api/corrections/mine","/api/corrections/queue"].includes(path);
-export const dossierPostRoute=path=>sourceList.test(path)||sourceReview.test(path)||path==="/api/corrections"||correctionReview.test(path);
+export const dossierGetRoute=path=>sourceList.test(path)||sourceFingerprint.test(path)||["/api/corrections/mine","/api/corrections/queue"].includes(path);
+export const dossierPostRoute=path=>sourceList.test(path)||sourceReview.test(path)||sourceFingerprint.test(path)||path==="/api/corrections"||correctionReview.test(path);
 
 function checkedUrl(value) {
   try{return validateSourceUrl(value);}
@@ -33,7 +35,62 @@ export async function dossierRoute({pathname,req,res,pool,user,json,fail,readJSO
       disclaimer:"Burimet janë shqyrtuar nga redaktorë. Lidhjet mund të ndryshojnë dhe nuk provojnë vetë vërtetësinë e pretendimit."
     });
   }
+  const fingerprintMatch=pathname.match(sourceFingerprint);
+  if(fingerprintMatch&&req.method==="GET"){
+    const [caseId,sourceId]=fingerprintMatch.slice(1);
+    if(!UUID.test(caseId)||!UUID.test(sourceId))return fail(res,400,"ID i pavlefshëm.");
+    if(!user)return fail(res,404,"Regjistrimi nuk është publik.");
+    const source=await pool.query(
+      "SELECT c.author_id FROM case_sources s JOIN civic_cases c ON c.id=s.case_id WHERE s.id=$1 AND s.case_id=$2",
+      [sourceId,caseId]
+    );
+    if(!source.rowCount||!(source.rows[0].author_id===user.id||canReview(user.role)))
+      return fail(res,404,"Regjistrimi nuk është publik.");
+    const declared=await pool.query(
+      "SELECT sha256_hex,byte_length,media_type,created_at FROM source_fingerprints WHERE source_id=$1",
+      [sourceId]
+    );
+    return json(res,200,{item:privateFingerprintRecord(declared.rows[0]||null),
+      disclaimer:"SHA-256 i deklaruar nga verifikuesi, jo provë e pavarur autenticiteti."});
+  }
   if(!user)return fail(res,401,"Kërkohet identifikim.");
+  if(fingerprintMatch&&req.method==="POST"){
+    const [caseId,sourceId]=fingerprintMatch.slice(1);
+    if(!UUID.test(caseId)||!UUID.test(sourceId))return fail(res,400,"ID i pavlefshëm.");
+    if(!canReview(user.role))return fail(res,403,"Kërkohet verifikues.");
+    const details=validateSourceFingerprint(await readJSON(req));
+    if(!details)return fail(res,422,"Kërkohet hash SHA-256 i PDF-së deri 8 MiB dhe konfirmimet editoriale.");
+    const client=await pool.connect();
+    try{
+      await client.query("BEGIN");
+      const record=await client.query(
+        "SELECT c.author_id,c.state AS case_state,s.state AS source_state FROM civic_cases c JOIN case_sources s ON s.case_id=c.id WHERE c.id=$1 AND s.id=$2 FOR UPDATE OF c,s",
+        [caseId,sourceId]
+      );
+      if(!record.rowCount||record.rows[0].case_state!=="pending"||
+         record.rows[0].source_state!=="accepted"){
+        await client.query("ROLLBACK");return fail(res,409,"Vetëm burimet e pranuara, para publikimit, mund të marrin gjurmë.");
+      }
+      if(record.rows[0].author_id===user.id){
+        await client.query("ROLLBACK");return fail(res,403,"Autori i dosjes nuk mund të certifikojë gjurmën.");
+      }
+      const inserted=await client.query(
+        "INSERT INTO source_fingerprints(source_id,sha256_hex,byte_length,media_type,reviewed_by) VALUES($1,$2,$3,$4,$5) ON CONFLICT (source_id) DO NOTHING RETURNING sha256_hex,byte_length,media_type,created_at",
+        [sourceId,details.sha256_hex,details.byte_length,details.media_type,user.id]
+      );
+      if(!inserted.rowCount){
+        await client.query("ROLLBACK");return fail(res,409,"Gjurmë e regjistruar më parë; nuk mund të zëvendësohet.");
+      }
+      await client.query(
+        "INSERT INTO audit_entries(id,actor_id,action,object_type,object_id) VALUES($1,$2,'source.fingerprint.declared','source',$3)",
+        [randomUUID(),user.id,sourceId]
+      );
+      await client.query("COMMIT");
+      return json(res,201,{item:privateFingerprintRecord(inserted.rows[0]),
+        disclaimer:"Gjurmë e deklaruar nga verifikuesi, jo dokument i ruajtur në server."});
+    }catch(e){try{await client.query("ROLLBACK");}catch{}throw e;}
+    finally{client.release();}
+  }
 
   if(srcMatch&&req.method==="POST"){
     if(!UUID.test(srcMatch[1]))return fail(res,400,"ID dosjeje i pavlefshëm.");
