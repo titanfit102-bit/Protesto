@@ -116,12 +116,20 @@ export async function renderDialogue({user,call,notice,refresh,cases}){
    if(stmt.author_id===user.id){card.append(make("small","pilot-muted","Nuk mund të verifikosh deklaratën tënde."));target.append(card);continue;}
    const label=make("label","pilot-dialogue-review-label","Arsyetimi i verifikimit");
    const field=make("textarea","review-note");field.rows=2;field.minLength=20;field.maxLength=1000;label.append(field);card.append(label);
+   const publicLabel=make("label","pilot-dialogue-review-label","Kopja publike e redaktuar");
+   const publicBody=make("textarea","dialogue-public-body");
+   publicBody.rows=3;publicBody.maxLength=360;publicBody.minLength=25;publicBody.value=stmt.body;
+   publicLabel.append(publicBody);card.append(publicLabel);
+   const privacyLabel=make("label","pilot-dialogue-review-label");
+   const privacy=make("input");privacy.type="checkbox";
+   privacyLabel.append(privacy,document.createTextNode(" Kontrollova privatësinë e kopjes publike."));
+   card.append(privacyLabel);
    const buttons=make("div","pilot-review-actions");
    for(const [decision,text] of [["accepted","Mirato deklaratën"],["rejected","Refuzo deklaratën"]]){
     const btn=make("button","btn subtle",text);btn.type="button";
     btn.addEventListener("click",async()=>{
      btn.disabled=true;
-     try{await call("/api/dialogue/statements/"+encodeURIComponent(stmt.id)+"/review","POST",{decision,note:field.value});
+     try{await call("/api/dialogue/statements/"+encodeURIComponent(stmt.id)+"/review","POST",{decision,note:field.value,publicBody:publicBody.value,privacyReviewed:privacy.checked});
       notice("Vendimi për deklaratën u regjistrua.");await refresh();
      }catch(e){notice(e.message,true);}finally{btn.disabled=false;}
     });
@@ -148,7 +156,12 @@ export function initDialogue({call,notice,refresh}){
   event.preventDefault();
   try{
    const form=event.currentTarget;
-   const result=await call("/api/dialogue/topics","POST",Object.fromEntries(new FormData(form)));
+   const draft=Object.fromEntries(new FormData(form));
+    const result=await call("/api/dialogue/topics","POST",{
+     caseId:draft.caseId,title:draft.title,description:draft.description,
+     public:{title:draft.publicTitle,description:draft.publicDescription},
+     checks:{privacyReviewed:draft.privacyReviewed==="on",publicCopyReviewed:draft.privacyReviewed==="on"}
+    });
    selectedTopic=result.item.id;form.reset();notice("Diskutimi u hap mbi një dosje të verifikuar.");await refresh();
   }catch(e){notice(e.message,true);}
  });

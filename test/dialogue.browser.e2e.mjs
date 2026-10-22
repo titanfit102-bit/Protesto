@@ -69,7 +69,11 @@ try{
  if(process.env.PROTESTO_CAPTURE_PREVIEW==="1")await page.screenshot({path:"dist-preview/04-hyrja-pilot.png",fullPage:true});
  await login(page,reviewer);
  await page.waitForSelector("#dialogue-create-section:not([hidden])");
- await form(page,"#dialogue-create-form",{caseId,title:"Konsultim sintetik për mjedisin",description:"Ky është një diskutim sintetik për verifikimin e funksioneve të moderimit dhe votimit."});
+ await form(page,"#dialogue-create-form",{
+ caseId,title:"Konsultim sintetik për mjedisin",description:"Ky është një diskutim sintetik për verifikimin e funksioneve të moderimit dhe votimit.",
+ publicTitle:"Konsultim sintetik për mjedisin",publicDescription:"Kontekst publik sintetik për funksionet e diskutimit dhe moderimit."
+});
+await page.$eval('#dialogue-create-form [name="privacyReviewed"]',el=>el.click());
  await click(page,"#dialogue-create-form","Hap diskutimin");
  await page.waitForFunction(()=>document.querySelector("#dialogue-details h3")?.textContent==="Konsultim sintetik për mjedisin",{timeout:15000});
  console.log("[dialogue browser] Reviewer created a topic linked to published case");
@@ -82,7 +86,9 @@ try{
  await logout(page);
  await login(page,reviewer);
  await page.waitForSelector("#review-dialogue-statements .pilot-card");
- await page.$eval("#review-dialogue-statements .pilot-card textarea",x=>x.value="Deklaratë e paanshme, pa identifikues privatë, e kontrolluar manualisht.");
+ await page.$eval("#review-dialogue-statements .pilot-card textarea.review-note",x=>x.value="Deklaratë e paanshme, pa identifikues privatë, e kontrolluar manualisht.");
+ await page.$eval("#review-dialogue-statements .pilot-card textarea.dialogue-public-body",x=>x.value="Institucionet duhet të publikojnë raporte të verifikueshme rregullisht.");
+ await page.$eval("#review-dialogue-statements .pilot-card input[type=checkbox]",x=>x.click());
  await click(page,"#review-dialogue-statements .pilot-card","Mirato deklaratën");
  await page.waitForSelector("#dialogue-details .pilot-dialogue-statement");
  console.log("[dialogue browser] Statement approved by separate moderator");

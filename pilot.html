@@ -83,6 +83,11 @@
      <label>Dosja e verifikuar<select id="dialogue-case-select" name="caseId" required></select></label>
      <label>Titulli i diskutimit<input name="title" minlength="8" maxlength="140" required></label>
      <label>Konteksti neutral<textarea name="description" minlength="35" maxlength="1200" rows="3" required></textarea></label>
+     <fieldset class="pilot-public-copy"><legend>Kopje e redaktuar për publikim</legend>
+      <label>Titulli publik<input name="publicTitle" minlength="8" maxlength="140" required></label>
+      <label>Konteksti publik<textarea name="publicDescription" minlength="35" maxlength="1200" rows="3" required></textarea></label>
+      <label><input name="privacyReviewed" type="checkbox" required> Kontrollova privatësinë dhe miratoj tekstin publik.</label>
+     </fieldset>
      <button class="btn primary" type="submit">Hap diskutimin</button>
     </form>
    </section>
