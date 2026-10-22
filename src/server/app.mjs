@@ -87,7 +87,7 @@ export function createPilotServer(pool,{origin,production=false,rateLimitSecret=
   const isReview=/^\/api\/review\/[^/]+$/.test(pathname);
   const isArchive=/^\/api\/archive\/[^/]+$/.test(pathname);
   const getRoutes=["/api/public/cases","/api/public/ledger","/api/me","/api/me/export","/api/cases/mine","/api/review/queue"];
-  const postRoutes=["/api/auth/login","/api/auth/logout","/api/cases"];
+  const postRoutes=["/api/auth/login","/api/auth/logout","/api/me/sessions/revoke-all","/api/cases"];
   if(!(req.method==="GET"&&(getRoutes.includes(pathname)||actionGetRoutes.includes(pathname)||dossierGetRoute(pathname)||appealGetRoute(pathname)||dialogueGetRoute(pathname)))&&!(req.method==="POST"&&(postRoutes.includes(pathname)||isReview||isArchive||actionPostRoute(pathname)||dossierPostRoute(pathname)||appealPostRoute(pathname)||dialoguePostRoute(pathname)))){
    return fail(res,404,"API endpoint nuk ekziston.");
   }
@@ -175,6 +175,13 @@ export function createPilotServer(pool,{origin,production=false,rateLimitSecret=
    const user=await auth(req);
    if(pathname==="/api/me"&&req.method==="GET")return user?json(res,200,{user}):fail(res,401,"Kërkohet identifikim.");
    if(!user)return fail(res,401,"Kërkohet identifikim.");
+   if(pathname==="/api/me/sessions/revoke-all"&&req.method==="POST"){
+    // Explicit self-service invalidation: current and other sessions are
+    // deleted in one statement. Requires an authenticated cookie and CSRF.
+    const result=await pool.query("DELETE FROM sessions WHERE user_id=$1",[user.id]);
+    return json(res,200,{revoked:result.rowCount,message:"Të gjitha sesionet u çaktivizuan."},
+      {"Set-Cookie":clearSessionCookie(production)});
+   }
    if(pathname==="/api/me/export"&&req.method==="GET"){
     const [cases,actions,corrections,sources]=await Promise.all([
      pool.query("SELECT id,title,description,area,category,source_url,state,created_at FROM civic_cases WHERE author_id=$1 ORDER BY created_at DESC LIMIT 1000",[user.id]),
@@ -196,8 +203,10 @@ export function createPilotServer(pool,{origin,production=false,rateLimitSecret=
    if(pathname==="/api/cases"&&req.method==="POST"){
     const body=await readJSON(req);
     let item;try{item=validateCase(body,new Date(),randomUUID);}catch(e){return fail(res,422,e.message);}
-    const number=await pool.query("SELECT count(*)::integer AS n FROM civic_cases WHERE author_id=$1 AND created_at>now()-interval '1 hour'",[user.id]);
-    if(number.rows[0].n>=10)return fail(res,429,"Lejohen deri në 10 raportime në orë.");
+    // A shared, atomic quota prevents parallel submissions from racing past
+    // the previous SELECT COUNT guard across independent application workers.
+    const caseLimit=await consumeRateLimit(pool,rateKey(rateLimitSecret,"case-create-user",user.id),{limit:10,windowSeconds:3600});
+    if(!caseLimit.allowed)return json(res,429,{error:"Lejohen deri në 10 raportime në orë."},{"Retry-After":String(caseLimit.retrySeconds)});
     const client=await pool.connect();
     try{
      await client.query("BEGIN");
