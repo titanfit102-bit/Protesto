@@ -73,3 +73,22 @@ In the authenticated pilot, an authorized reviewer selects a published case and 
 **Do not use with real political/sensitive participation.** Complete legal/DPIA review where needed, consent and rights processes, backup retention, duplicate-account controls, participant disclosures, security testing, neutral moderation procedures and independent data stewardship first. The old vote records can survive in backups even when deleted from the live tables.
 
 CI uses an entirely synthetic PROTESTO_DIALOGUE_SECRET. The new PostgreSQL migration 007 adds dialogue_topics, dialogue_statements, dialogue_reviews, dialogue_votes and dialogue_results. For methodology and licence boundaries see docs/POLIS_DESIGN_ADAPTATION.md.
+
+## Operations/readiness tranche — private pilot
+The admin-only endpoint `GET /api/ops/status` returns **aggregate counts**, never identifying records. Access requires a current admin session. This is an on-demand snapshot and **not a monitoring service**.
+
+### Recommended operating controls before release (not yet configured)
+- Own a 24/7 incident escalation contact, on-call backup owner, breach reporting protocol and tested access revocation workflow.
+- Run automated encrypted backups to a separately authorized offsite destination, with retention and rotation of the recovery key managed outside the repository. Document restore RTO/RPO targets only after timed drills.
+- Set thresholds for pending editorial cases/replies, failed dependency/database health probes and unusually large session/rate-limit counts; connect them to a privacy-safe external alerting system approved by the owner.
+- Before applying a new migration to any non-disposable database, take and verify a backup, run rehearsal on an isolated copy, and plan a rollback migration; never forcibly replay an already applied migration with a changed checksum.
+- Record code SHA, reviewer approval, backup id and timestamps in an append-only operations record. Do not include personal data in CI artifacts.
+
+### Rollback / incident runbook
+1. Disable external ingestion and public publishing, preserve evidence of incident without adding sensitive details to logs.
+2. Revoke compromised sessions and credentials, rotate secrets with a controlled playbook; avoid automated mass data deletion.
+3. Validate backup MAC and restore to a **separate empty database**; check row parity and schema checksum independently.
+4. Apply an owner-approved deployment rollback, then test readiness, permissions, audit and public/private content isolation.
+5. Record decisions and notify competent privacy/legal personnel if personal information may have been exposed.
+
+The CI backup drill uses disposable test data. Offsite backups, actual alert delivery, incident response staffing and retention/deletion policy remain **OPEN P0**.
