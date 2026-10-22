@@ -108,6 +108,11 @@ test("Dialogu Qytetar: independent moderation, consent, vote threshold and delet
   assert.ok(entry,"Eligible finalized statement should be in public report");
   assert.equal(entry.participants,11);
   assert.equal(entry.agree_count,7);
+  assert.equal(entry.agree_percent+entry.disagree_percent+entry.pass_percent,100);
+  assert.equal(entry.agree_percent,64);
+  assert.equal(entry.statement_id,statementId);
+  assert.equal(entry.topic_id,topicId);
+  assert.equal(entry.statement,statementData.body);
   assert.ok(!r.data.items.some(x=>x.statement_id===smallId),"Single-vote statement must never be reported");
   assert.equal(JSON.stringify(r.data).includes(author.email),false,"No private identities in aggregate report");
 
