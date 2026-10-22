@@ -1,5 +1,6 @@
 // Privacy-preserving public projection of finalized dialogue aggregates.
-// Intentionally does not import experimental, unmerged OpenCode modules.
+// Projects only approved publication data, never original dossier/source fields.
+import {safePublicExternalUrl} from "./public-url.mjs";
 export const MIN_PUBLIC_DIALOGUE_PARTICIPANTS = 10;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const CHOICES = ["agree_count", "disagree_count", "pass_count"];
@@ -47,17 +48,6 @@ function publicText(value, name) {
   return value;
 }
 
-function safePublicSource(value) {
-  if (value == null) return null;
-  if (typeof value !== "string") return null;
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" && url.hostname && !url.username && !url.password ? value : null;
-  } catch {
-    return null;
-  }
-}
-
 export function publicDialogueReportItems(rows) {
   if (!Array.isArray(rows)) throw new TypeError("Aggregate rows must be an array");
   const items = [];
@@ -85,7 +75,7 @@ export function publicDialogueReportItems(rows) {
       ...roundedDialogueShares(raw),
       closed_at:closedAt,
       case_title:publicText(raw.case_title, "case_title"),
-      source_url:safePublicSource(raw.source_url)
+      source_url:safePublicExternalUrl(raw.source_url)
     });
   }
   return items;

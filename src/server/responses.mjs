@@ -10,8 +10,8 @@ export async function responseRoute({pathname,req,res,pool,user,readJSON,json,fa
  const match=pathname.match(casePath);
  if(match){
   if(!UUID.test(match[1]))return fail(res,400,"ID dosjeje i pavlefshëm.");
-  const c=await pool.query("SELECT id,state,author_id FROM civic_cases WHERE id=$1",[match[1]]);
-  if(!c.rowCount||c.rows[0].state!=="published")return fail(res,404,"Dosja nuk është publike.");
+  const c=await pool.query("SELECT id,state,author_id,public_title,public_description FROM civic_cases WHERE id=$1",[match[1]]);
+  if(!c.rowCount||c.rows[0].state!=="published"||!c.rows[0].public_title||!c.rows[0].public_description)return fail(res,404,"Dosja nuk është publike.");
   if(req.method==="GET"){
    const r=await pool.query("SELECT id,public_body AS body,reviewed_at FROM case_responses WHERE case_id=$1 AND state='accepted' AND public_body IS NOT NULL ORDER BY reviewed_at ASC,id ASC LIMIT 50",[match[1]]);
    return json(res,200,{items:r.rows,disclaimer:"Përgjigje qytetare e moderuar, pa verifikim institucional."});
@@ -34,7 +34,7 @@ export async function responseRoute({pathname,req,res,pool,user,readJSON,json,fa
  }
  if(pathname==="/api/editorial/responses/queue"){
   if(!canReview(user.role))return fail(res,403,"Kërkohet verifikues.");
-  const r=await pool.query("SELECT r.id,r.case_id,r.author_id,r.body,r.source_url,c.title,c.author_id AS case_author_id FROM case_responses r JOIN civic_cases c ON c.id=r.case_id WHERE r.state='pending' AND c.state='published' ORDER BY r.created_at ASC LIMIT 100");
+  const r=await pool.query("SELECT r.id,r.case_id,r.author_id,r.body,r.source_url,c.title,c.author_id AS case_author_id FROM case_responses r JOIN civic_cases c ON c.id=r.case_id WHERE r.state='pending' AND c.state='published' AND c.public_title IS NOT NULL AND c.public_description IS NOT NULL ORDER BY r.created_at ASC LIMIT 100");
   return json(res,200,{items:r.rows});
  }
  const rv=pathname.match(reviewPath);
@@ -50,10 +50,10 @@ export async function responseRoute({pathname,req,res,pool,user,readJSON,json,fa
   try{
    await client.query("BEGIN");
    const record=await client.query(
-    "SELECT r.state,r.author_id,c.state AS case_state,c.author_id AS case_author_id FROM case_responses r JOIN civic_cases c ON c.id=r.case_id WHERE r.id=$1 FOR UPDATE OF c,r",
+    "SELECT r.state,r.author_id,c.state AS case_state,c.author_id AS case_author_id,c.public_title,c.public_description FROM case_responses r JOIN civic_cases c ON c.id=r.case_id WHERE r.id=$1 FOR UPDATE OF c,r",
     [rv[1]]
    );
-   if(!record.rowCount||record.rows[0].state!=="pending"||record.rows[0].case_state!=="published"){
+   if(!record.rowCount||record.rows[0].state!=="pending"||record.rows[0].case_state!=="published"||!record.rows[0].public_title||!record.rows[0].public_description){
     await client.query("ROLLBACK");return fail(res,409,"Përgjigjja nuk është në pritje.");
    }
    if([record.rows[0].author_id,record.rows[0].case_author_id].includes(user.id)){
