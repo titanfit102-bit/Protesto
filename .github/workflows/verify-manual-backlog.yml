@@ -77,8 +77,8 @@ jobs:
           test "$(find src -maxdepth 1 -name 'opencode-*.mjs' | wc -l)" -eq 17
           test "$(find test -maxdepth 1 -name 'opencode-*.test.mjs' | wc -l)" -eq 17
           echo "17 original manual modules and 17 synthetic test files loaded; no merge."
-      - name: Install dependencies without lockfile mutations
-        run: npm install --no-package-lock --no-audit --no-fund
+      - name: Install dependencies and generate disposable audit lockfile
+        run: npm install --no-audit --no-fund
       - name: JavaScript syntax checks
         run: find src tools test -type f -name '*.mjs' -print0 | xargs -0 -r -n 1 node --check
       - name: PostgreSQL migration and replay
