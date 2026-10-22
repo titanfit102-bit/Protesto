@@ -125,10 +125,34 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
   r=await send("/api/public/cases");assert.ok(r.json.items.some(x=>x.id===caseId));
   const audit=await pool.query("SELECT count(*)::integer AS n FROM audit_entries WHERE object_id=$1",[caseId]);
   assert.equal(audit.rows[0].n,1);
+  // Pending correction is invalidated for adjudication if a case is archived.
+  r=await send("/api/corrections",{method:"POST",cookie:reporterCookie,body:{
+   caseId,reason:"Kjo kërkesë sintetike mbetet në pritje kur dosja tërhiqet nga publikimi."
+  }});
+  assert.equal(r.status,201);
+  const staleCorrectionId=r.json.item.id;
+  r=await send("/api/corrections/queue",{cookie:reviewCookie});
+  assert.ok(r.json.items.some(x=>x.id===staleCorrectionId),"Published case can enter correction queue");
   r=await send("/api/archive/"+caseId,{method:"POST",cookie:reporterCookie,body:{note:"This should fail due to reporter role."}});
   assert.equal(r.status,403);
   r=await send("/api/archive/"+caseId,{method:"POST",cookie:reviewCookie,body:{note:"Retract the article pending an additional independent source review."}});
   assert.equal(r.status,200);assert.equal(r.json.item.state,"archived");
+  for(const decision of ["accepted","rejected"]){
+   r=await send("/api/corrections/review/"+staleCorrectionId,{method:"POST",cookie:reviewCookie,body:{
+    decision,note:"Korrigjimi nuk duhet të marrë vendim pas arkivimit të dosjes."
+   }});
+   assert.equal(r.status,409,"Archived case must block both decisions");
+  }
+  const staleRow=await pool.query(
+   "SELECT state,reviewer_id,reviewed_at FROM case_corrections WHERE id=$1",[staleCorrectionId]
+  );
+  assert.equal(staleRow.rows[0].state,"pending");
+  assert.equal(staleRow.rows[0].reviewer_id,null);
+  assert.equal(staleRow.rows[0].reviewed_at,null);
+  const staleAudit=await pool.query("SELECT count(*)::integer n FROM audit_entries WHERE object_id=$1",[staleCorrectionId]);
+  assert.equal(staleAudit.rows[0].n,0,"No new decision or audit should be created");
+  r=await send("/api/corrections/queue",{cookie:reviewCookie});
+  assert.ok(!r.json.items.some(x=>x.id===staleCorrectionId),"Archived case is removed from active review queue");
   r=await send("/api/public/cases");assert.ok(!r.json.items.some(x=>x.id===caseId));
   r=await send("/api/public/ledger");
   assert.equal(r.status,200);
