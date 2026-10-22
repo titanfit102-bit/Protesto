@@ -40,3 +40,12 @@ All POST requests require exact-origin validation and the custom request header;
 
 ## Production gate
 Before accepting real allegations, establish provenance, immutable document snapshots, redaction, corrections and public notice policy, rights-of-reply, review appeals, accredited moderators, records retention, and privacy/legal review.
+
+## PDF fingerprint declarations — private pilot, phase 1
+An authorized reviewer of an already-accepted source, while its case is still pending, can select a **local PDF up to 8 MiB**. Browser WebCrypto hashes the bytes with SHA-256, and sends **only** the 64-character digest and byte length to PostgreSQL. PDF contents are neither uploaded to Protesto nor retrieved by its server. The local client checks only the `%PDF-` prefix, not the full PDF grammar; the API validates the metadata and reviewer declarations, not the bytes themselves.
+
+The declaration is kept in `source_fingerprints` (migration 008) along with the reviewer and creation time. A unique source ID prevents duplicate declarations; a database trigger prevents modifications to existing rows. Authorized retention-based deletion is still possible; this is **not WORM storage or independent timestamp notarization**. The audit records `source.fingerprint.declared`. Only the original case author and reviewers can read the digest via `GET /api/dossiers/:caseId/sources/:sourceId/fingerprint`; unrelated visitors cannot. This endpoint has no external network fetch and does not publicize files or the digest.
+
+**Limitations:** an editor can submit a false digest or compare the wrong file; the system does not establish original authorship, publisher identity, factual accuracy, verified chain of custody, independent notarization, document signatures or enduring access to the original PDF. Existing sources need not have fingerprints, and the new declaration is optional for pilot publication. Human reviewers must separately retain their legally vetted evidence according to an approved retention/redaction policy, which does **not** exist yet. No real sensitive/whistleblower documentation is authorized.
+
+Public release gate remains **OPEN** pending privacy, GDPR, legal and independent editorial/security review.
