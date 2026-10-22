@@ -5,16 +5,10 @@
   "maxTasksPerRun": 2,
   "tasks": [
     {
-      "id": "validation-extra",
+      "id": "filter-final-e2e",
       "status": "approved",
-      "target": "test/opencode-validation-extra.test.mjs",
-      "brief": "Add at least four meaningful, deterministic edge-case tests using node:test and node:assert/strict for public exports in src/domain.mjs. Focus on title/description exact min-max boundaries, HTTPS URL credential rejection, and leap-day or past-date handling. Only synthetic data. Do not duplicate an identical existing test case. Imports must come only from node:test, node:assert/strict, ../src/domain.mjs and ../src/seed.mjs."
-    },
-    {
-      "id": "restore-extra",
-      "status": "approved",
-      "target": "test/opencode-restore-extra.test.mjs",
-      "brief": "Add at least four meaningful deterministic regression tests for restoreState and summarize in src/domain.mjs, using synthetic data. Check invalid JSON or shape falls back to independently cloned seed data, array caps 500/200/200, invalid records removed, open-versus-resolved summary counting. Review actual implementation carefully and assert its existing intentional behavior instead of guessing. Do not change production implementation. Imports only from node:test, node:assert/strict, ../src/domain.mjs and ../src/seed.mjs."
+      "target": "test/opencode-filter-final-e2e.test.mjs",
+      "brief": "Create at least four meaningful deterministic regression tests for the existing filterCases export in src/domain.mjs, using only synthetic records. Cover case-insensitive and Albanian diacritic-insensitive search, combined category/status/query filtering, descending createdAt ordering on a fresh returned array, and non-mutation of input array. Use node:test and node:assert/strict. Inspect the existing behavior and avoid assumptions, real political data, or changes to production code. Import only node:test, node:assert/strict, ../src/domain.mjs, and optionally ../src/seed.mjs. Do not duplicate the existing filterCases test exactly."
     }
   ]
 }
