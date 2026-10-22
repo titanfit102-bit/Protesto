@@ -100,6 +100,21 @@ try{
  });
  await clickText(page,selectCard+" .pilot-source","Prano burimin");
  await page.waitForFunction(s=>document.querySelector(s)?.textContent.includes("Burim i shqyrtuar"),{timeout:12000},selectCard+" .pilot-source small");
+ // The browser computes SHA-256 from synthetic local bytes; no PDF file content
+ // is transmitted to the server by this workflow.
+ await page.waitForSelector(selectCard+" .pilot-fingerprint input[type=file]");
+ await page.$eval(selectCard+" .pilot-fingerprint input[type=file]",input=>{
+  const bytes="%PDF-1.4\\n1 0 obj\\n<< /Type /Catalog >>\\nendobj\\n%%EOF\\n";
+  const transfer=new DataTransfer();
+  transfer.items.add(new File([bytes],"synthetic.pdf",{type:"application/pdf"}));
+  input.files=transfer.files;
+ });
+ await page.$$eval(selectCard+" .pilot-fingerprint input[type=checkbox]",boxes=>{
+  if(boxes.length!==2)throw Error("Two explicit fingerprint declarations required");
+  boxes.forEach(box=>box.click());
+ });
+ await clickText(page,selectCard+" .pilot-fingerprint","Regjistro SHA-256");
+ await page.waitForFunction(s=>document.querySelector(s)?.textContent.includes("SHA-256 (deklaruar):"),{timeout:12000},selectCard+" .pilot-fingerprint");
  await page.$eval(selectCard+' > textarea.review-note',el=>el.value="Dosja demonstrative u kontrollua sipas procedurës dhe mund të publikohet.");
  await page.$$eval(selectCard+" .pilot-checklist input",els=>els.forEach(x=>x.checked=true));
  await clickText(page,selectCard,"Publiko pas verifikimit");
