@@ -47,3 +47,6 @@ Following the source metadata finding, the internal audit also found `/api/actio
 
 ## Correction appeal stale-state audit
 The internal review found that a pending appeal could still be rejected after its parent case was archived, leaving a misleading post-withdrawal editorial decision. Draft PR #45 locks the parent case and appeal together, blocks **both** decisions once the publication is inactive, and removes the stale appeal from the active queue without deleting its history. The regression tests verify the absence of audit and row mutations. Separate appeal retention policy remains legally unreviewed.
+
+## Public dialogue report and reply privacy review (2026-10-22)
+A code audit identified the aggregate report exposing original `civic_cases.title` and `case_sources.url` despite separate approved public copies. The report now selects approved `civic_cases.public_title` and `public_source_url`, requires an accepted source with matching approved URL, and applies the shared URL validator. Dialogue topic and citizen-response routes withhold legacy cases missing approved public text. Tests include a private synthetic title and query-token link. This is a scoped internal code review, not independent security certification; accepted dialogue text still requires human privacy review. Production remains blocked.

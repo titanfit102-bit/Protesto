@@ -59,4 +59,8 @@ test("unsafe links are removed and output order is stable",()=>{
  const out=publicDialogueReportItems([first,second]);
  assert.deepEqual(out.map(x=>x.statement_id),[first.statement_id,second.statement_id]);
  assert.equal(out[0].source_url,null);assert.equal(out[1].source_url,null);
+ for(const unsafe of ["https://example.org/file?private=token","https://example.org/file#name",
+  "https://localhost/source","https://127.0.0.1/private","http://example.org/document"]){
+  assert.equal(publicDialogueReportItems([{...row(),source_url:unsafe}])[0].source_url,null,unsafe);
+ }
 });
