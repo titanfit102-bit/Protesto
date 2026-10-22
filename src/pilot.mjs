@@ -51,6 +51,7 @@ function record(item,review=false){
   };
   const publicTitle=makePublicField("Titulli publik (rishiko të dhënat personale)",item.title);
   const publicDescription=makePublicField("Përshkrimi publik i redaktuar",item.description,true);
+  const publicArea=makePublicField("Zona publike (hiq adresat ose të dhënat personale)",item.area);
   const publicSourceUrl=makePublicField("URL publike e burimit të pranuar (pa query/hash)",item.source_url);
   const publicConfirm=document.createElement("label"),publicCheck=document.createElement("input");
   publicCheck.type="checkbox";publicConfirm.append(publicCheck,document.createTextNode(" E rishikova kopjen publike, pa të dhëna personale të panevojshme."));
@@ -62,7 +63,7 @@ function record(item,review=false){
    btn.addEventListener("click",async()=>{
     if(field.value.trim().length<15){notice("Shkruaj arsyetim prej të paktën 15 karakteresh.",true);return;}
     btn.disabled=true;
-    try{await call("/api/review/"+encodeURIComponent(item.id),"POST",{decision,note:field.value,checks:{sourceReviewed:checks.sourceReviewed.checked,privacyReviewed:checks.privacyReviewed.checked,replyConsidered:checks.replyConsidered.checked,publicCopyReviewed:publicCheck.checked},public:{title:publicTitle.value,description:publicDescription.value,sourceUrl:publicSourceUrl.value}});notice("Vendimi u regjistrua.");await refresh();}
+    try{await call("/api/review/"+encodeURIComponent(item.id),"POST",{decision,note:field.value,checks:{sourceReviewed:checks.sourceReviewed.checked,privacyReviewed:checks.privacyReviewed.checked,replyConsidered:checks.replyConsidered.checked,publicCopyReviewed:publicCheck.checked},public:{title:publicTitle.value,description:publicDescription.value,area:publicArea.value,sourceUrl:publicSourceUrl.value}});notice("Vendimi u regjistrua.");await refresh();}
     catch(e){notice(e.message,true);}finally{btn.disabled=false;}
    });
    actions.appendChild(btn);

@@ -22,10 +22,10 @@ export async function dossierRoute({pathname,req,res,pool,user,json,fail,readJSO
   const srcMatch=pathname.match(sourceList);
   if(srcMatch&&req.method==="GET"){
     if(!UUID.test(srcMatch[1]))return fail(res,400,"ID dosjeje i pavlefshëm.");
-    const item=await pool.query("SELECT author_id,state,public_title FROM civic_cases WHERE id=$1",[srcMatch[1]]);
+    const item=await pool.query("SELECT author_id,state,public_title,public_area FROM civic_cases WHERE id=$1",[srcMatch[1]]);
     if(!item.rowCount)return fail(res,404,"Dosja nuk ekziston.");
     const record=item.rows[0], privileged=!!user&&(user.id===record.author_id||canReview(user.role));
-    if((record.state!=="published"||!record.public_title)&&!privileged)return fail(res,404,"Dosja nuk është publike.");
+    if((record.state!=="published"||!record.public_title||!record.public_area)&&!privileged)return fail(res,404,"Dosja nuk është publike.");
     const sources=await pool.query(
       "SELECT id,title,url,context,state,created_at,public_title,public_url FROM case_sources WHERE case_id=$1 AND ($2::boolean OR state='accepted') ORDER BY created_at ASC LIMIT 20",
       [srcMatch[1],privileged]

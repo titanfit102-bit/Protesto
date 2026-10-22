@@ -58,8 +58,8 @@ try{
   await pool.query("INSERT INTO civic_users(id,email,password_hash,role) VALUES($1,$2,$3,$4)",[account.id,account.email,hashPassword(account.password),account.role]);
  }
  const caseId=randomUUID();
- await pool.query("INSERT INTO civic_cases(id,author_id,title,description,area,category,state,public_title,public_description,public_source_url) VALUES($1,$2,$3,$4,$5,$6,'published',$7,$8,$9)",
-  [caseId,citizen.id,"Dosje prove për dialogun","Dosje sintetike për testim në browser, pa pretendime publike reale.","Prova "+suffix,"Mjedis","Dosje prove për dialogun","Kopje publike sintetike vetëm për testimin e dialogut në Chromium.","https://example.org/dialogue-fixture"]);
+ await pool.query("INSERT INTO civic_cases(id,author_id,title,description,area,category,state,public_title,public_description,public_source_url,public_area) VALUES($1,$2,$3,$4,$5,$6,'published',$7,$8,$9,$10)",
+  [caseId,citizen.id,"Dosje prove për dialogun","Dosje sintetike për testim në browser, pa pretendime publike reale.","Prova "+suffix,"Mjedis","Dosje prove për dialogun","Kopje publike sintetike vetëm për testimin e dialogut në Chromium.","https://example.org/dialogue-fixture","Zona publike e dialogut"]);
  browser=await puppeteer.launch({executablePath:process.env.CHROME_PATH||"/usr/bin/google-chrome",headless:true,args:["--no-sandbox","--disable-dev-shm-usage"]});
  const page=await browser.newPage();
  const jsErrors=[];page.on("pageerror",error=>jsErrors.push(error.message));

@@ -20,8 +20,8 @@ test("citizen response remains private until independent reviewed public copy",{
  try{
   for(const u of [citizen,reviewer,author])await pool.query("INSERT INTO civic_users(id,email,password_hash,role) VALUES($1,$2,$3,$4)",
    [u.id,u.email,hashPassword(u.pass),u===reviewer?"reviewer":"reporter"]);
-  await pool.query("INSERT INTO civic_cases(id,author_id,title,description,area,category,state,public_title,public_description,public_source_url) VALUES($1,$2,$3,$4,$5,$6,'published',$7,$8,$9)",
-   [dossier,author.id,"Dosje prove për përgjigje","Raportim sintetik për procesin e kundërpërgjigjes.","Zona e testit","Tjetër","Dosje prove për përgjigje","Përmbajtje publike sintetike për testim të kundërpërgjigjeve.","https://example.org/reply"]);
+  await pool.query("INSERT INTO civic_cases(id,author_id,title,description,area,category,state,public_title,public_description,public_source_url,public_area) VALUES($1,$2,$3,$4,$5,$6,'published',$7,$8,$9,$10)",
+   [dossier,author.id,"Dosje prove për përgjigje","Raportim sintetik për procesin e kundërpërgjigjes.","Zona e testit","Tjetër","Dosje prove për përgjigje","Përmbajtje publike sintetike për testim të kundërpërgjigjeve.","https://example.org/reply","Zona publike e përgjigjeve"]);
   await new Promise(resolve=>server.listen(4197,"127.0.0.1",resolve));
   const tokens=[];
   for(const u of [citizen,reviewer,author]){
