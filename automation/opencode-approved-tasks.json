@@ -128,6 +128,14 @@
       "kind": "pure-module",
       "stream": "quality",
       "brief": "Develop a pure mapping from predefined Protesto public UI operation results to understandable Albanian status messages and semantic severity (info, success, warning, error). Provide safe deterministic text for loading, empty results, unauthorized action, rate limited request, pending editorial review and finalized public aggregates; never interpolate untrusted markup, personal data or accusations. Include at least five Node native tests for allowed states, safe unknown fallback, stable formatting and non-mutation."
+    },
+    {
+      "id": "public-source-link-safety",
+      "status": "approved",
+      "kind": "pure-module",
+      "stream": "trust-and-safety",
+      "batch": "BATCH-02-AUTO-HANDOFF-CHECK",
+      "brief": "Implement an ORIGINAL pure, deterministic, side-effect-free JavaScript module for safely displaying externally supplied documentary source URLs in Protesto's human-reviewed civic cases. Only accept absolute HTTPS URLs; reject embedded credentials, control characters, malformed URLs, obvious local-only hostnames, loopback/link-local/private IP literals (IPv4 and IPv6), and dangerous non-web schemes. Return narrow neutral display metadata and explicit blocking reasons, WITHOUT fetching DNS, making HTTP requests, claiming the linked evidence is authentic, or editing existing source files. Clearly document that this display validator is NOT a complete SSRF prevention control or an evidence authenticity check. Build its dedicated Node native test file with at least six fully synthetic tests for allowed ordinary HTTPS links, dangerous schemes, credentials, private/loopback endpoints, unusual unicode/encoded inputs, valid public paths, and deterministic non-mutating behavior. Do not import third-party code; no networking, process, filesystem, secrets, political content or live user data."
     }
   ],
   "batch": "BATCH-2026-10-22-CIVIC-FOUNDATIONS",
