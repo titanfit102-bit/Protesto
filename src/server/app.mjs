@@ -91,7 +91,7 @@ export function createPilotServer(pool,{origin,production=false,rateLimitSecret=
   if(!pathname.startsWith("/api/"))return fail(res,404,"Nuk u gjet.");
   const isReview=/^\/api\/review\/[^/]+$/.test(pathname);
   const isArchive=/^\/api\/archive\/[^/]+$/.test(pathname);
-  const getRoutes=["/api/public/cases","/api/public/ledger","/api/me","/api/me/export","/api/cases/mine","/api/review/queue"];
+  const getRoutes=["/api/public/cases","/api/public/ledger","/api/me","/api/me/export","/api/ops/status","/api/cases/mine","/api/review/queue"];
   const postRoutes=["/api/auth/login","/api/auth/logout","/api/me/sessions/revoke-all","/api/cases"];
   if(!(req.method==="GET"&&(getRoutes.includes(pathname)||actionGetRoutes.includes(pathname)||dossierGetRoute(pathname)||responseGetRoute(pathname)||appealGetRoute(pathname)||dialogueGetRoute(pathname)))&&!(req.method==="POST"&&(postRoutes.includes(pathname)||isReview||isArchive||actionPostRoute(pathname)||dossierPostRoute(pathname)||responsePostRoute(pathname)||appealPostRoute(pathname)||dialoguePostRoute(pathname)))){
    return fail(res,404,"API endpoint nuk ekziston.");
@@ -190,6 +190,22 @@ export function createPilotServer(pool,{origin,production=false,rateLimitSecret=
     const result=await pool.query("DELETE FROM sessions WHERE user_id=$1",[user.id]);
     return json(res,200,{revoked:result.rowCount,message:"Të gjitha sesionet u çaktivizuan."},
       {"Set-Cookie":clearSessionCookie(production)});
+   }
+   if(pathname==="/api/ops/status"&&req.method==="GET"){
+    if(user.role!=="admin")return fail(res,403,"Kërkohet administrues.");
+    const q=await pool.query(`SELECT
+      (SELECT count(*)::integer FROM civic_cases WHERE state='pending') AS cases_pending,
+      (SELECT count(*)::integer FROM case_corrections WHERE state='pending') AS corrections_pending,
+      (SELECT count(*)::integer FROM correction_appeals WHERE state='pending') AS appeals_pending,
+      (SELECT count(*)::integer FROM case_responses WHERE state='pending') AS responses_pending,
+      (SELECT count(*)::integer FROM sessions WHERE expires_at>now()) AS active_sessions,
+      (SELECT count(*)::integer FROM schema_migrations) AS migration_count`);
+    const x=q.rows[0];
+    return json(res,200,{status:"admin-only-aggregates",counts:{
+      casesPending:x.cases_pending,correctionsPending:x.corrections_pending,
+      appealsPending:x.appeals_pending,responsesPending:x.responses_pending,
+      activeSessions:x.active_sessions,migrations:x.migration_count
+    },disclaimer:"Pa identitete; kjo nuk është monitorim i vazhdueshëm."});
    }
    if(pathname==="/api/me/export"&&req.method==="GET"){
     const [cases,actions,corrections,sources]=await Promise.all([
