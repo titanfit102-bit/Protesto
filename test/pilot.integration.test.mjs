@@ -20,7 +20,7 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
   await pool.query("INSERT INTO civic_users(id,email,password_hash,role) VALUES($1,$2,$3,$4)",[u.id,u.email,hashPassword(u.password),u===reporter?"reporter":"reviewer"]);
  }
  const applied=await pool.query("SELECT count(*)::integer n FROM schema_migrations");
- assert.equal(applied.rows[0].n,12,"Expected all twelve versioned migrations");
+ assert.equal(applied.rows[0].n,13,"Expected all thirteen versioned migrations");
  const quotaKey=rateKey("synthetic-integration-rate-limit-key-longer-than-32","test-concurrent",randomUUID());
  const quota=await Promise.all([1,2,3].map(()=>consumeRateLimit(pool,quotaKey,{limit:2,windowSeconds:60})));
  assert.equal(quota.filter(x=>x.allowed).length,2,"Concurrent database quota must allow exactly two hits");
@@ -267,9 +267,30 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
   r=await send("/api/actions/mine",{cookie:reporterCookie});assert.ok(r.json.items.some(x=>x.id===actionId));
   r=await send("/api/actions/review/queue",{cookie:reporterCookie});assert.equal(r.status,403);
   r=await send("/api/actions/public");assert.ok(!r.json.items.some(x=>x.id===actionId));
-  r=await send("/api/actions/review/"+actionId,{method:"POST",cookie:reviewCookie,body:{decision:"published",note:"Nisma u kontrollua nga redaktori i testit."}});
+  // The reporter's raw values are intentionally private.
+  await pool.query("UPDATE civic_actions SET title=$1,description=$2,area=$3 WHERE id=$4",[
+   "PRIVATE title containing identity","PRIVATE narrative containing personal details; not approved for publication.",
+   "PRIVATE apartment address",actionId
+  ]);
+  const safeAction={title:"Nismë publike për testim",description:"Përshkrim publik sintetik pa identitetet e raportuesve.",
+   area:"Zona publike e testit"};
+  const actionReview="/api/actions/review/"+actionId;
+  r=await send(actionReview,{method:"POST",cookie:reviewCookie,body:{
+   decision:"published",note:"Nisma u kontrollua nga redaktori i testit."
+  }});
+  assert.equal(r.status,422,"Action cannot publish without reviewed public copy");
+  r=await send(actionReview,{method:"POST",cookie:reviewCookie,body:{
+   decision:"published",note:"Nisma u kontrollua nga redaktori i testit.",
+   checks:{privacyReviewed:true,publicCopyReviewed:true},public:safeAction
+  }});
   assert.equal(r.status,200);
-  r=await send("/api/actions/public");assert.ok(r.json.items.some(x=>x.id===actionId));
+  r=await send("/api/actions/public");
+  const shownAction=r.json.items.find(x=>x.id===actionId);
+  assert.ok(shownAction);
+  assert.equal(shownAction.title,safeAction.title);
+  assert.equal(shownAction.description,safeAction.description);
+  assert.equal(shownAction.area,safeAction.area);
+  assert.ok(!JSON.stringify(shownAction).includes("PRIVATE"));
   r=await send("/api/actions/archive/"+actionId,{method:"POST",cookie:reviewCookie,body:{note:"Publikimi u tërhoq për kontroll të mëtejshëm."}});
   assert.equal(r.status,200);
   r=await send("/api/actions/public");assert.ok(!r.json.items.some(x=>x.id===actionId));

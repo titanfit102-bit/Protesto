@@ -41,3 +41,6 @@ All P0 gates are evidenced by test artifacts **and independent human review**, p
 
 ## Security-review checkpoint — source metadata privacy
 The post-#42 audit identified and fixed a raw source title/URL disclosure route. See Draft PR #43 and migration 012. The public sources route is now fail-closed for historical accepted records missing independently approved fields. This is an **internal code review**, not an external independent security certification. Production release remains blocked.
+
+## Civic initiatives and gatherings: separate publication copies
+Following the source metadata finding, the internal audit also found `/api/actions/public` returning raw user-provided action title/description/area after review. Migration 013 and Draft PR #44 introduce distinct reviewer-approved public copies with explicit privacy checks; historical published rows missing public copies remain hidden (no unsafe backfill). Real-world PII risk still requires independent editorial and GDPR review.
