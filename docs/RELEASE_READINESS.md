@@ -44,3 +44,6 @@ The post-#42 audit identified and fixed a raw source title/URL disclosure route.
 
 ## Civic initiatives and gatherings: separate publication copies
 Following the source metadata finding, the internal audit also found `/api/actions/public` returning raw user-provided action title/description/area after review. Migration 013 and Draft PR #44 introduce distinct reviewer-approved public copies with explicit privacy checks; historical published rows missing public copies remain hidden (no unsafe backfill). Real-world PII risk still requires independent editorial and GDPR review.
+
+## Correction appeal stale-state audit
+The internal review found that a pending appeal could still be rejected after its parent case was archived, leaving a misleading post-withdrawal editorial decision. Draft PR #45 locks the parent case and appeal together, blocks **both** decisions once the publication is inactive, and removes the stale appeal from the active queue without deleting its history. The regression tests verify the absence of audit and row mutations. Separate appeal retention policy remains legally unreviewed.

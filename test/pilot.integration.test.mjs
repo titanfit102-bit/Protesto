@@ -211,6 +211,24 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
   r=await send("/api/public/cases");assert.ok(r.json.items.some(x=>x.id===caseId));
   const audit=await pool.query("SELECT count(*)::integer AS n FROM audit_entries WHERE object_id=$1",[caseId]);
   assert.equal(audit.rows[0].n,1);
+  // A second rejected correction becomes a pending appeal. After archiving,
+  // neither accepting nor rejecting that appeal may create an audit mutation.
+  r=await send("/api/corrections",{method:"POST",cookie:reporterCookie,body:{
+   caseId,reason:"Ky korrigjim sintetik krijohet për të provuar mbrojtjen e apelimit pas arkivimit."
+  }});
+  assert.equal(r.status,201);
+  const staleAppealCorrection=r.json.item.id;
+  r=await send("/api/corrections/review/"+staleAppealCorrection,{method:"POST",cookie:reviewCookie,body:{
+   decision:"rejected",note:"Refuzim sintetik për skenarin e apelimit pas arkivimit."
+  }});
+  assert.equal(r.status,200);
+  r=await send("/api/appeals",{method:"POST",cookie:reporterCookie,body:{
+   correctionId:staleAppealCorrection,reason:"Ky apelim sintetik pret vendim deri në tërheqjen e dosjes."
+  }});
+  assert.equal(r.status,201);
+  const staleAppealId=r.json.item.id;
+  r=await send("/api/appeals/queue",{cookie:independentCookie});
+  assert.ok(r.json.items.some(x=>x.id===staleAppealId));
   // Pending correction is invalidated for adjudication if a case is archived.
   r=await send("/api/corrections",{method:"POST",cookie:reporterCookie,body:{
    caseId,reason:"Kjo kërkesë sintetike mbetet në pritje kur dosja tërhiqet nga publikimi."
@@ -223,6 +241,20 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
   assert.equal(r.status,403);
   r=await send("/api/archive/"+caseId,{method:"POST",cookie:reviewCookie,body:{note:"Retract the article pending an additional independent source review."}});
   assert.equal(r.status,200);assert.equal(r.json.item.state,"archived");
+  for(const decision of ["accepted","rejected"]){
+   r=await send("/api/appeals/review/"+staleAppealId,{method:"POST",cookie:independentCookie,body:{
+    decision,note:"Apelimi nuk mund të marrë vendim mbi një dosje të arkivuar."
+   }});
+   assert.equal(r.status,409,"Archived parent must block both appeal outcomes");
+  }
+  const staleAppeal=await pool.query("SELECT state,reviewer_id,reviewed_at FROM correction_appeals WHERE id=$1",[staleAppealId]);
+  assert.equal(staleAppeal.rows[0].state,"pending");
+  assert.equal(staleAppeal.rows[0].reviewer_id,null);
+  assert.equal(staleAppeal.rows[0].reviewed_at,null);
+  const appealAudit=await pool.query("SELECT count(*)::integer n FROM audit_entries WHERE object_id=$1",[staleAppealId]);
+  assert.equal(appealAudit.rows[0].n,0);
+  r=await send("/api/appeals/queue",{cookie:independentCookie});
+  assert.ok(!r.json.items.some(x=>x.id===staleAppealId),"Archived parent must leave active queue");
   for(const decision of ["accepted","rejected"]){
    r=await send("/api/corrections/review/"+staleCorrectionId,{method:"POST",cookie:reviewCookie,body:{
     decision,note:"Korrigjimi nuk duhet të marrë vendim pas arkivimit të dosjes."

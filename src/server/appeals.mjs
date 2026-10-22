@@ -42,7 +42,7 @@ export async function appealRoute({pathname,req,res,pool,user,json,fail,readJSON
  if(!canReview(user.role))return fail(res,403,"Kërkohet rol i verifikuesit.");
  if(pathname==="/api/appeals/queue"&&req.method==="GET"){
   const result=await pool.query(
-   "SELECT a.id,a.correction_id,a.author_id,a.reason,a.created_at,r.reviewer_id AS original_reviewer_id,c.title,c.author_id AS case_author_id FROM correction_appeals a JOIN case_corrections r ON r.id=a.correction_id JOIN civic_cases c ON c.id=r.case_id WHERE a.state='pending' ORDER BY a.created_at ASC LIMIT 100"
+   "SELECT a.id,a.correction_id,a.author_id,a.reason,a.created_at,r.reviewer_id AS original_reviewer_id,c.title,c.author_id AS case_author_id FROM correction_appeals a JOIN case_corrections r ON r.id=a.correction_id JOIN civic_cases c ON c.id=r.case_id WHERE a.state='pending' AND r.state='rejected' AND c.state='published' ORDER BY a.created_at ASC LIMIT 100"
   );
   return json(res,200,{items:result.rows});
  }
@@ -56,11 +56,13 @@ export async function appealRoute({pathname,req,res,pool,user,json,fail,readJSON
   await client.query("BEGIN");
   // Lock the appeal row and check editorial independence before doing any writes.
   const q=await client.query(
-   "SELECT a.id,a.correction_id,a.author_id,a.state,r.case_id,r.reviewer_id AS original_reviewer_id,c.author_id AS case_author_id,c.state AS case_state FROM correction_appeals a JOIN case_corrections r ON r.id=a.correction_id JOIN civic_cases c ON c.id=r.case_id WHERE a.id=$1 FOR UPDATE OF a",
+   "SELECT a.id,a.correction_id,a.author_id,a.state,r.case_id,r.reviewer_id AS original_reviewer_id,c.author_id AS case_author_id,c.state AS case_state FROM correction_appeals a JOIN case_corrections r ON r.id=a.correction_id JOIN civic_cases c ON c.id=r.case_id WHERE a.id=$1 FOR UPDATE OF c,a",
    [match[1]]
   );
   const appeal=q.rows[0];
-  if(!appeal||appeal.state!=="pending"){await client.query("ROLLBACK");return fail(res,409,"Apelimi është shqyrtuar ose nuk ekziston.");}
+  if(!appeal||appeal.state!=="pending"||appeal.case_state!=="published"){
+   await client.query("ROLLBACK");return fail(res,409,"Apelimi ose dosja nuk janë më aktive.");
+  }
   if([appeal.author_id,appeal.original_reviewer_id,appeal.case_author_id].includes(user.id)){
    await client.query("ROLLBACK");return fail(res,403,"Apelimin duhet ta shqyrtojë një verifikues tjetër, i pavarur nga vendimi fillestar.");
   }
