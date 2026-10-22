@@ -2,6 +2,7 @@ import {randomUUID} from "node:crypto";
 import {cleanText, validateSourceUrl} from "../domain.mjs";
 import {canReview} from "./security.mjs";
 import {correctionDecisionPolicy} from "./correction-policy.mjs";
+import {publicSourceItems,sourceReviewAttestation} from "./source-publication.mjs";
 
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const sourceList=/^\/api\/dossiers\/([^/]+)\/sources$/;
@@ -27,7 +28,10 @@ export async function dossierRoute({pathname,req,res,pool,user,json,fail,readJSO
       "SELECT id,title,url,context,state,created_at FROM case_sources WHERE case_id=$1 AND ($2::boolean OR state='accepted') ORDER BY created_at ASC LIMIT 20",
       [srcMatch[1],privileged]
     );
-    return json(res,200,{items:sources.rows});
+    return json(res,200,{
+      items:privileged?sources.rows:publicSourceItems(sources.rows),
+      disclaimer:"Burimet janë shqyrtuar nga redaktorë. Lidhjet mund të ndryshojnë dhe nuk provojnë vetë vërtetësinë e pretendimit."
+    });
   }
   if(!user)return fail(res,401,"Kërkohet identifikim.");
 
@@ -64,14 +68,15 @@ export async function dossierRoute({pathname,req,res,pool,user,json,fail,readJSO
     if(!canReview(user.role))return fail(res,403,"Kërkohet verifikues.");
     const input=await readJSON(req);
     const note=cleanText(input.note,1001),decision=input.decision;
-    if(!["accepted","rejected"].includes(decision)||note.length<20||note.length>1000)
-      return fail(res,422,"Vendimi dhe arsyetimi 20–1000 karaktere janë të detyrueshëm.");
+    const attestation=sourceReviewAttestation({decision,note,checks:input.checks});
+    if(!attestation.valid)
+      return fail(res,422,"Jep arsyetimin (20–1000 karaktere); për pranim konfirmo kontrollin e lidhjes, privatësisë dhe fushave publike.");
     const client=await pool.connect();
     try{
       await client.query("BEGIN");
       const row=await client.query(
         "UPDATE case_sources s SET state=$1,reviewed_by=$2,reviewed_at=now(),review_note=$3 FROM civic_cases c WHERE s.id=$4 AND s.case_id=$5 AND c.id=s.case_id AND c.state='pending' AND c.author_id<>$2 AND s.state='pending' RETURNING s.id,s.state,s.case_id",
-        [decision,user.id,note,sourceId,caseId]
+        [decision,user.id,attestation.reviewNote,sourceId,caseId]
       );
       if(!row.rowCount){await client.query("ROLLBACK");return fail(res,409,"Burimi nuk mund të shqyrtohet.");}
       await client.query("INSERT INTO audit_entries(id,actor_id,action,object_type,object_id) VALUES($1,$2,$3,'source',$4)",[randomUUID(),user.id,"source."+decision,sourceId]);
