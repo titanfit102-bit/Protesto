@@ -128,7 +128,7 @@ export async function dialogueRoute({pathname,req,res,pool,user,json,fail,readJS
   try{
    await client.query("BEGIN");
    const parent=await client.query(
-    "SELECT t.id FROM dialogue_topics t JOIN civic_cases c ON c.id=t.case_id WHERE t.id=$1 AND t.state='open' AND t.review_state='approved' AND t.public_title IS NOT NULL AND t.public_description IS NOT NULL AND c.state='published' AND c.public_title IS NOT NULL AND c.public_description IS NOT NULL AND c.public_area IS NOT NULL FOR UPDATE OF t",[create[1]]
+    "SELECT t.id FROM dialogue_topics t JOIN civic_cases c ON c.id=t.case_id WHERE t.id=$1 AND t.state='open' AND t.review_state='approved' AND t.public_title IS NOT NULL AND t.public_description IS NOT NULL AND c.state='published' AND c.public_title IS NOT NULL AND c.public_description IS NOT NULL AND c.public_area IS NOT NULL FOR UPDATE OF c,t",[create[1]]
    );
    if(!parent.rowCount){await client.query("ROLLBACK");return fail(res,409,"Tema është e mbyllur ose nuk ekziston.");}
    const quota=await client.query("SELECT count(*)::integer n FROM dialogue_statements WHERE author_id=$1 AND topic_id=$2 AND created_at>now()-interval '1 day'",[user.id,create[1]]);
@@ -151,6 +151,19 @@ export async function dialogueRoute({pathname,req,res,pool,user,json,fail,readJS
   const client=await pool.connect();
   try{
    await client.query("BEGIN");
+   // Lock the case, topic and statement in the same transaction before
+   // deciding. UPDATE ... FROM by itself would not lock the parent topic.
+   const locked=await client.query(
+    "SELECT s.state AS statement_state,s.author_id AS statement_author,t.state AS topic_state,t.review_state,t.public_title AS topic_title,t.public_description AS topic_description,c.state AS case_state,c.public_title AS case_title,c.public_description AS case_description,c.public_area FROM dialogue_statements s JOIN dialogue_topics t ON t.id=s.topic_id JOIN civic_cases c ON c.id=t.case_id WHERE s.id=$1 FOR UPDATE OF c,t,s",
+    [review[1]]
+   );
+   const current=locked.rows[0];
+   if(!current||current.statement_state!=="pending"||current.topic_state!=="open"||
+      current.review_state!=="approved"||!current.topic_title||!current.topic_description||
+      current.case_state!=="published"||!current.case_title||!current.case_description||
+      !current.public_area||current.statement_author===user.id){
+    await client.query("ROLLBACK");return fail(res,409,"Deklarata nuk shqyrtohet ose tema/dosja nuk janë aktive.");
+   }
    const q=await client.query(
     "UPDATE dialogue_statements s SET state=$1,reviewed_by=$2,reviewed_at=now(),public_body=$4 FROM dialogue_topics t,civic_cases c WHERE s.id=$3 AND s.topic_id=t.id AND c.id=t.case_id AND s.state='pending' AND t.state='open' AND t.review_state='approved' AND t.public_title IS NOT NULL AND t.public_description IS NOT NULL AND c.state='published' AND c.public_title IS NOT NULL AND c.public_description IS NOT NULL AND c.public_area IS NOT NULL AND s.author_id<>$2 RETURNING s.id,s.state",[decision,user.id,review[1],approved]
    );
@@ -173,7 +186,7 @@ export async function dialogueRoute({pathname,req,res,pool,user,json,fail,readJS
   try{
    await client.query("BEGIN");
    const q=await client.query(
-    "SELECT t.id FROM dialogue_statements s JOIN dialogue_topics t ON t.id=s.topic_id JOIN civic_cases c ON c.id=t.case_id WHERE s.id=$1 AND s.state='accepted' AND s.public_body IS NOT NULL AND t.state='open' AND t.review_state='approved' AND t.public_title IS NOT NULL AND t.public_description IS NOT NULL AND c.state='published' AND c.public_title IS NOT NULL AND c.public_description IS NOT NULL AND c.public_area IS NOT NULL FOR UPDATE OF t",
+    "SELECT t.id FROM dialogue_statements s JOIN dialogue_topics t ON t.id=s.topic_id JOIN civic_cases c ON c.id=t.case_id WHERE s.id=$1 AND s.state='accepted' AND s.public_body IS NOT NULL AND t.state='open' AND t.review_state='approved' AND t.public_title IS NOT NULL AND t.public_description IS NOT NULL AND c.state='published' AND c.public_title IS NOT NULL AND c.public_description IS NOT NULL AND c.public_area IS NOT NULL FOR UPDATE OF c,t",
     [vote[1]]
    );
    if(!q.rowCount){await client.query("ROLLBACK");return fail(res,409,"Votimi nuk është i hapur.");}
@@ -195,6 +208,18 @@ export async function dialogueRoute({pathname,req,res,pool,user,json,fail,readJS
   const client=await pool.connect();
   try{
    await client.query("BEGIN");
+   // Coordinate topic closing with parent-case archival and concurrent votes
+   // and statement decisions; the topic row is held until final tally commits.
+   const locked=await client.query(
+    "SELECT t.state AS topic_state,t.review_state,c.state AS case_state,c.public_title,c.public_description,c.public_area FROM civic_cases c JOIN dialogue_topics t ON t.case_id=c.id WHERE t.id=$1 FOR UPDATE OF c,t",
+    [close[1]]
+   );
+   const current=locked.rows[0];
+   if(!current||current.topic_state!=="open"||current.review_state!=="approved"||
+      current.case_state!=="published"||!current.public_title||
+      !current.public_description||!current.public_area){
+    await client.query("ROLLBACK");return fail(res,409,"Tema ose dosja nuk janë më aktive.");
+   }
    const q=await client.query(
     "UPDATE dialogue_topics t SET state='closed',closed_at=now(),closed_by=$1 FROM civic_cases c WHERE t.id=$2 AND t.case_id=c.id AND c.state='published' AND c.public_title IS NOT NULL AND c.public_description IS NOT NULL AND c.public_area IS NOT NULL AND t.state='open' AND t.review_state='approved' RETURNING t.id",[user.id,close[1]]
    );
