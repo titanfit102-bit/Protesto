@@ -1,0 +1,130 @@
+name: OpenCode approved task queue
+
+on:
+  pull_request:
+    branches:
+      - feat/protesto-foundation
+    paths:
+      - .github/workflows/opencode-approved-queue.yml
+      - automation/opencode-approved-tasks.json
+      - tools/opencode-queue-runner.mjs
+      - tools/opencode-queue-publish.mjs
+
+concurrency:
+  group: protesto-approved-queue-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    if: >-
+      github.head_ref == 'experiment/opencode-pilot' &&
+      github.event.pull_request.head.repo.full_name == 'titanfit102-bit/Protesto' &&
+      github.event.pull_request.user.login == 'titanfit102-bit' &&
+      github.actor == 'titanfit102-bit'
+    runs-on: ubuntu-latest
+    timeout-minutes: 17
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: protesto
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d protesto"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/protesto
+      APP_ORIGIN: http://127.0.0.1:4174
+      PROTESTO_RATE_LIMIT_SECRET: synthetic-ci-rate-limit-secret-for-isolated-postgres-only
+      PROTESTO_DIALOGUE_SECRET: synthetic-ci-dialogue-secret-for-isolated-postgres-only
+      OPENCODE_DISABLE_AUTOUPDATE: 'true'
+      OPENCODE_AUTO_SHARE: 'false'
+    steps:
+      - name: Check out owner-controlled pilot PR
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Parse/check controller scripts before any AI
+        run: |
+          node --check tools/opencode-queue-runner.mjs
+          node --check tools/opencode-queue-publish.mjs
+      - name: Install project dependencies without modifying lockfiles
+        run: npm install --no-package-lock --no-audit --no-fund
+      - name: Migrate isolated test database
+        run: npm run db:migrate
+      - name: Install OpenCode CLI
+        run: npm install --global opencode-ai --no-audit --no-fund
+      - name: Select an available free model
+        id: model
+        shell: bash
+        run: |
+          set -euo pipefail
+          opencode models opencode > "$RUNNER_TEMP/approved-models.txt"
+          MODEL=''
+          for candidate in 'opencode/glm-5.3-flash-free' 'opencode/deepseek-v4.1-flash-free'; do
+            if grep -Fxq "$candidate" "$RUNNER_TEMP/approved-models.txt"; then
+              MODEL="$candidate"
+              break
+            fi
+          done
+          if [ -z "$MODEL" ]; then
+            echo 'No supported free model available. No agent execution.'
+            exit 1
+          fi
+          echo "model=$MODEL" >> "$GITHUB_OUTPUT"
+      - name: Generate and verify approved tasks sequentially
+        env:
+          OPENCODE_MODEL: ${{ steps.model.outputs.model }}
+        run: node tools/opencode-queue-runner.mjs
+      - name: Upload reviewed-by-CI proposals and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Protesto-OpenCode-Queue-Proposals
+          path: ${{ runner.temp }}/protesto-opencode-queue/
+          retention-days: 7
+          if-no-files-found: warn
+
+  publish-draft-prs:
+    needs: generate
+    if: >-
+      github.head_ref == 'experiment/opencode-pilot' &&
+      github.event.pull_request.head.repo.full_name == 'titanfit102-bit/Protesto' &&
+      github.event.pull_request.user.login == 'titanfit102-bit' &&
+      github.actor == 'titanfit102-bit'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Check out trusted owner controller only — never execute generated test code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Download verified code proposals
+        uses: actions/download-artifact@v4
+        with:
+          name: Protesto-OpenCode-Queue-Proposals
+          path: queue-output
+      - name: Verify artifact hashes and open one draft PR per task
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          QUEUE_ARTIFACT_DIR: ./queue-output
+        run: node tools/opencode-queue-publish.mjs
