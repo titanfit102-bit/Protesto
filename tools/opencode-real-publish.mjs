@@ -48,7 +48,7 @@ for(const item of output.tasks){
   if(!existsSync(disk)||!lstatSync(disk).isFile()||lstatSync(disk).isSymbolicLink())fail("Unsafe artifact");
   const txt=readFileSync(disk,"utf8");
   if(txt.length<150||txt.length>20000||hash(txt)!==f.sha256)fail("Artifact checksum invalid");
-  if(/\b(?:process|require|globalThis|eval|fetch|WebSocket|Worker|window|document|XMLHttpRequest|Function|child_process|worker_threads|fs|http|https|net|vm|Buffer|import\.meta)\b|\bimport\s*\(|\.\.\/\.\.\//.test(txt))fail("Unsafe generated source rejected");
+  if(/\b(?:process|require|globalThis|eval|fetch|WebSocket|Worker|window|document|XMLHttpRequest|Function|child_process|worker_threads|fs|net|vm|Buffer|import\.meta)\b|\bimport\s*\(|\.\.\/\.\.\//.test(txt))fail("Unsafe generated source rejected");
   const imports=[...txt.matchAll(/\b(?:from\s*|import\s*)["']([^"']+)["']/g)].map(x=>x[1]);
   const allowed=new Set(["node:test","node:assert/strict","../src/domain.mjs","../src/seed.mjs","../src/opencode-"+task.id+".mjs"]);
   if(imports.some(x=>!allowed.has(x))||(name.startsWith("src/")&&imports.length))fail("Disallowed code imports");

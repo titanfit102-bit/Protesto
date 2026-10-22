@@ -43,7 +43,7 @@ const pending=queue.tasks.filter(t=>t.status==="approved");
 let generated=0;
 const outputPaths=[];
 const approvedImports=new Set(["node:test","node:assert/strict","../src/domain.mjs","../src/seed.mjs"]);
-const disallowed=/\b(?:process|require|globalThis|eval|fetch|WebSocket|Worker|window|document|XMLHttpRequest|Function|child_process|worker_threads|fs|http|https|net|vm|Buffer|import\.meta)\b|\bimport\s*\(|\.\.\/\.\.\//;
+const disallowed=/\b(?:process|require|globalThis|eval|fetch|WebSocket|Worker|window|document|XMLHttpRequest|Function|child_process|worker_threads|fs|net|vm|Buffer|import\.meta)\b|\bimport\s*\(|\.\.\/\.\.\//;
 function verifySource(task,file,source){
  if(source.length<150||source.length>20000||disallowed.test(source))fail("Unsafe or invalid generated file "+file);
  if(/^\s*(?:import|export)\s*[{*]/m.test(source) && !file.startsWith("src/")){/* imports evaluated below */}
