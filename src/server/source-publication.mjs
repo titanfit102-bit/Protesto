@@ -1,4 +1,4 @@
-import {validateSourceUrl} from "../domain.mjs";
+import {safePublicExternalUrl} from "./public-url.mjs";
 
 // Public source responses contain only reviewer-accepted link metadata.
 // Original case context and reviewer notes remain on authorized private routes.
@@ -25,7 +25,7 @@ export function publicSourceItems(rows){
     throw new TypeError("Invalid public source record");
   }
   let url;
-  try{url=validateSourceUrl(raw.url);}catch{throw new TypeError("Invalid public source URL");}
+  url=safePublicExternalUrl(raw.url);
   if(!url)throw new TypeError("Invalid public source URL");
   const date=raw.created_at instanceof Date?raw.created_at:new Date(raw.created_at);
   if(!Number.isFinite(date.getTime()))throw new TypeError("Invalid public source timestamp");

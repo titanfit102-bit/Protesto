@@ -33,6 +33,11 @@ export async function checkAccessibility(page, label) {
       const name = (el.getAttribute("aria-label") || el.textContent || el.getAttribute("title") || "").trim();
       if (!name) issues.push("Unnamed control: " + el.outerHTML.slice(0, 90));
     }
+    for (const el of document.querySelectorAll('[aria-labelledby]')) {
+      for (const id of el.getAttribute('aria-labelledby').split(/\s+/).filter(Boolean)) {
+        if (!document.getElementById(id)) issues.push('Broken aria-labelledby reference: '+id);
+      }
+    }
     for (const img of document.querySelectorAll("img")) {
       if (!img.hasAttribute("alt")) issues.push("Image has no alt attribute");
     }

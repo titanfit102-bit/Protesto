@@ -22,7 +22,7 @@ test("public projection preserves useful source link but strips sensitive case c
 test("pending/rejected sources and malformed URLs cannot enter public projection",()=>{
  for(const raw of [
   {...source(),state:"pending"}, {...source(),state:"rejected"},
-  {...source(),url:"http://example.org/file"}, {...source(),url:"https://name:secret@example.org/"},
+  {...source(),url:"http://example.org/file"}, {...source(),url:"https://example.org/file?token=secret"}, {...source(),url:"https://127.0.0.1/private"}, {...source(),url:"https://name:secret@example.org/"},
   {...source(),title:" "}, {...source(),created_at:"not a date"}, {...source(),id:"not-uuid"}
  ])assert.throws(()=>publicSourceItems([raw]));
  assert.throws(()=>publicSourceItems("not-array"));
