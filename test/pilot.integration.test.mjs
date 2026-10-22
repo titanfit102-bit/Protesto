@@ -135,7 +135,7 @@ test("PostgreSQL private pilot: reporting, session security and editorial separa
   const ledgerEntries=r.json.events.filter(x=>x.case_id===caseId);
   assert.equal(ledgerEntries.filter(x=>x.event_type==="published").length,1);
   assert.equal(ledgerEntries.filter(x=>x.event_type==="archived").length,1);
-  assert.deepEqual(Object.keys(ledgerEntries[0]).sort(),["case_id","event_type","created_at"]);
+  assert.deepEqual(Object.keys(ledgerEntries[0]).sort(),["case_id","created_at","event_type"]);
   assert.ok(ledgerEntries.every(x=>x.case_id===caseId));
   const publicationEvent=ledgerEntries.find(x=>x.event_type==="published");
   const archiveEvent=ledgerEntries.find(x=>x.event_type==="archived");
