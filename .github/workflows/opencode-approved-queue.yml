@@ -10,16 +10,55 @@ on:
       - tools/opencode-queue-runner.mjs
       - tools/opencode-queue-publish.mjs
 
+# A PR paths filter matches the cumulative PR diff, not only the latest commit.
+# Keep currently running work alive while newer queue edits are submitted.
 concurrency:
   group: protesto-approved-queue-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: read
 
 jobs:
-  generate:
+  detect-approved-queue-change:
     if: >-
+      github.head_ref == 'experiment/opencode-pilot' &&
+      github.event.pull_request.head.repo.full_name == 'titanfit102-bit/Protesto' &&
+      github.event.pull_request.user.login == 'titanfit102-bit' &&
+      github.actor == 'titanfit102-bit'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      changed: ${{ steps.check.outputs.changed }}
+    steps:
+      - name: Only run the agent when latest commit changes approved task list
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { appendFileSync } from "node:fs";
+          const sha = process.env.HEAD_SHA;
+          if (!/^[0-9a-f]{40}$/.test(sha || "")) throw new Error("Invalid PR head SHA");
+          const response = await fetch("https://api.github.com/repos/titanfit102-bit/Protesto/commits/" + sha, {
+            headers: {
+              Authorization: "Bearer " + process.env.GH_TOKEN,
+              Accept: "application/vnd.github+json",
+              "X-GitHub-Api-Version": "2022-11-28"
+            }
+          });
+          if (!response.ok) throw new Error("Could not check last commit changes: HTTP " + response.status);
+          const commit = await response.json();
+          const changed = Array.isArray(commit.files) && commit.files.some(file => file.filename === "automation/opencode-approved-tasks.json");
+          appendFileSync(process.env.GITHUB_OUTPUT, "changed=" + String(changed) + "\\n");
+          console.log(changed ? "New approved task queue update: run OpenCode" : "No new task queue update: skip OpenCode jobs");
+          NODE
+
+  generate:
+    needs: detect-approved-queue-change
+    if: >-
+      needs.detect-approved-queue-change.outputs.changed == 'true' &&
       github.head_ref == 'experiment/opencode-pilot' &&
       github.event.pull_request.head.repo.full_name == 'titanfit102-bit/Protesto' &&
       github.event.pull_request.user.login == 'titanfit102-bit' &&
