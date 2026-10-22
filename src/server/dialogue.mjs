@@ -4,6 +4,7 @@ import {cleanText} from "../domain.mjs";
 import {canReview} from "./security.mjs";
 import {rateKey} from "./rate-limits.mjs";
 import {reviewedTopicCopy,reviewedStatementCopy} from "./dialogue-publication.mjs";
+import {lockAuthorQuota} from "./author-quotas.mjs";
 
 // Original, neutral deliberation implementation inspired by the concept of Polis.
 // No Polis source code is incorporated. No inferred political profiles or clusters.
@@ -110,14 +111,27 @@ export async function dialogueRoute({pathname,req,res,pool,user,json,fail,readJS
    return fail(res,422,"Përcakto dosjen e publikuar, titullin dhe kontekstin (35–1200 karaktere).");
   const approved=reviewedTopicCopy(body);
   if(!approved)return fail(res,422,"Kërkohet kopje publike e rishikuar dhe kontroll privatësie.");
-  const count=await pool.query("SELECT count(*)::integer n FROM dialogue_topics WHERE created_by=$1 AND created_at>now()-interval '1 day'",[user.id]);
-  if(count.rows[0].n>=5)return fail(res,429,"Maksimumi pesë tema të reja në ditë.");
-  const result=await pool.query(
-   "INSERT INTO dialogue_topics(id,case_id,created_by,title,description,public_title,public_description) SELECT $1,c.id,$2,$3,$4,$6,$7 FROM civic_cases c WHERE c.id=$5 AND c.state='published' AND c.public_title IS NOT NULL AND c.public_description IS NOT NULL AND c.public_area IS NOT NULL RETURNING id,state",
-   [randomUUID(),user.id,title,description,caseId,approved.title,approved.description]
-  );
-  if(!result.rowCount)return fail(res,409,"Dosja nuk është e publikuar.");
-  return json(res,201,{item:{...result.rows[0],review_state:"pending"},message:"Tema u dërgua për miratim të pavarur dhe nuk është publike."});
+  const client=await pool.connect();
+  try{
+   await client.query("BEGIN");
+   const parent=await client.query(
+    "SELECT id,state,public_title,public_description,public_area FROM civic_cases WHERE id=$1 FOR UPDATE",[caseId]
+   );
+   if(!parent.rowCount||parent.rows[0].state!=="published"||
+      !parent.rows[0].public_title||!parent.rows[0].public_description||!parent.rows[0].public_area){
+    await client.query("ROLLBACK");return fail(res,409,"Dosja nuk është e publikuar.");
+   }
+   await lockAuthorQuota(client,"dialogue-topic-create",user.id);
+   const count=await client.query("SELECT count(*)::integer n FROM dialogue_topics WHERE created_by=$1 AND created_at>now()-interval '1 day'",[user.id]);
+   if(count.rows[0].n>=5){await client.query("ROLLBACK");return fail(res,429,"Maksimumi pesë tema të reja në ditë.");}
+   const result=await client.query(
+    "INSERT INTO dialogue_topics(id,case_id,created_by,title,description,public_title,public_description) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id,state",
+    [randomUUID(),caseId,user.id,title,description,approved.title,approved.description]
+   );
+   await client.query("COMMIT");
+   return json(res,201,{item:{...result.rows[0],review_state:"pending"},message:"Tema u dërgua për miratim të pavarur dhe nuk është publike."});
+  }catch(e){try{await client.query("ROLLBACK");}catch{}throw e;}
+  finally{client.release();}
  }
  const create=pathname.match(statementCreate);
  if(create&&req.method==="POST"){

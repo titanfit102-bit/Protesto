@@ -2,6 +2,7 @@ import {randomUUID} from "node:crypto";
 import {cleanText,validateInitiative,validateGathering} from "../domain.mjs";
 import {canReview} from "./security.mjs";
 import {reviewedActionCopy} from "./action-publication.mjs";
+import {lockAuthorQuota} from "./author-quotas.mjs";
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export const actionGetRoutes=["/api/actions/public","/api/actions/mine","/api/actions/review/queue"];
 export const actionPostRoute=pathname=>pathname==="/api/actions"||/^\/api\/actions\/review\/[^/]+$/.test(pathname)||/^\/api\/actions\/archive\/[^/]+$/.test(pathname);
@@ -23,10 +24,17 @@ export async function actionRoute({pathname,req,res,pool,user,json,fail,readJSON
    else if(input.kind==="gathering")entry={...validateGathering(input,new Date(),randomUUID),kind:"gathering"};
    else return fail(res,422,"Lloji i veprimit nuk është i vlefshëm.");
   }catch(e){return fail(res,422,e.message);}
-  const recent=await pool.query("SELECT count(*)::integer AS n FROM civic_actions WHERE author_id=$1 AND created_at>now()-interval '1 hour'",[user.id]);
-  if(recent.rows[0].n>=6)return fail(res,429,"Maksimumi 6 nisma ose takime për orë.");
-  const result=await pool.query("INSERT INTO civic_actions(id,author_id,kind,subtype,title,description,area,event_date,state) VALUES($1,$2,$3,$4,$5,$6,$7,$8,'pending') RETURNING id,kind,state,created_at",[entry.id,user.id,entry.kind,entry.kind==="initiative"?entry.type:null,entry.title,entry.description,entry.area,entry.kind==="gathering"?entry.date:null]);
-  return json(res,201,{item:result.rows[0],message:"Regjistrimi është në pritje të shqyrtimit."});
+  const client=await pool.connect();
+  try{
+   await client.query("BEGIN");
+   await lockAuthorQuota(client,"action-create",user.id);
+   const recent=await client.query("SELECT count(*)::integer AS n FROM civic_actions WHERE author_id=$1 AND created_at>now()-interval '1 hour'",[user.id]);
+   if(recent.rows[0].n>=6){await client.query("ROLLBACK");return fail(res,429,"Maksimumi 6 nisma ose takime për orë.");}
+   const result=await client.query("INSERT INTO civic_actions(id,author_id,kind,subtype,title,description,area,event_date,state) VALUES($1,$2,$3,$4,$5,$6,$7,$8,'pending') RETURNING id,kind,state,created_at",[entry.id,user.id,entry.kind,entry.kind==="initiative"?entry.type:null,entry.title,entry.description,entry.area,entry.kind==="gathering"?entry.date:null]);
+   await client.query("COMMIT");
+   return json(res,201,{item:result.rows[0],message:"Regjistrimi është në pritje të shqyrtimit."});
+  }catch(e){try{await client.query("ROLLBACK");}catch{}throw e;}
+  finally{client.release();}
  }
  if(!canReview(user.role))return fail(res,403,"Kërkohet rol verifikuesi.");
  if(pathname==="/api/actions/review/queue"&&req.method==="GET"){
