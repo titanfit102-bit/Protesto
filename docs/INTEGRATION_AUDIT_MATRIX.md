@@ -1,20 +1,20 @@
 # PROTESTO — Integrated candidate evidence and review matrix
 
-**Checkpoint:** 2026-10-23. **Scope:** synthetic, PostgreSQL-backed private pilot for Albanian civic accountability, not a public live system. **This is an internal source/CI review, not an independent security, privacy, legal or accessibility assessment.**
+**Checkpoint:** 2026-10-23. The audited implementation SHA precedes this documentation-only commit; the live PR HEAD must be read from GitHub. **Scope:** synthetic, PostgreSQL-backed private pilot for Albanian civic accountability, not a public live system. **This is an internal source/CI review, not an independent security, privacy, legal or accessibility assessment.**
 
 ## 1. Immutable evidence and branch topology
 
 | Item | Checked fact | Evidence |
 |---|---|---|
-| Candidate | Draft [PR #55](https://github.com/titanfit102-bit/Protesto/pull/55), `feat/protesto-atomic-public-read-snapshots`, HEAD `906aef9970cab066f4e468c50dafb4fea4444773`; **not merged** | PR #55 metadata |
+| Candidate | Draft [PR #55](https://github.com/titanfit102-bit/Protesto/pull/55), `feat/protesto-atomic-public-read-snapshots`, audited implementation SHA `906aef9970cab066f4e468c50dafb4fea4444773` (before this document's commit); **not merged** | PR #55 metadata |
 | Baseline | `feat/protesto-foundation` at `ab4cb221d1320d50b9a489c64a7380d227c3cd4c` | GitHub ref |
 | Main | `main` at `1e34611bdb48195e7deadb8e33d26ddac3338c4d` | GitHub ref |
 | Ancestry | Compared candidate against foundation: **ahead 80 commits, behind 0**; **76 changed files** (compare result). Compared #31 against candidate: ahead 63, behind 0 | GitHub compare_commits |
-| CI at exact HEAD | [Run #39867893831](https://github.com/titanfit102-bit/Protesto/actions/runs/39867893831) **success**; 58/58 Node tests, 16 PostgreSQL migrations and repeated migration, Chromium pilot/dialogue E2E, npm audit reporting zero findings at run time, synthetic encrypted backup verification and isolated restore | Workflow result and job logs |
+| CI at audited implementation SHA | [Run #39867893831](https://github.com/titanfit102-bit/Protesto/actions/runs/39867893831) **success**; 58/58 Node tests, 16 PostgreSQL migrations and repeated migration, Chromium pilot/dialogue E2E, npm audit reporting zero findings at run time, synthetic encrypted backup verification and isolated restore | Workflow result and job logs |
 | Artifact | `Protesto-Preview-Offline` (1,351,470 bytes at verification), not a deployment, retention per workflow 14 days | Actions artifact list and `.github/workflows/verify.yml` |
 | Live release | **Not authorized**. `evaluateReadiness` returns `releaseAllowed:false` even with CI evidence | `src/ops/release-gate.mjs` |
 
-**Critical distinction:** passing the integrated suite proves the tested synthetic paths at this exact code revision. It does not establish factual accuracy of citizen allegations, legal permission, correct security configuration, real-world usability, or complete race-freedom. A PostgreSQL one-statement snapshot is consistent at query start; archival may occur immediately afterward.
+**Critical distinction:** passing the integrated suite proves the tested synthetic paths at the audited implementation revision. It does not establish factual accuracy of citizen allegations, legal permission, correct security configuration, real-world usability, or complete race-freedom. A PostgreSQL one-statement snapshot is consistent at query start; archival may occur immediately afterward.
 
 ## 2. Draft PR dependency map
 
@@ -61,12 +61,12 @@ Legend: **VERIFIED (automated)** = a specific implemented and exercised invarian
 
 ## 4. Current verification boundary
 
-- Full CI job at SHA `906aef9970cab066f4e468c50dafb4fea4444773`: **completed/success**, **58 passed, 0 failed Node tests**, PostgreSQL 16 versioned migrations/idempotence, npm dependency audit with no reported findings, Chromium pilot+dialogue E2E, backup/restore drill.
+- Audited implementation CI job at SHA `906aef9970cab066f4e468c50dafb4fea4444773`: **completed/success**, **58 passed, 0 failed Node tests**, PostgreSQL 16 versioned migrations/idempotence, npm dependency audit with no reported findings, Chromium pilot+dialogue E2E, backup/restore drill.
 - These are **local ephemeral CI tests**, not live hosted staging, independent penetration testing, authentic institutional workflow trials or a real disaster recovery exercise.
 - A `success` result does not make the application safe for actual allegations, whistleblower submissions or identifiable political-opinion data.
 - This audit verified the **GitHub ancestry and subset of code-level route/security contracts**, not an exhaustive line-by-line review of all 76 changed files. Full independent code and threat-model review remains necessary.
 - **UNKNOWN:** protection rules requiring reviews on foundation/main, production secrets policy applied outside repo, live deployment/monitoring state. Do not infer these from a green synthetic workflow. **No production deployment was initiated here.**
-- Historical failed CI attempts are part of the audit trail; use the **final green run at the exact candidate SHA**, not an earlier success for a different tree.
+- Historical failed CI attempts are part of the audit trail; require a **green run at the exact integration-candidate SHA**, not an earlier success for a different tree.
 
 ## 5. Four distinct maturity assessments
 
