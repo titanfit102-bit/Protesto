@@ -10,6 +10,7 @@ import {dialogueRoute,dialogueGetRoute,dialoguePostRoute} from "./dialogue.mjs";
 import {publicLedgerEvents} from "./public-ledger.mjs";
 import {publicCopyDecision} from "./publication-privacy.mjs";
 import {rateKey,consumeRateLimit} from "./rate-limits.mjs";
+import {decryptTotpSecret,verifyTotpCode} from "./totp.mjs";
 import {normalizeEmail,verifyPassword,newSessionToken,tokenHash,parseSessionCookie,sessionCookie,clearSessionCookie,secureWrite,canReview,SESSION_AGE_SECONDS} from "./security.mjs";
 
 const publicAssets=new Map([
@@ -46,7 +47,7 @@ async function readJSON(req){
   return parsed;
  }catch{throw {status:400,message:"JSON i pavlefshëm."};}
 }
-export function createPilotServer(pool,{origin,production=false,rateLimitSecret=process.env.PROTESTO_RATE_LIMIT_SECRET,dialogueSecret=process.env.PROTESTO_DIALOGUE_SECRET}={}){
+export function createPilotServer(pool,{origin,production=false,rateLimitSecret=process.env.PROTESTO_RATE_LIMIT_SECRET,dialogueSecret=process.env.PROTESTO_DIALOGUE_SECRET,mfaKey=process.env.PROTESTO_MFA_KEY}={}){
  if(typeof pool?.query!=="function"||typeof pool?.connect!=="function")throw Error("PostgreSQL pool missing.");
  if(typeof origin!=="string"||!/https?:\/\/[^/]+$/.test(origin))throw Error("APP_ORIGIN missing or invalid.");
  if(production&&!origin.startsWith("https://"))throw Error("HTTPS required in production.");
@@ -147,12 +148,29 @@ export function createPilotServer(pool,{origin,production=false,rateLimitSecret=
     const accountLimit=await consumeRateLimit(pool,rateKey(rateLimitSecret,"login-email",email),{limit:15,windowSeconds:900});
     if(!accountLimit.allowed)return json(res,429,{error:"Shumë tentativa për këtë llogari."},{"Retry-After":String(accountLimit.retrySeconds)});
     const password=typeof body.password==="string"?body.password:"";
-    const found=await pool.query("SELECT id,email,role,password_hash FROM civic_users WHERE email=$1 AND active=true LIMIT 1",[email]);
-    const user=found.rows[0];
-    if(!user||!verifyPassword(password,user.password_hash))return fail(res,401,"Kredenciale të pavlefshme.");
-    const token=newSessionToken();
-    await pool.query("INSERT INTO sessions(token_hash,user_id,expires_at) VALUES($1,$2,now()+($3::integer * interval '1 second'))",[tokenHash(token),user.id,SESSION_AGE_SECONDS]);
-    return json(res,200,{user:{id:user.id,email:user.email,role:user.role}},{"Set-Cookie":sessionCookie(token,production)});
+    // Serializes one-time TOTP consumption with session creation.
+    const client=await pool.connect();
+    try{
+     await client.query("BEGIN");
+     const found=await client.query("SELECT id,email,role,password_hash,totp_secret_encrypted,totp_last_counter FROM civic_users WHERE email=$1 AND active=true FOR UPDATE",[email]);
+     const account=found.rows[0];
+     if(!account||!verifyPassword(password,account.password_hash)){
+      await client.query("ROLLBACK");return fail(res,401,"Kredenciale të pavlefshme.");
+     }
+     if(account.totp_secret_encrypted){
+      if(!mfaKey){await client.query("ROLLBACK");return fail(res,503,"MFA është e pakonfiguruar në server.");}
+      const secret=decryptTotpSecret(account.totp_secret_encrypted,mfaKey);
+      const counter=verifyTotpCode(secret,body.totpCode,account.totp_last_counter);
+      secret.fill(0);
+      if(counter===null){await client.query("ROLLBACK");return fail(res,401,"Kredenciale të pavlefshme.");}
+      await client.query("UPDATE civic_users SET totp_last_counter=$1 WHERE id=$2",[counter,account.id]);
+     }
+     const token=newSessionToken();
+     await client.query("INSERT INTO sessions(token_hash,user_id,expires_at) VALUES($1,$2,now()+($3::integer * interval '1 second'))",[tokenHash(token),account.id,SESSION_AGE_SECONDS]);
+     await client.query("COMMIT");
+     return json(res,200,{user:{id:account.id,email:account.email,role:account.role}},{"Set-Cookie":sessionCookie(token,production)});
+    }catch(error){try{await client.query("ROLLBACK");}catch{}throw error;}
+    finally{client.release();}
    }
    const user=await auth(req);
    if(pathname==="/api/me"&&req.method==="GET")return user?json(res,200,{user}):fail(res,401,"Kërkohet identifikim.");
