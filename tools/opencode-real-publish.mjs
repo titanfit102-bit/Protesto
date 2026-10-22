@@ -34,6 +34,12 @@ for(const item of output.tasks){
  if(!/^[a-z][a-z0-9-]{2,36}$/.test(task.id))fail("Bad task id");
  const branch="opencode/pilot-"+task.id;
  if(branch!==item.branch)fail("Branch mismatch");
+ if(item.status==="failed"){
+  if(!Array.isArray(item.files)||item.files.length!==0)fail("Failed task unexpectedly includes publishable artifacts");
+  console.warn("::warning::Blocked OpenCode task "+item.id+": no code published, manual review required");
+  results.push({id:item.id,status:"blocked-needs-manual-review"});
+  continue;
+ }
  if(item.status==="pending"){results.push({id:item.id,status:"queued-for-next-owner-trigger"});continue;}
  if(item.status==="already-exists"){results.push({id:item.id,status:"already-exists",branch});continue;}
  if(item.status!=="verified"||!Number.isInteger(item.attempts)||item.attempts<1||item.attempts>3)fail("Not independently verified");
