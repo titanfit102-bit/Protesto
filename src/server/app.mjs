@@ -258,6 +258,14 @@ export function createPilotServer(pool,{origin,production=false,rateLimitSecret=
     const client=await pool.connect();
     try{
      await client.query("BEGIN");
+     // Lock before evaluating accepted sources, so source decisions cannot
+     // race the case's publication/rejection transition.
+     const locked=await client.query(
+      "SELECT id,state,author_id FROM civic_cases WHERE id=$1 FOR UPDATE",[caseId]
+     );
+     if(!locked.rowCount||locked.rows[0].state!=="pending"||locked.rows[0].author_id===user.id){
+      await client.query("ROLLBACK");return fail(res,409,"Dosja nuk është në pritje ose është e jotja.");
+     }
      if(decision==="published"){
       const accepted=await client.query("SELECT 1 FROM case_sources WHERE case_id=$1 AND state='accepted' LIMIT 1",[caseId]);
       if(!accepted.rowCount){await client.query("ROLLBACK");return fail(res,422,"Të paktën një burim duhet verifikuar para publikimit.");}
