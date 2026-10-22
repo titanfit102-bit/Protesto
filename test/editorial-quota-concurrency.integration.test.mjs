@@ -14,6 +14,7 @@ test("author-wide quotas and parent case approval remain atomic under parallel H
   dialogueSecret:"synthetic-editorial-dialogue-key-long-32"});
  const author=randomUUID(),reporter=randomUUID(),reviewer=randomUUID();
  const identities=new Map();
+ const fixtureUsers=[author,reporter,reviewer];
  const cases=Array.from({length:9},()=>randomUUID());
  const send=async(path,body,user)=>{
   const response=await fetch(origin+path,{method:"POST",headers:{
@@ -102,6 +103,7 @@ test("author-wide quotas and parent case approval remain atomic under parallel H
   // Fresh identities avoid already exhausted author-wide quotas; parent lock
   // must force each submission to observe the subsequently archived case.
   const lateReviewer=randomUUID(),lateReporter=randomUUID();
+  fixtureUsers.push(lateReviewer,lateReporter);
   for(const [id,role] of [[lateReviewer,"reviewer"],[lateReporter,"reporter"]]){
    await pool.query("INSERT INTO civic_users(id,email,password_hash,role) VALUES($1,$2,$3,$4)",
     [id,"late-"+id+"@example.org",hash,role]);
@@ -120,6 +122,16 @@ test("author-wide quotas and parent case approval remain atomic under parallel H
   if(hold){try{await hold.query("ROLLBACK");}finally{hold.release();}}
   await Promise.allSettled(active);
   if(server.listening)await new Promise(resolve=>server.close(resolve));
-  await pool.end();
+  // Do not pollute later Chromium reviewer queues with our five synthetic
+  // pending topic proposals. Cleanup always runs, even after a test failure.
+  try{
+   await pool.query("DELETE FROM correction_appeals WHERE author_id=ANY($1::uuid[])",[fixtureUsers]);
+   await pool.query("DELETE FROM case_corrections WHERE author_id=ANY($1::uuid[])",[fixtureUsers]);
+   await pool.query("DELETE FROM dialogue_topics WHERE created_by=ANY($1::uuid[])",[fixtureUsers]);
+   await pool.query("DELETE FROM civic_actions WHERE author_id=ANY($1::uuid[])",[fixtureUsers]);
+   await pool.query("DELETE FROM sessions WHERE user_id=ANY($1::uuid[])",[fixtureUsers]);
+   await pool.query("DELETE FROM civic_cases WHERE id=ANY($1::uuid[])",[cases]);
+   await pool.query("DELETE FROM civic_users WHERE id=ANY($1::uuid[])",[fixtureUsers]);
+  }finally{await pool.end();}
  }
 });
