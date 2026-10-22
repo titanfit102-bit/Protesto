@@ -58,3 +58,6 @@ The public dialogue report includes only closed-topic aggregates with >=10 respo
 
 ## Local reviewer PDF fingerprint (experimental, 2026-10-22)
 The optional reviewer-declared PDF SHA-256 metadata workflow has Node, PostgreSQL and Chromium coverage in the development branch. No file is uploaded or fetched by the server. An editor declaration is **not** an authentic document snapshot, externally attested proof, or content-truth verification. Private pilot only; immutable external archival, privacy-safe redaction, independent custody and operational deletion/retention policies remain OPEN / P0.
+
+## 2026-10-22 integrated candidate audit
+See `docs/RELEASE_READINESS.md`. Final CI for PR #42 must be verified against its exact head SHA. Automated unit/browser/DB security proof does **not** satisfy the remaining P0 external privacy, identity, legal, right-of-reply, incident and hosted staging controls. No production authorization is granted.
