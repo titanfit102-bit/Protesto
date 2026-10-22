@@ -49,3 +49,6 @@ The declaration is kept in `source_fingerprints` (migration 008) along with the 
 **Limitations:** an editor can submit a false digest or compare the wrong file; the system does not establish original authorship, publisher identity, factual accuracy, verified chain of custody, independent notarization, document signatures or enduring access to the original PDF. Existing sources need not have fingerprints, and the new declaration is optional for pilot publication. Human reviewers must separately retain their legally vetted evidence according to an approved retention/redaction policy, which does **not** exist yet. No real sensitive/whistleblower documentation is authorized.
 
 Public release gate remains **OPEN** pending privacy, GDPR, legal and independent editorial/security review.
+
+## Independent local comparison of a reviewer declaration
+After a source fingerprint has been recorded, a reviewer may select the same or another PDF to compare its locally computed SHA-256 with the stored declaration. Both match and mismatch are reported explicitly. No PDF bytes are transmitted; no external trust anchor, publisher certification or original-file custody is established. This is **content equality only**, not proof of provenance.

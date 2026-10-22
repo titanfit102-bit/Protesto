@@ -115,6 +115,12 @@ try{
  });
  await clickText(page,selectCard+" .pilot-fingerprint","Regjistro SHA-256");
  await page.waitForFunction(s=>document.querySelector(s)?.textContent.includes("SHA-256 (deklaruar):"),{timeout:12000},selectCard+" .pilot-fingerprint");
+ await page.$eval(selectCard+" .pilot-fingerprint input[type=file]",input=>{
+  const transfer=new DataTransfer();transfer.items.add(new File(["%PDF-1.4\\n1 0 obj\\n<< /Type /Catalog >>\\nendobj\\n%%EOF\\n"],"comparison.pdf",{type:"application/pdf"}));
+  input.files=transfer.files;
+ });
+ await clickText(page,selectCard+" .pilot-fingerprint","Krahaso PDF lokalisht");
+ await page.waitForFunction(s=>document.querySelector(s)?.dataset.matches==="true",{timeout:12000},selectCard+" .pilot-fingerprint output");
  await page.$eval(selectCard+' > textarea.review-note',el=>el.value="Dosja demonstrative u kontrollua sipas procedurës dhe mund të publikohet.");
  await page.$$eval(selectCard+" .pilot-checklist input",els=>els.forEach(x=>x.checked=true));
  await page.$eval(selectCard+" .pilot-public-copy input[type=checkbox]",el=>el.checked=true);

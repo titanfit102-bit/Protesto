@@ -1,4 +1,5 @@
 // UI helpers for source provenance and corrective review; does not make external network requests.
+import {hashLocalPdf,comparePdfWithDeclaration} from "./source-integrity.mjs";
 const node=(tag,className,text)=>{const e=document.createElement(tag);if(className)e.className=className;if(text!==undefined)e.textContent=text;return e;};
 const field=(label,name,required=true,kind="input")=>{
  const wrap=node("label","pilot-evidence-label"),caption=node("span","",label);
@@ -69,6 +70,19 @@ export function attachEvidence(article,item,{user,review,call,notice,refresh}){
      if(previous.item){
       fp.append(node("p","","SHA-256 (deklaruar): "+previous.item.sha256));
       fp.append(node("small","","Nuk certifikon origjinën. Skedari nuk ruhet në Protesto."));
+      const comparison=node("input");comparison.type="file";comparison.accept=".pdf,application/pdf";
+      comparison.setAttribute("aria-label","Zgjidh PDF për krahasimin lokal me gjurmën e regjistruar");
+      const result=node("output","pilot-fingerprint-result","Asnjë krahasim ende.");
+      const verify=button("Krahaso PDF lokalisht",async()=>{
+       try{
+        const file=comparison.files?.[0];if(!file)throw Error("Zgjidh dokumentin PDF.");
+        const comparisonResult=await comparePdfWithDeclaration(await file.arrayBuffer(),previous.item);
+        result.textContent=comparisonResult.matches?"PËRPUTHET — SHA-256 i njëjtë.":"NUK PËRPUTHET — përmbajtja është ndryshuar ose është dokument tjetër.";
+        result.dataset.matches=String(comparisonResult.matches);
+        comparison.value="";
+       }catch(error){result.textContent="Krahasimi dështoi: "+error.message;result.dataset.matches="false";}
+      });
+      fp.append(comparison,verify,result);
      }else{
       const input=node("input");input.type="file";input.accept=".pdf,application/pdf";
       input.setAttribute("aria-label","Zgjidh dokumentin PDF vetëm për llogaritje lokale të SHA-256");
@@ -88,10 +102,7 @@ export function attachEvidence(article,item,{user,review,call,notice,refresh}){
         if(!matching.checked||!privacy.checked)throw Error("Konfirmo dy kontrollet editoriale.");
         if(!globalThis.crypto?.subtle)throw Error("Kërkohet mjedis i sigurt (HTTPS ose localhost) për SHA-256.");
         const bytes=await file.arrayBuffer();
-        const magic=String.fromCharCode(...new Uint8Array(bytes.slice(0,5)));
-        if(magic!=="%PDF-")throw Error("Skedari nuk ka firmën bazë të një PDF-je.");
-        const digest=new Uint8Array(await crypto.subtle.digest("SHA-256",bytes));
-        const sha256=[...digest].map(x=>x.toString(16).padStart(2,"0")).join("");
+        const sha256=await hashLocalPdf(bytes);
         await call(fpPath,"POST",{
          sha256,byteLength:bytes.byteLength,mediaType:"application/pdf",
          acknowledgedCorrespondence:true,acknowledgedPrivacy:true

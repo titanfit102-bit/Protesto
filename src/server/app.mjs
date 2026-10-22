@@ -23,6 +23,7 @@ const publicAssets=new Map([
  ["/src/seed.mjs",["../seed.mjs","text/javascript; charset=utf-8"]],
  ["/src/pilot.mjs",["../pilot.mjs","text/javascript; charset=utf-8"]],
  ["/src/pilot-evidence.mjs",["../pilot-evidence.mjs","text/javascript; charset=utf-8"]],
+ ["/src/source-integrity.mjs",["../source-integrity.mjs","text/javascript; charset=utf-8"]],
  ["/src/pilot-dialogue.mjs",["../pilot-dialogue.mjs","text/javascript; charset=utf-8"]]
 ]);
 const idFormat=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
