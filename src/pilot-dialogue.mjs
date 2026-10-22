@@ -100,6 +100,51 @@ export async function renderDialogue({user,call,notice,refresh,cases}){
  for(const item of topics)select.append(listOption(item.id,item.title+" — "+(item.state==="closed"?"mbyllur":"hapur")));
  if(!topics.some(x=>x.id===selectedTopic))selectedTopic=topics[0]?.id||"";
  select.value=selectedTopic;
+ const reviews=$("review-dialogue-topics");
+ if(user&&["reviewer","admin"].includes(user.role)){
+  const queue=await call("/api/dialogue/topic-review/queue");
+  reviews.replaceChildren();
+  if(!queue.items.length)reviews.append(make("p","pilot-empty","Nuk ka tema në pritje të miratimit."));
+  for(const item of queue.items){
+   const card=make("article","pilot-card dialogue-topic-review");
+   card.append(make("h3","",item.title),make("p","",item.description));
+   const noteLabel=make("label","","Arsyetimi editorial");
+   const note=make("textarea","dialogue-topic-note");
+   note.rows=2;note.minLength=20;note.maxLength=1000;noteLabel.append(note);
+   const titleLabel=make("label","","Titulli për publikim");
+   const title=make("input","dialogue-topic-title");title.value=item.public_title||"";title.maxLength=140;titleLabel.append(title);
+   const descriptionLabel=make("label","","Konteksti për publikim");
+   const description=make("textarea","dialogue-topic-description");
+   description.value=item.public_description||"";description.rows=3;description.maxLength=1200;
+   descriptionLabel.append(description);card.append(noteLabel,titleLabel,descriptionLabel);
+   if([item.created_by,item.case_author_id].includes(user.id)){
+    card.append(make("p","pilot-muted","Nuk mund të miratosh temën tënde ose dosjen tënde."));
+   }else{
+    const copyLabel=make("label","",""),privacyLabel=make("label","","");
+    const copyCheck=make("input",""),privacyCheck=make("input","");
+    copyCheck.type="checkbox";privacyCheck.type="checkbox";
+    copyLabel.append(copyCheck,document.createTextNode(" Kontrollova tekstin publik të redaktuar."));
+    privacyLabel.append(privacyCheck,document.createTextNode(" Kontrollova privatësinë e përmbajtjes."));
+    card.append(copyLabel,privacyLabel);
+    const buttons=make("div","pilot-review-actions");
+    for(const [decision,text] of [["approved","Mirato temën"],["rejected","Refuzo temën"]]){
+     const button=make("button","btn subtle",text);button.type="button";
+     button.addEventListener("click",async()=>{
+      button.disabled=true;
+      try{
+       await call("/api/dialogue/topics/"+encodeURIComponent(item.id)+"/review","POST",{
+        decision,note:note.value,public:{title:title.value,description:description.value},
+        checks:{publicCopyReviewed:copyCheck.checked,privacyReviewed:privacyCheck.checked}
+       });
+       notice("Vendimi për temën u regjistrua.");await refresh();
+      }catch(error){notice(error.message,true);}finally{button.disabled=false;}
+     });buttons.append(button);
+    }
+    card.append(buttons);
+   }
+   reviews.append(card);
+  }
+ }else reviews.replaceChildren();
  const topicForm=$("dialogue-create-section");
  topicForm.hidden=!(user&&["reviewer","admin"].includes(user.role));
  const published=$("dialogue-case-select");published.replaceChildren(listOption("","Zgjidh dosjen e verifikuar..."));
@@ -162,7 +207,7 @@ export function initDialogue({call,notice,refresh}){
      public:{title:draft.publicTitle,description:draft.publicDescription},
      checks:{privacyReviewed:draft.privacyReviewed==="on",publicCopyReviewed:draft.privacyReviewed==="on"}
     });
-   selectedTopic=result.item.id;form.reset();notice("Diskutimi u hap mbi një dosje të verifikuar.");await refresh();
+   selectedTopic="";form.reset();notice("Tema u dërgua për miratim të pavarur. Ende nuk është publike.");await refresh();
   }catch(e){notice(e.message,true);}
  });
  $("dialogue-statement-form").addEventListener("submit",async event=>{
