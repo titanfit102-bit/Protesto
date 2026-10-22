@@ -1,11 +1,8 @@
 name: OpenCode - verify automatic draft PR permission
 
+# Historical experiment kept for audit; no automatic PR-triggered runs.
 on:
-  pull_request:
-    branches:
-      - feat/protesto-foundation
-    paths:
-      - .github/workflows/opencode-pr-permission-check.yml
+  workflow_dispatch:
 
 permissions:
   contents: read
