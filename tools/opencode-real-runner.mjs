@@ -1,5 +1,5 @@
 // Guarded OpenCode task executor. GitHub-token READ ONLY; generated code never published here.
-import {readFileSync,writeFileSync,mkdirSync,lstatSync,existsSync} from "node:fs";
+import {readFileSync,writeFileSync,mkdirSync,lstatSync,existsSync,unlinkSync} from "node:fs";
 import {resolve,join} from "node:path";
 import {spawnSync} from "node:child_process";
 import {createHash} from "node:crypto";
@@ -40,8 +40,9 @@ const baseSha=run("git",["ls-remote","origin","refs/heads/"+queue.base]).trim().
 if(!/^[0-9a-f]{40}$/.test(baseSha))fail("Invalid base SHA");
 const manifest={version:2,queueDigest:sha(raw),base:queue.base,baseSha,model,tasks:[]};
 const pending=queue.tasks.filter(t=>t.status==="approved");
-let generated=0;
+let generated=0,attempted=0;
 const outputPaths=[];
+const blocked=[];
 const approvedImports=new Set(["node:test","node:assert/strict","../src/domain.mjs","../src/seed.mjs"]);
 const disallowed=/\b(?:process|require|globalThis|eval|fetch|WebSocket|Worker|window|document|XMLHttpRequest|Function|child_process|worker_threads|fs|net|vm|Buffer|import\.meta)\b|\bimport\s*\(|\.\.\/\.\.\//;
 function verifySource(task,file,source){
@@ -73,12 +74,14 @@ for(const task of pending){
   manifest.tasks.push({id:task.id,kind:task.kind,status:"already-exists",branch,files:[]});
   continue;
  }
- if(generated>=queue.maxTasksPerRun){
+ if(attempted>=queue.maxTasksPerRun){
   console.log("PENDING LEFT "+task.id+": retained in committed queue for a later owner-triggered run");
   manifest.tasks.push({id:task.id,kind:task.kind,status:"pending",branch,files:[]});
   continue;
  }
  const files=expectedFiles(task);
+ attempted++;
+ try{
  if(files.some(p=>existsSync(p)))fail("File already exists on controller "+task.id);
  const edit={ "*":"deny" };
  for(const file of files)edit["*"+file]="allow";
@@ -134,8 +137,29 @@ for(const task of pending){
  outputPaths.push(...files);
  generated++;
  console.log("VERIFIED "+task.id+" ("+files.length+" files) — draft PR publisher must still validate hashes");
+ }catch(error){
+  // A failed individual agent attempt must not discard independently verified
+  // artifacts from earlier tasks. Never weaken source checks or publish failures.
+  const diagnostic=String(error?.message||error).slice(0,300);
+  const dirty=run("git",["status","--porcelain=v1","--untracked-files=all"]).trim().split("\n").filter(Boolean);
+  const allowlisted=new Set([...outputPaths,...files]);
+  if(dirty.some(line=>!line.startsWith("?? ")||!allowlisted.has(line.slice(3)))){
+   fail("SECURITY STOP: unexpected agent workspace modifications detected for "+task.id);
+  }
+  for(const name of files){
+   const full=resolve(root,name);
+   let stats;
+   try{stats=lstatSync(full);}catch(e){if(e?.code==="ENOENT")continue;throw e;}
+   if(!stats.isFile()||stats.isSymbolicLink())fail("SECURITY STOP: unsafe generated artifact "+name);
+   unlinkSync(full);
+  }
+  blocked.push(task.id);
+  manifest.tasks.push({id:task.id,kind:task.kind,status:"failed",branch,files:[],error:"Generation, validation or CI rejected this task."});
+  console.error("TASK BLOCKED "+task.id+" — original safety checks retained; manual review needed. "+diagnostic);
+ }
 }
 writeFileSync(join(out,"manifest.json"),JSON.stringify(manifest,null,2)+"\n");
 const unprocessed=manifest.tasks.filter(t=>t.status==="pending").map(t=>t.id);
-console.log("QUEUE COMPLETE, verified="+generated+", retained="+unprocessed.length);
+console.log("QUEUE COMPLETE, verified="+generated+", attempted="+attempted+", blocked="+blocked.length+", retained="+unprocessed.length);
+if(blocked.length)console.error("BLOCKED TASKS (not published): "+blocked.join(", "));
 if(unprocessed.length)console.log("Retained task IDs for a later controller update: "+unprocessed.join(", "));
