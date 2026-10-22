@@ -92,3 +92,6 @@ The admin-only endpoint `GET /api/ops/status` returns **aggregate counts**, neve
 5. Record decisions and notify competent privacy/legal personnel if personal information may have been exposed.
 
 The CI backup drill uses disposable test data. Offsite backups, actual alert delivery, incident response staffing and retention/deletion policy remain **OPEN P0**.
+
+## CI staging rehearsal
+The isolated staging boundary check refuses a public origin or remote database before running browser/backup tests. Preview artifacts include four mobile/tablet breakpoints. No hosted staging or public exposure is created by this step. See `docs/STAGING_REHEARSAL.md`.

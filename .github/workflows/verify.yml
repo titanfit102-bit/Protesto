@@ -1,7 +1,7 @@
 name: Protesto verification
 on:
   pull_request:
-    branches: [main, feat/protesto-foundation, feat/protesto-pilot-integration-candidate, feat/protesto-source-disclosure-hardening, feat/protesto-source-fingerprint-attestations, feat/protesto-publication-privacy-guard, feat/protesto-document-digest-compare, feat/protesto-reviewer-totp-mfa, feat/protesto-atomic-abuse-session-revoke, feat/protesto-reviewed-citizen-replies, feat/protesto-public-url-security-a11y]
+    branches: [main, feat/protesto-foundation, feat/protesto-pilot-integration-candidate, feat/protesto-source-disclosure-hardening, feat/protesto-source-fingerprint-attestations, feat/protesto-publication-privacy-guard, feat/protesto-document-digest-compare, feat/protesto-reviewer-totp-mfa, feat/protesto-atomic-abuse-session-revoke, feat/protesto-reviewed-citizen-replies, feat/protesto-public-url-security-a11y, feat/protesto-ops-private-status-runbook]
   workflow_dispatch:
 permissions:
   contents: read
@@ -41,6 +41,11 @@ jobs:
       - run: npm run db:migrate
       - name: Confirm migrations are idempotent
         run: npm run db:migrate
+      - name: Enforce isolated staging rehearsal boundaries
+        env:
+          PROTESTO_STAGING_REHEARSAL: '1'
+          PROTESTO_BACKUP_TEST: '1'
+        run: node tools/staging-gate.mjs
       - run: npm run verify
       - name: Find preinstalled Chromium
         shell: bash
