@@ -1,26 +1,31 @@
 # OpenCode integration pilot — Protesto
 
-**Scope:** experiment/opencode-pilot, branched from feat/protesto-foundation. The production branch main is unchanged.
+**Scope:** `experiment/opencode-pilot`, branched from `feat/protesto-foundation`. The production branch `main` is unchanged. Draft PR: https://github.com/titanfit102-bit/Protesto/pull/3
 
-## Phase A — GitHub-hosted CLI smoke, no AI credentials
-- Open a draft pull request from experiment/opencode-pilot to feat/protesto-foundation.
-- This triggers .github/workflows/opencode-smoke.yml using standard ubuntu-latest.
-- The workflow installs the OpenCode CLI and confirms opencode --version, then checks the existing project.
-- The workflow has only contents:read permission, does not call a model, does not run agent code or create commits, and should not incur model-token charges.
-- Verify the green workflow run with its exact commit SHA before claiming Phase A passed.
+## Phase A — GitHub-hosted CLI smoke — VERIFIED
 
-## Phase B — AI agent, not enabled
-Before enabling any model-backed autonomous execution:
-1. Choose an AI model/provider and verify current pricing, usage caps and data-handling terms. OpenCode itself and AI inference are different services.
-2. Provision provider credentials **only** through GitHub Actions secrets, never in commits or chat.
-3. Review GitHub App / token permissions and trigger security for public-repo contributions. Never expose credentials to arbitrary pull-request code, untrusted users, or public issue comments.
-4. Start with one narrowly scoped, explicitly authorized *read-only* analysis run. Keep tool permissions least-privilege.
-5. Only after confirming output quality, set up an authorized branch-limited implementation flow with test gates, draft PRs and no automatic merge.
-6. Never deploy or collect real personal/political data from this unaudited prototype.
+- `.github/workflows/opencode-smoke.yml` uses standard `ubuntu-latest`.
+- Installs OpenCode without provider API keys; verifies CLI and existing static project check.
+- GitHub Actions run [39756916408](https://github.com/titanfit102-bit/Protesto/actions/runs/39756916408) PASSED.
+- Repeat smoke on commit `f4890e8a6782c46f8bb861ae26b069be44557694`: [39758318474](https://github.com/titanfit102-bit/Protesto/actions/runs/39758318474) PASSED.
 
-**Important:** OpenCode's GitHub comment commands normally rely on a default-branch workflow and separate provider configuration. This experiment intentionally does not modify main; comment-triggered OpenCode and unattended multi-task orchestration are not active yet.
+## Phase B — FREE read-only AI test — VERIFIED
 
-## Success criteria
-- Phase A: a successful GitHub Actions run shows the OpenCode binary operating remotely with no personal PC required.
-- Phase B: a separate authorized AI run provides useful scoped results, evidence of model calls, cost accounting, and safe permission boundaries.
-- Do not confuse Phase A (CLI installation) with Phase B (autonomous development).
+- `.github/workflows/opencode-free-analysis.yml` runs only for the named experimental pull-request branch and repository owner.
+- Permissions: GitHub `contents:read`; checkout does not persist credentials; OpenCode tools `read`, `glob`, and `grep` only; explicit denial for all other tools; agent `plan`.
+- No provider key was configured. OpenCode dynamically listed free models and chose `opencode/glm-5.3-flash-free`.
+- Agent read `AGENTS.md`, `README.md`, `package.json`, and `docs/RELEASE_GATES.md`; reported modules, two release risks, and a next-task suggestion in Albanian.
+- [GitHub Actions run 39758318564](https://github.com/titanfit102-bit/Protesto/actions/runs/39758318564), commit `f4890e8a6782c46f8bb861ae26b069be44557694`: COMPLETED SUCCESSFULLY. Workflow confirmed no tracked-file modifications.
+- Output artifact `OpenCode-free-analysis` (7-day retention) contains the model list and agent transcript. Full run logs also show actual OpenCode file-read tool calls.
+- No metered provider API key or model charges were required for this test, subject to OpenCode's changing free model availability/rules.
+- Model summaries are not independent audit certifications. Agent findings must be reconciled with current implementation before making decisions.
+
+## Phase C — Autonomous coding test — NOT YET ENABLED
+
+Proposed narrowly scoped task: add isolated **domain-validation unit tests only**, using synthetic data; do not modify `src/`, server, auth, secrets, schema, or any production code.
+
+Next steps require an explicitly authorized coding task and a tightly restricted workflow. Generate proposed changes on the ephemeral runner first; upload patch/artifact; run `npm run verify` (and broader tests as required); review the resulting diff before any GitHub commit. Keep PR draft, never auto-merge or deploy.
+
+**Important:** OpenCode comment commands on GitHub normally need a default-branch workflow with appropriate tokens. This pilot deliberately avoids `main` and uses a read-only PR-triggered workflow instead; comment-triggered development and unattended multi-task orchestration are not enabled.
+
+**Safety:** No real user data, political preference tracking, accusations, public civic intake, or production deployment in this prototype.
