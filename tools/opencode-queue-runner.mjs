@@ -30,7 +30,8 @@ for (const task of queue.tasks) {
   if (typeof task.brief !== "string" || task.brief.length < 100 || task.brief.length > 1400) stop("bad brief: " + task.id);
   if (existsSync(task.target)) stop("target already exists: " + task.target);
 }
-const baseline = run("git", ["rev-parse", "HEAD"]).trim();
+const baseline = run("git", ["ls-remote", "origin", "refs/heads/" + queue.base]).trim().split(/\\s+/)[0];
+if (!/^[a-f0-9]{40}$/.test(baseline)) stop("could not resolve trusted target branch SHA");
 const metadata = { version: 1, base: queue.base, baseSha: baseline, model: process.env.OPENCODE_MODEL, tasks: [] };
 const already = [];
 for (const task of queue.tasks) {
