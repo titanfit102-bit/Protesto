@@ -100,7 +100,7 @@ function showLedger(events){
  for(const event of events){
   const row=document.createElement("div");row.className="pilot-ledger-row";
   const flag=document.createElement("strong");
-  flag.textContent=event.event_type==="archived"?"Publikim i tërhequr":"Dosje e publikuar";
+  flag.textContent=event.event_type==="archived"?"Publikim i tërhequr":event.event_type==="published"?"Dosje e publikuar":"Ngjarje e panjohur";
   const details=document.createElement("span");
   const date=new Date(event.created_at);
   details.textContent="Dosja "+String(event.case_id).slice(0,8)+" · "+(Number.isNaN(date.getTime())?"Datë e panjohur":new Intl.DateTimeFormat("sq-AL",{dateStyle:"medium"}).format(date));
