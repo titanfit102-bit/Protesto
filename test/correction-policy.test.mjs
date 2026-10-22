@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {correctionDecisionPolicy} from "../src/server/correction-policy.mjs";
 
-const valid=()=>({case_state:"published",correction_state:"pending",author_id:"author",reviewer_id:"reviewer"});
+const valid=()=>({case_state:"published",correction_state:"pending",author_id:"author",case_author_id:"case-owner",reviewer_id:"reviewer"});
 
 test("a pending correction of a published case requires independent human review",()=>{
  const result=correctionDecisionPolicy(valid());
@@ -27,6 +27,8 @@ test("terminal correction and self-review both block another decision",()=>{
  }
  const own=correctionDecisionPolicy({...valid(),reviewer_id:"author"});
  assert.ok(own.reasons.includes("independent_reviewer_required"));
+ const caseOwner=correctionDecisionPolicy({...valid(),reviewer_id:"case-owner"});
+ assert.ok(caseOwner.reasons.includes("independent_reviewer_required"));
 });
 
 test("malformed policy context fails closed",()=>{
