@@ -51,7 +51,7 @@ jobs:
           if (!response.ok) throw new Error("Could not check last commit changes: HTTP " + response.status);
           const commit = await response.json();
           const changed = Array.isArray(commit.files) && commit.files.some(file => file.filename === "automation/opencode-approved-tasks.json");
-          appendFileSync(process.env.GITHUB_OUTPUT, "changed=" + String(changed) + "\\n");
+          appendFileSync(process.env.GITHUB_OUTPUT, "changed=" + String(changed) + "\n");
           console.log(changed ? "New approved task queue update: run OpenCode" : "No new task queue update: skip OpenCode jobs");
           NODE
 
