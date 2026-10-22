@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "base": "feat/protesto-foundation",
+  "policy": "synthetic-tests-only",
+  "maxTasksPerRun": 2,
+  "tasks": [
+    {
+      "id": "validation-edge",
+      "status": "approved",
+      "target": "test/opencode-validation-extra.test.mjs",
+      "brief": "Add at least four meaningful, deterministic edge-case tests using node:test and node:assert/strict for public exports in src/domain.mjs. Focus on title/description exact min-max boundaries, HTTPS URL credential rejection, and leap-day or past-date handling. Only synthetic data. Do not duplicate an identical existing test case. Imports must come only from node:test, node:assert/strict, ../src/domain.mjs and ../src/seed.mjs."
+    },
+    {
+      "id": "restore-edge",
+      "status": "approved",
+      "target": "test/opencode-restore-extra.test.mjs",
+      "brief": "Add at least four meaningful deterministic regression tests for restoreState and summarize in src/domain.mjs, using synthetic data. Check invalid JSON or shape falls back to independently cloned seed data, array caps 500/200/200, invalid records removed, open-versus-resolved summary counting. Review actual implementation carefully and assert its existing intentional behavior instead of guessing. Do not change production implementation. Imports only from node:test, node:assert/strict, ../src/domain.mjs and ../src/seed.mjs."
+    }
+  ]
+}
