@@ -110,8 +110,6 @@ export async function dialogueRoute({pathname,req,res,pool,user,json,fail,readJS
    return fail(res,422,"Përcakto dosjen e publikuar, titullin dhe kontekstin (35–1200 karaktere).");
   const approved=reviewedTopicCopy(body);
   if(!approved)return fail(res,422,"Kërkohet kopje publike e rishikuar dhe kontroll privatësie.");
-  const approved=reviewedTopicCopy(body);
-  if(!approved)return fail(res,422,"Kërkohet kopje publike e rishikuar dhe kontroll privatësie.");
   const count=await pool.query("SELECT count(*)::integer n FROM dialogue_topics WHERE created_by=$1 AND created_at>now()-interval '1 day'",[user.id]);
   if(count.rows[0].n>=5)return fail(res,429,"Maksimumi pesë tema të reja në ditë.");
   const result=await pool.query(
