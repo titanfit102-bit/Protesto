@@ -49,6 +49,10 @@ export function attachEvidence(article,item,{user,review,call,notice,refresh}){
       const wrapper=node("label"),input=node("input");input.type="checkbox";
       wrapper.append(input,document.createTextNode(" "+label));attestation.append(wrapper);checks[key]=input;
      }
+     const pubTitle=field("Titulli i miratuar për publik (redakto të dhëna personale)","publicTitle");
+     pubTitle.querySelector("input").value=source.title;
+     const pubUrl=field("URL publike (pa query, fragment ose identifikues privat)","publicUrl",true,"url");
+     pubUrl.querySelector("input").value=source.url;
      const controls=node("div","pilot-review-actions");
      for(const [decision,label] of [["accepted","Prano burimin"],["rejected","Refuzo burimin"]]){
       controls.append(button(label,async()=>{
@@ -56,11 +60,11 @@ export function attachEvidence(article,item,{user,review,call,notice,refresh}){
         sourceOpened:checks.sourceOpened.checked,
         privacyReviewed:checks.privacyReviewed.checked,
         publicMetadataReviewed:checks.publicMetadataReviewed.checked
-       }});notice("Vendimi u regjistrua; shqyrtimi nuk provon autenticitetin e burimit.");await reload();}
+       },publicMetadata:{title:pubTitle.querySelector("input").value,url:pubUrl.querySelector("input").value}});notice("Vendimi u regjistrua; shqyrtimi nuk provon autenticitetin e burimit.");await reload();}
        catch(e){notice(e.message,true);}
       }));
      }
-     entry.append(note,attestation,controls);
+     entry.append(note,attestation,pubTitle,pubUrl,controls);
     }
     if(review&&source.state==="accepted"&&item.author_id!==user?.id){
      const fp=node("section","pilot-fingerprint");
