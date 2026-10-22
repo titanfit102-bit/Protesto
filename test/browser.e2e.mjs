@@ -94,8 +94,12 @@ try{
  await page.click(selectCard+" .pilot-evidence summary");
  await page.waitForSelector(selectCard+" .pilot-source");
  await page.$eval(selectCard+" .pilot-source textarea",el=>el.value="Burimi testues është kontrolluar manualisht për demonstrimin.");
+ await page.$eval(selectCard+" .pilot-source .pilot-checklist input",els=>{
+  if(els.length!==3)throw Error("Three source-review checkboxes required");
+  els.forEach(el=>el.click());
+ });
  await clickText(page,selectCard+" .pilot-source","Prano burimin");
- await page.waitForFunction(s=>document.querySelector(s)?.textContent.includes("Burim i verifikuar"),{timeout:12000},selectCard+" .pilot-source small");
+ await page.waitForFunction(s=>document.querySelector(s)?.textContent.includes("Burim i shqyrtuar"),{timeout:12000},selectCard+" .pilot-source small");
  await page.$eval(selectCard+' > textarea.review-note',el=>el.value="Dosja demonstrative u kontrollua sipas procedurës dhe mund të publikohet.");
  await page.$$eval(selectCard+" .pilot-checklist input",els=>els.forEach(x=>x.checked=true));
  await clickText(page,selectCard,"Publiko pas verifikimit");
