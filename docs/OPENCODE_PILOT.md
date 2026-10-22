@@ -29,3 +29,9 @@ Next steps require an explicitly authorized coding task and a tightly restricted
 **Important:** OpenCode comment commands on GitHub normally need a default-branch workflow with appropriate tokens. This pilot deliberately avoids `main` and uses a read-only PR-triggered workflow instead; comment-triggered development and unattended multi-task orchestration are not enabled.
 
 **Safety:** No real user data, political preference tracking, accusations, public civic intake, or production deployment in this prototype.
+
+## Phase C — guarded coding queue (VERIFIED 2026-10-22)
+
+The prior header "NOT YET ENABLED" above is historical; this update supersedes it for **bounded, synthetic** work. The original test-only queue created [Draft PR #7](https://github.com/titanfit102-bit/Protesto/pull/7). The guarded V2 queue then generated a new **pure dialogue aggregate statistics module** and native tests, independently checked by [Actions #39768946834](https://github.com/titanfit102-bit/Protesto/actions/runs/39768946834), and published only [Draft PR #9](https://github.com/titanfit102-bit/Protesto/pull/9). No merges, deployments or existing application edits.
+
+Current implementation: tools/opencode-real-runner.mjs, tools/opencode-real-publish.mjs and .github/workflows/opencode-approved-queue.yml. Full operating manual and limits: docs/OPENCODE_TASK_QUEUE.md.

@@ -55,3 +55,6 @@ In [run #39670591638](https://github.com/titanfit102-bit/Protesto/actions/runs/3
 
 ## Descriptive dialogue export, October 22, 2026
 The public dialogue report includes only closed-topic aggregates with >=10 respondents, and filters out cases subsequently archived. Unit/integration checks plus browser smoke passed on the implementation revision ([run #39688457772](https://github.com/titanfit102-bit/Protesto/actions/runs/39688457772)). This does not make it a representative survey, a consensus across opinion clusters, a general civic mandate, or a legally approved sensitive-data program.
+
+## AI-assisted development gate (2026-10-22)
+Only bounded synthetic-test tasks and newly created deterministic pure modules are delegated to OpenCode under the guarded queue on PR #3. Each result requires immutable task brief, exact file allowlist, SHA-256 artifact verification, independent CI, draft PR into feat/protesto-foundation, human architectural/security review, and separate owner approval for integration. Passing generator CI is not an authorization to ship. PR #7 and PR #9 are evidence of task execution, **not** merged product features.

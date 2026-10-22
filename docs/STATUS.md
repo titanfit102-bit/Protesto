@@ -82,3 +82,12 @@ Prioritize meaningful release blockers rather than counting extra features as co
 - Integration tests ensure open topics, sub-threshold statements and cases subsequently archived are excluded. No private participant identities are exported.
 - This is **not** an AI report, PCA analysis, political targeting mechanism or statistical proof of agreement across demographic groups. It is a transparent descriptive tally for consenting pilot participants.
 - [GitHub Actions run #39688457772](https://github.com/titanfit102-bit/Protesto/actions/runs/39688457772) completed its Node, migration, Chromium, audit and encrypted recovery steps successfully on the tested commit. The final documentation-only commit should have its own CI status checked.
+
+## OpenCode orchestration milestone — 2026-10-22
+
+OpenCode+GitHub Actions now supports a **bounded, persistent V2 task backlog** on experiment/opencode-pilot (controller PR #3). Only a verified free model is allowed. Agent works without GitHub write credentials; separate job checks artifacts and creates isolated draft PRs into feat/protesto-foundation. User may submit new tasks while one is active, without cancellation. Queue updates are snapshot-based and existing per-task branches avoid regeneration.
+
+- Pilot proof: OpenCode-generated filter regression tests [Draft PR #7](https://github.com/titanfit102-bit/Protesto/pull/7).
+- Actual source-code proof: privacy-limited dialogue summary pure module and test suite [Draft PR #9](https://github.com/titanfit102-bit/Protesto/pull/9), [Actions #39768946834](https://github.com/titanfit102-bit/Protesto/actions/runs/39768946834) green.
+- Both PRs remain UNMERGED and require architectural/code review before integration. Generated module is **not yet wired into the live pilot interface**.
+- GitHub backlog can hold historical and waiting tasks, but standard PR concurrency and a maximum of 4 new tasks per run prevent a guarantee of infinite autonomous processing. See docs/OPENCODE_TASK_QUEUE.md and issue #8. No production data or model API keys used.

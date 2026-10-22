@@ -1,42 +1,44 @@
-# Protesto OpenCode — approved sequential task queue pilot
+# Protesto — OpenCode + GitHub Actions, guarded development queue V2
 
-## Isolation and scope
-Repository: `titanfit102-bit/Protesto` (public).
-Controller PR: [#3](https://github.com/titanfit102-bit/Protesto/pull/3), branch `experiment/opencode-pilot`, target `feat/protesto-foundation`.
-Do not merge controller PR or publish the civic platform as part of this experiment.
+**Scope:** public code repository `titanfit102-bit/Protesto`. This is an experimental controller on `experiment/opencode-pilot` (draft PR #3), targeted only at the existing development branch `feat/protesto-foundation`. Never write `main`, deploy Production, or merge without explicit owner approval.
 
-## The pilot's task queue
-`automation/opencode-approved-tasks.json` holds at most two **individually pre-authorized** synthetic-data test tasks per pilot run. The final verified pilot used a single `filter-final-e2e` task.
-Only the repository owner's experiment PR can activate this workflow. A changed queue alone does not constitute authority for changing production files.
-Changing task entries requires a separate explicit task authorization.
+## Roles and source of truth
 
-## Execution protocol
-1. On an owner-authored PR update, a lightweight guard checks whether the **latest commit** changed `automation/opencode-approved-tasks.json`. Only an approved queue change can start AI generation; ordinary documentation/workflow edits do not.
-2. An isolated, read-only-token generator installs OpenCode, chooses an available `opencode/*-free` model, and runs tasks **one after the other**, each with a narrow file-write allowlist.
-3. Only new `test/opencode-<task-id>.test.mjs` files are permitted. No edits to existing tracked files, deployment, shell/network access by the agent, real data, or provider credentials.
-4. The generator independently checks the output, installs test dependencies without a lockfile change, migrates a disposable PostgreSQL database, and runs `npm run verify` after **each** task.
-5. Generated sources, transcripts, hashes and test logs are uploaded as a 7-day Actions artifact, even if a task fails. The generator's `GITHUB_TOKEN` has only contents:read.
-6. A **separate job** with `contents:write` and `pull-requests:write` verifies artifact hashes and target branch SHA, creates one isolated branch for each task, writes only its test file, and attempts to open **draft PRs** against `feat/protesto-foundation`.
-7. Stable per-task branch names make reruns idempotent. No automatic merge, production deployment, approval, release, or changes to main.
+- **User:** assigns feature goals and approves eventual merge/publication separately.
+- **ChatGPT architect:** reviews backlog, dependencies, data privacy, acceptance criteria, source of truth, generated PRs and tests; appends approved tasks to Git-tracked `automation/opencode-approved-tasks.json`.
+- **OpenCode:** writes only the explicitly allowlisted new files in a temporary runner, using one dynamically detected free `opencode/*-free` model. Model availability may change; do not enable paid API keys without explicit authorization.
+- **GitHub Actions:** runs OpenCode without GitHub write credentials, checks file paths/allowed imports/safety rules, runs project CI on disposable synthetic PostgreSQL, then hands verified artifacts and SHA-256 hashes to a **separate privileged publisher**.
+- **Publisher:** refuses any mismatch or stale base branch and creates **draft PRs** into `feat/protesto-foundation`. It cannot merge or deploy. `GITHUB_TOKEN`-authored PRs may not trigger standard PR Actions automatically; the generator CI is the initial independent evidence.
+- **GitHub Issue #8:** architectural milestone and limitations, **not** a replacement for the Git task queue.
 
-## Permissions / possible blocker
-GitHub may forbid Actions from creating Pull Requests until the repository owner enables:
-`Settings -> Actions -> General -> Workflow permissions -> Allow GitHub Actions to create and approve pull requests`.
-Enable only if comfortable with repository-wide implications; **do not change this setting silently**.
-If blocked, the generator artifact still contains the verified code. The publisher may have created a test-only branch before PR creation was denied. No automatic retry to replace an existing branch.
-The GitHub-generated PR may not trigger other Actions workflows automatically (events made with `GITHUB_TOKEN` are suppressed). The isolated generator is the verification evidence. Human review and additional CI are required before merging.
+## Durable queue contract
 
-## Current operational boundary
-This is a pilot, not a general unsupervised agent system or proof of production readiness. The queue currently contains one deliberately safe test task; it is not a durable multi-user backlog. Extending it to backend, moderation, auth, security, personal data, or deployments requires stronger policy controls and explicit human authorization.
+- V2 `automation/opencode-approved-tasks.json` is the versioned, ordered source of approved tasks, limited to at most 200 historical task records. Do **not** remove or rewrite active/historical tasks while a job is running.
+- Each record has stable `id`, `status` (`approved` / `paused`), `kind` (`tests` or `pure-module`), and a precise, synthetic-data-only `brief` (100–1800 characters).
+- A task ID maps to a stable output branch `opencode/pilot-<id>`. An existing branch is a durable **do-not-republish** marker; check its associated PR before considering it completed or mergeable.
+- A run takes an **immutable commit snapshot** of the controller and scans the full queue for approved tasks lacking their own branch, not merely latest-commit diff. GitHub can replace a queued PR workflow event during rapid edits; the newest snapshot still includes all appended approved tasks.
+- `concurrency.cancel-in-progress: false` prevents stopping the active job; GitHub permits only one running and one queued workflow per concurrency group. The system is not a 24/7 worker.
+- One run executes at most **four new tasks sequentially** (55-minute cap). Tasks beyond four remain in Git; they require a later owner-authored controller update / run trigger. This is a durable **backlog**, not guaranteed unbounded autonomous draining.
+- Failed generation/verification does **not** publish code. The task is left in Git without a published branch and can be retried on a later authorized queue/controller update. Completed GitHub runs/artifacts are retained per workflow policy.
 
-## How to inspect results
-From controller PR #3 -> Checks -> `OpenCode approved task queue`. Check the run summary, artifact `Protesto-OpenCode-Queue-Proposals`, individual task verification logs and links to each draft PR. Treat agent claims as unverified unless validated by independent test output.
+## Allowed scope of autonomous coding (V2)
 
-## 2026-10-22 — cleanup of historical pilot workflows
-- Kept `.github/workflows/opencode-approved-queue.yml` as the only automatically triggered **OpenCode** task workflow on `experiment/opencode-pilot`.
-- Preserved `.github/workflows/verify.yml` (the independent Protesto verification workflow).
-- Converted four obsolete workflows to `workflow_dispatch` without `pull_request` triggers: `opencode-smoke.yml`, `opencode-free-analysis.yml`, `opencode-coding-pilot.yml` and `opencode-pr-permission-check.yml`.
-- Historic run logs, artifacts, and draft PRs were not deleted. A red symbol on a **past** run stays visible and does not imply the latest controller is broken.
-- Because GitHub PR `paths` checks the **cumulative PR diff**, the controller now has a cheap `detect-approved-queue-change` gate. Agent generation only starts when the latest head commit changes the approved task JSON. No ongoing controller job is intentionally cancelled by future PR synchronizations (`cancel-in-progress: false`).
-- GitHub concurrency still does **not** provide a lossless, persistent backlog when many updates arrive; do not treat this prototype as an unattended queue of arbitrary new tasks.
-- Changes affect only `experiment/opencode-pilot`, not `main`, `feat/protesto-foundation`, deployment, or product logic. Full end-to-end proof remains [Actions #39764186471](https://github.com/titanfit102-bit/Protesto/actions/runs/39764186471) with [Draft PR #7](https://github.com/titanfit102-bit/Protesto/pull/7).
+`tests`: create only `test/opencode-<id>.test.mjs`, using Node native tests and synthetic data.
+
+`pure-module`: create only `src/opencode-<id>.mjs` **and** `test/opencode-<id>.test.mjs`. This is real, reviewable source code, but deliberately **not yet wired into the application**. Integrating it into existing app source, authentication, editorial verification, network services or DB migrations requires a separately reviewed task/gate.
+
+Agent cannot run shell commands, call network services, read secrets or GitHub credentials, change existing tracked files, modify project deployments, or communicate with external live civic records. Allowed new source code is deterministic and side-effect-free; no I/O, process execution, dynamic imports or third-party dependencies. OpenCode must not copy AGPL-licensed Polis code. The generator checks for suspicious constructs, import paths and unexpected workspace modifications and then independently runs `npm run verify` (and Chromium plus encrypted restore for pure module tasks).
+
+Security regex and tests are defense in depth, **not** a proof of complete supply-chain security; require human architectural/security review of every generated PR before integration.
+
+## Verification
+
+- Earlier free-model test pilot: [run #39764186471](https://github.com/titanfit102-bit/Protesto/actions/runs/39764186471), [draft PR #7](https://github.com/titanfit102-bit/Protesto/pull/7).
+- First guarded real source task: `dialogue-report-metrics`, completed in [run #39768946834](https://github.com/titanfit102-bit/Protesto/actions/runs/39768946834), [draft PR #9](https://github.com/titanfit102-bit/Protesto/pull/9). It created only an independent pure aggregate module and its tests, with no main/Production changes.
+- Detector resilience revision: [run #39769411010](https://github.com/titanfit102-bit/Protesto/actions/runs/39769411010) succeeded after updating the durable-backlog scan; existing draft branches are not regenerated.
+
+## Practical operation from this conversation
+
+User may give more tasks before current OpenCode run finishes. Architect assigns immutable IDs, checks dependencies, appends approved in-scope entries to the controller branch and tracks the triggering run/PR. Existing running job continues; a later run processes the most recent approved backlog snapshot, skips previously published branches, and leaves any over the per-run cap in Git. Never pretend work continues after runs complete without a future trigger or scheduled mechanism.
+
+Next architectural phase, **not enabled**: supervised changes to existing application modules, requiring file-level approvals, staging CI, broader threat model, manual PR reviews, contract tests, rollback gates and stricter secret isolation. No automatic merge, website deployment, real-user data, political persuasion targeting or model-provider charges.

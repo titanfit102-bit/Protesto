@@ -125,3 +125,9 @@ The pilot now requires a distinct secret PROTESTO_DIALOGUE_SECRET (32+ character
 ### Descriptive dialogue results
 
 The private pilot also offers a public summary and download of **finalized aggregate** responses through GET /api/dialogue/report (JSON, format protesto-dialogue-aggregates/1). It excludes open discussions, sub-threshold statements and topics whose civic cases have been withdrawn, and never exports raw voter keys or account IDs. Treat it as descriptive participation within this pilot, not verified consensus across opinion groups or a population poll.
+
+## OpenCode coding orchestration (guarded experiment)
+
+The project now includes a **separate** OpenCode + GitHub Actions controller at `experiment/opencode-pilot` (draft PR #3). It preserves an ordered backlog in `automation/opencode-approved-tasks.json`. The architect can append approved work while an OpenCode job is running; the workflow is snapshot-pinned, never cancels current work, independently verifies generated files, and opens draft PRs without merging. Scope is limited to synthetic tests and additive pure modules with tests. It cannot edit existing application/auth/database modules autonomously.
+
+Verified examples: [test PR #7](https://github.com/titanfit102-bit/Protesto/pull/7) and [first real module PR #9](https://github.com/titanfit102-bit/Protesto/pull/9). See [operating manual](docs/OPENCODE_TASK_QUEUE.md) and [tracking issue #8](https://github.com/titanfit102-bit/Protesto/issues/8) for reliability limitations and the approval process. No main merge, production deployment or metered provider configuration is authorized.

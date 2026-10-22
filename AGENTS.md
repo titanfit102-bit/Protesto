@@ -27,5 +27,5 @@ Scope: **only** titanfit102-bit/Protesto. Treat this repository as a politically
 - Do not copy third-party source without license review and compliance, including Polis AGPLv3.
 - Public deployment, production secrets, real civic submissions, and merge to main require separate owner approval.
 
-## Pilot objective
-Test that OpenCode can run in a GitHub-hosted CI environment, then later evaluate a narrowly scoped read-only code review only after an AI provider is explicitly configured. The initial smoke test deliberately does **not** call any AI model.
+## Current authorized agent operating mode (2026-10-22)
+The earlier smoke-only objective has been completed. The controller in experiment/opencode-pilot (PR #3) now accepts an append-only, snapshot-pinned, bounded task queue for synthetic **unit tests or new pure modules plus their tests only**. The agent may create exclusively test/opencode-<task-id>.test.mjs and, for a pure-module task, src/opencode-<task-id>.mjs. No edits to existing source, migrations, auth, external services, privacy controls, workflows or policies. Generation and GitHub publication run in separately privileged jobs, with independent CI and draft PR review required. Never merge or deploy autonomously. See docs/OPENCODE_TASK_QUEUE.md for exact conditions and incomplete-run retry limitations.
