@@ -12,8 +12,9 @@ export function correctionDecisionPolicy(input) {
   if (input.case_state !== "published") reasons.push("case_not_published");
   if (input.correction_state !== "pending") reasons.push("already_decided");
   if (typeof input.author_id !== "string" || !input.author_id ||
+      typeof input.case_author_id !== "string" || !input.case_author_id ||
       typeof input.reviewer_id !== "string" || !input.reviewer_id ||
-      input.author_id === input.reviewer_id) {
+      input.author_id === input.reviewer_id || input.case_author_id === input.reviewer_id) {
     reasons.push("independent_reviewer_required");
   }
   return {
