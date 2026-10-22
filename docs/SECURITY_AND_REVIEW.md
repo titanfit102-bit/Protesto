@@ -39,3 +39,6 @@ Before processing live political or highly sensitive user information, complete 
 
 ## Atomic abuse defenses and session revocation — development tranche
 Case creation uses a shared PostgreSQL quota keyed with HMAC for 10 attempts/hour/user, replacing a race-prone count check. Authenticated users can explicitly invalidate **all** their sessions at `POST /api/me/sessions/revoke-all` (same-origin anti-CSRF required). This intentionally includes the current device, clears the cookie and returns a count. These controls reduce simple automation and provide containment; they do not replace IP reputation, trusted account recovery, MFA enrollment policy or external security assessment.
+
+## Public URL and browser containment gate
+Public external URLs now reject query/fragment tokens, userinfo, local hosts and known private IP destinations; accepted internal source links remain privately reviewable. This is **not** a complete phishing URL scanner, DNS-rebinding defense or a proof of source authenticity. The pilot API refuses to expose accepted sources for legacy published cases missing an approved public title, and returns only redacted public copy. COOP/CORP and form-action CSP were added. Automated accessibility checks now detect broken ARIA labelling references, but WCAG and manual assistive-technology audits remain OPEN.

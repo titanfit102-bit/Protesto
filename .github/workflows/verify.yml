@@ -1,7 +1,7 @@
 name: Protesto verification
 on:
   pull_request:
-    branches: [main, feat/protesto-foundation, feat/protesto-pilot-integration-candidate, feat/protesto-source-disclosure-hardening, feat/protesto-source-fingerprint-attestations, feat/protesto-publication-privacy-guard, feat/protesto-document-digest-compare, feat/protesto-reviewer-totp-mfa, feat/protesto-atomic-abuse-session-revoke]
+    branches: [main, feat/protesto-foundation, feat/protesto-pilot-integration-candidate, feat/protesto-source-disclosure-hardening, feat/protesto-source-fingerprint-attestations, feat/protesto-publication-privacy-guard, feat/protesto-document-digest-compare, feat/protesto-reviewer-totp-mfa, feat/protesto-atomic-abuse-session-revoke, feat/protesto-reviewed-citizen-replies]
   workflow_dispatch:
 permissions:
   contents: read
