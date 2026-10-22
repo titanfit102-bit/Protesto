@@ -1,11 +1,8 @@
 name: OpenCode free-model analysis (read-only)
 
+# Historical experiment kept for audit; no automatic PR-triggered runs.
 on:
-  pull_request:
-    branches:
-      - feat/protesto-foundation
-    paths:
-      - .github/workflows/opencode-free-analysis.yml
+  workflow_dispatch:
 
 permissions:
   contents: read
