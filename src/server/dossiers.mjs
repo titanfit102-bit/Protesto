@@ -1,3 +1,4 @@
+import {cancelOpenDialogueTopics} from "./dialogue-cancellation.mjs";
 import {randomUUID} from "node:crypto";
 import {cleanText, validateSourceUrl} from "../domain.mjs";
 import {canReview} from "./security.mjs";
@@ -238,6 +239,7 @@ export async function dossierRoute({pathname,req,res,pool,user,json,fail,readJSO
       if(decision==="accepted"){
         const c=await client.query("UPDATE civic_cases SET state='archived',reviewed_at=now(),reviewed_by=$1 WHERE id=$2 AND state='published' RETURNING id",[user.id,r.rows[0].case_id]);
         if(!c.rowCount){await client.query("ROLLBACK");return fail(res,409,"Dosja nuk mund të tërhiqet.");}
+        await cancelOpenDialogueTopics(client,{caseId:c.rows[0].id,actorId:user.id});
         await client.query("INSERT INTO retraction_history(id,case_id,reviewer_id,note) VALUES($1,$2,$3,$4)",[randomUUID(),c.rows[0].id,user.id,note]);
       }
       await client.query("INSERT INTO audit_entries(id,actor_id,action,object_type,object_id) VALUES($1,$2,$3,'correction',$4)",[randomUUID(),user.id,"correction."+decision,match[1]]);
