@@ -1,84 +1,54 @@
-# PROTESTO — CURRENT VERIFIED STATUS
+# PROTESTO — CURRENT_STATE / VERIFIED CHECKPOINT
 
-**Updated:** 2026-10-21  
-**Repository:** titanfit102-bit/Protesto — **PUBLIC repository**, private-pilot application (not deployed)  
-**Working branch:** feat/protesto-foundation  
-**Pull request:** #1, DRAFT, unmerged. Main branch unchanged.
+**Checkpoint date:** 2026-10-23  
+**Canonical continuity branch:** [`docs/protesto-continuity`](https://github.com/titanfit102-bit/Protesto/tree/docs/protesto-continuity)  
+**Full project handoff:** [`docs/MASTER_HANDOFF.md`](./MASTER_HANDOFF.md)  
+**Repository:** https://github.com/titanfit102-bit/Protesto  
+**Record type:** short recovery snapshot. **Do not mistake this documentation branch for the live application release or tested source SHA.**
 
-## Current CI evidence
+## Current verified source-of-truth
 
-- Last complete green run before expanded full dependency audit:
-  [GitHub Actions #39666863606](https://github.com/titanfit102-bit/Protesto/actions/runs/39666863606)
-  for commit \`96b89f6a6f561072139498fbe7bccfe34cecafe2\`.
-- Checks that passed: all 16 Node tests, repeatable PostgreSQL migrations, Chromium pilot and demo E2E including accessibility smoke and keyboard focus, JavaScript syntax, runtime dependency audit at high severity, AES-256-GCM encrypted archive and isolated PostgreSQL restore with matching data.
-- The earlier runner problem is **resolved** and recorded as [Issue #2](https://github.com/titanfit102-bit/Protesto/issues/2) (closed).
-- **Full dependency security audit also passed**: [Actions run #39667630075](https://github.com/titanfit102-bit/Protesto/actions/runs/39667630075), commit `743f29c65a3d650f2bf3df1f6269e94ec2e87453`; Chromium and encrypted PostgreSQL restore also passed on that commit. This followed upgrading `puppeteer-core` to `^25.15.0` after finding 7 high-severity development dependency advisories in an earlier audit run.
-- Historical failed runs remain in GitHub for audit purposes; they do **not** have to be rewritten as passed. Later green checks supersede earlier failures for the same tested behavior.
-
-## Implemented
-
-- Albanian browser-only civic demo with fictional source data.
-- Separate PostgreSQL private pilot with manually provisioned accounts, roles, sessions, CSRF protection, cases, sources, corrections, initiatives and peaceful gatherings.
-- Editorial case review and audit trail, independently accepted source URL required before publication.
-- Archival/retraction with private audit notes and minimal public status ledger.
-- GDPR-oriented own-data export as an early feature, **not** a complete legal process.
-- Encrypted PostgreSQL pilot backup, integrity verification, guarded restore into empty test databases.
-- Automated tests for logic, API authorization/integration, browser flows, simple accessibility heuristics, backup and source schema.
-
-## Four distinct maturity assessments
-
-| Dimension | Evidence-based assessment |
+| Item | Latest verified state |
 |---|---|
-| Implementation | Working demo and private pilot; many target platform modules remain absent |
-| Verification | Core test flows verified in CI; accessibility smoke is not a comprehensive accessibility audit |
-| Release readiness | **BLOCKED** for public production |
-| Professional maturity | Modular structure and documented gates; operations, abuse prevention, compliance and editorial governance unfinished |
+| Development candidate | [Draft PR #58](https://github.com/titanfit102-bit/Protesto/pull/58), **open / unmerged**, based on PR #57 |
+| Application code branch | `feat/protesto-utf8-url-ci-hardening` |
+| **Verified code SHA** | `4aec08ac16207af4c36ee0e1f0f84e5f2c0c67d5` |
+| CI | [Run #39980887111](https://github.com/titanfit102-bit/Protesto/actions/runs/39980887111): **completed / success** at exact code SHA |
+| Node test result | **64 passed / 0 failed** (fetched job logs for that CI run) |
+| Other successful CI stages | dependency audit (0 reported vulnerabilities at run time); migrations/replay; JavaScript checks; Chromium E2E/accessibility smoke; offline preview; synthetic encrypted PostgreSQL restore |
+| Default branch | `main` at `1e34611bdb48195e7deadb8e33d26ddac3338c4d`, initial README only; **unchanged/unprotected** at the checkpoint |
+| GitHub code visibility | **PUBLIC repository**, but **NO public application deployment** |
+| Release gate | **NO-GO / P0 BLOCKED** for Production and collection of real sensitive civic/political data |
 
-## P0 / P1 outstanding
+**Continuity change:** `docs/protesto-continuity` was branched from the tested PR #58 code SHA above. Subsequent docs-only commits on this branch are **not newly tested application code**. To know the latest documentation commit, inspect the live HEAD of this branch in GitHub.
 
-**P0 (required before public use):** independent security and accessibility audits; MFA/abuse defense and account lifecycle; authoritative source provenance, redaction and formal right-of-reply/appeals; privacy and legal review; backup retention/offsite storage with operational restore drill; production monitoring/incident response and explicitly approved public deployment.
+## Work completed (VERIFIED for documented synthetic scope)
 
-**P1 (product expansion):** official information requests and institutional response tracking; legitimate evidence ingestion; source-cited AI with human review; responsible privacy-safe maps; private pilot outcomes and governance.
+- Browser-only fictional Albanian demo and a separate Node.js/PostgreSQL 16 private pilot, with 16 DB migrations.
+- Authenticated case submission, role-separated manual source review, approved redacted publication/retraction and audit.
+- Initiatives and peaceful gatherings, corrections, independent appeals, moderated citizen responses and public ledger.
+- Original civic dialogue with approved topic/statement copies and private-threshold final aggregates; no population-representative polling.
+- Session/CSRF controls, shared HMAC-keyed throttling, optional reviewer TOTP, bounded own-data export.
+- Synthetic encrypted backup/restore and fail-closed release checks.
+- **PR #58**: UTF-8 chunk-safe JSON decoder, normalized public host filter, branch-glob CI coverage and regression tests; checked via exact-SHA CI.
 
-## Execution boundary
+## Important open risks
 
-No merge into main, public application deployment, expenses or changes to other repositories occurred in these commits. Repository **code visibility is currently public**, which is different from deploying a working public website. Do not commit secrets or sensitive documents.
+**P0 Production blockers:** specialist security/privacy/legal review (DPIA where applicable); formal evidence custody/redaction and neutral editorial right-of-reply; institutional identity verification; mandatory appropriate MFA/recovery; hosted isolated staging; offsite backups/monitoring/incident drills; manual accessibility evaluation; owner approval for release. No Production authorization exists.
 
-## Next engineering tranche
+**Next technical gaps (P1):** missing committed npm lockfile/reproducible installs; unprotected `main`; large stacked Draft PR chain / explicit safe integration plan; deeper validation of retention process isolation and adversarial API/race/privacy coverage. New institutional-response tracking, official provenance integrations, AI evidence assistance and public map remain planned, not implemented.
 
-Prioritize meaningful release blockers rather than counting extra features as completion: improved identity and anti-abuse, accessible UX audit, formal correction/appeals workflow, source provenance, and real operational recovery policy. External legal judgment, human content verification and a genuine production environment cannot be certified by GitHub Actions alone.
+## Exact next action
 
-## Development tranche — independent appeals and shared throttling (2026-10-21)
+1. **READ-ONLY:** verify GitHub PR #58 or any newer PR, HEAD commit, CI runs and current app code; reconcile changes after this checkpoint.
+2. Audit npm dependency lockfile/reproducibility and the `npm ci` migration; document concrete patch, tests and possible CI implications.
+3. Do **not** change application files, `main`, PR bases or Production without separate explicit permission. Discuss branch protection and retention hardening as subsequent scoped changes.
+4. After any material **verified** project change, update this file (short delta) and `MASTER_HANDOFF.md` if long-term context changed, **only on `docs/protesto-continuity`** under the standing authorization. Verify read-back before claiming the checkpoint was saved.
 
-- Added a one-time citizen appeal for a rejected correction, using a distinct second reviewer. The original editorial rejection remains on record. Acceptance archives a still-published case and records retraction plus audit in one transaction; rejection preserves the prior publication.
-- Appeals are private to the submitter and qualified reviewers; the original correction reviewer, appeal author, and affected case author may not judge the appeal.
-- Added PostgreSQL-backed, atomic, cross-instance rate limiting for login by remote network address (12 / 15 minutes), login by normalized account (15 / 15 minutes), and authenticated write attempts (120 / hour). Keys are HMAC-SHA256; the private pilot requires a separate stable 32+ character PROTESTO_RATE_LIMIT_SECRET.
-- New migrations: 005_correction_appeals.sql and 006_shared_rate_limits.sql. Existing schema is not altered destructively.
-- **Verified:** [GitHub Actions run #39670591638](https://github.com/titanfit102-bit/Protesto/actions/runs/39670591638), commit `97d827425740247688b9631612fd6b87cb758484`: 17 Node test cases passed, PostgreSQL integration includes acceptance/refusal and independent review, Chromium smoke passed, dependency audit passed, migration replay passed, encrypted Postgres restoration passed.
-- Current restrictions: no public application deployment or merge. Rate limiting alone is not full abuse prevention. Appeal process does not implement a legally certified remedy, external arbitrator, notification deadline or independent governance.
+## Preservation of historical status
 
-## Next hardening
-1. Revocable device sessions and password reset/MFA with audited operational process.
-2. Formal public correction history, independent moderator SOP, evidence redaction and appeal escalation.
-3. End-to-end browser tests specifically for the appeal UI and abusive traffic conditions.
-4. Backup retention policy, verified offsite storage, monitoring, legal/privacy review and private pilot.
+The previous `docs/STATUS.md` contained valuable 2026-10-21/22 development history but had an obsolete opening claim that PR #1 was current. Its **full original text** remains retrievable at the immutable, exact [pre-continuity snapshot](https://github.com/titanfit102-bit/Protesto/blob/4aec08ac16207af4c36ee0e1f0f84e5f2c0c67d5/docs/STATUS.md); history is not deleted from Git. ADRs, release matrices and CI history remain in existing dedicated docs, linked from [MASTER_HANDOFF](./MASTER_HANDOFF.md).
 
+## Continuity rules (DECIDED)
 
-## 2026-10-22 — Polis-inspired Dialogu Qytetar, phase 1
-
-**Implemented:** original civic dialogue module linked to published civic cases; reviewer-created neutral topics, citizen statements pending independent moderation, three-way responses, explicit privacy acknowledgment, no live aggregates, results only after topic close and per-statement minimum of ten participants, and deletion of all active individual vote rows in the same transaction as finalization. No statistical opinion clusters, targeting or AI are used.
-
-**Technical source:** db/007_civic_dialogue.sql, src/server/dialogue.mjs, src/pilot-dialogue.mjs, test/dialogue.integration.test.mjs, test/dialogue.browser.e2e.mjs and docs/POLIS_DESIGN_ADAPTATION.md. Polis AGPL code was not copied.
-
-**Verification:** [GitHub Actions #39687784143](https://github.com/titanfit102-bit/Protesto/actions/runs/39687784143) passed **18/18 Node tests**, PostgreSQL migration/replay, Chromium original and dialogue browser E2E, security audit, JS checks and encrypted PostgreSQL restore.
-
-**Limitations:** a ten-response threshold and finalized-only tally do not confer anonymity or statistically representative polling. Vote identifiers are keyed pseudonyms linked to accounts by the server's secret; vote records may survive on earlier backup copies. Critical open items: processing lawful basis/DPIA, informed participant notices, pseudonym and backup retention, countering fake accounts, editorial disputes, anti-harassment and unbiased discussion rules, independent threat assessment, manual accessibility testing and real user acceptance.
-
-**Next phases:** structured, independently reviewed institutional-response tracking plus source-cited aggregate reporting; only later consider any privacy-audited opinion clustering or human-reviewed AI. Never turn dialogue into individual political persuasion or targeting.
-
-
-## Additional dialogue reporting (2026-10-22)
-- Added descriptive public report GET /api/dialogue/report and a visible downloadable JSON report for finalized eligible statements, with self-selection caveats and links to the topic and source accepted by reviewers.
-- Integration tests ensure open topics, sub-threshold statements and cases subsequently archived are excluded. No private participant identities are exported.
-- This is **not** an AI report, PCA analysis, political targeting mechanism or statistical proof of agreement across demographic groups. It is a transparent descriptive tally for consenting pilot participants.
-- [GitHub Actions run #39688457772](https://github.com/titanfit102-bit/Protesto/actions/runs/39688457772) completed its Node, migration, Chromium, audit and encrypted recovery steps successfully on the tested commit. The final documentation-only commit should have its own CI status checked.
+The owner authorized ongoing edits **only** to `docs/STATUS.md` and `docs/MASTER_HANDOFF.md` **only** on `docs/protesto-continuity`, after material verified changes. No authorization for code changes, other documents, branch merges, deploy, public data, spending or other projects. Do not fabricate inaccessible chat history, completed tests or percentages. If a write fails, state **HANDOFF NOT SAVED** and the exact resume steps. On restarting in a new chat: read this branch's STATUS first, then MASTER_HANDOFF, then reverify current GitHub and continue development at the exact next authorized step.
