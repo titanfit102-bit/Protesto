@@ -86,7 +86,7 @@ export async function appealRoute({pathname,req,res,pool,user,json,fail,readJSON
    if(!updated.rowCount){await client.query("ROLLBACK");return fail(res,409,"Dosja nuk është më e publikuar; nuk mund të miratohet tërheqja.");}
    await client.query(
     "INSERT INTO retraction_history(id,case_id,reviewer_id,note) VALUES($1,$2,$3,$4)",
-    [randomUUID(),appeal.case_id,user.id,"Apelimi i pranuar: "+note]
+    [randomUUID(),appeal.case_id,user.id,note]
    );
   }
   await client.query("UPDATE correction_appeals SET state=$1,reviewer_id=$2,review_note=$3,reviewed_at=now() WHERE id=$4",[decision,user.id,note,match[1]]);
