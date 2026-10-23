@@ -126,6 +126,29 @@ The **continuity protocol** itself is an owner decision dated 2026-10-23: two do
 
 **UNKNOWN / do not infer:** full inaccessible chat transcripts; any undocumented historical decisions; penetration test, certified WCAG review, real institutional partnerships, live pilot users, approved DPIA, offsite backups, Production deployment, legal compliance or real civic issue resolution.
 
+### Retention/PostgreSQL operations source audit — 2026-10-23 (READ-ONLY)
+
+**Scope:** examined `src/ops/retention.mjs`, `src/ops/staging-boundary.mjs`, `tools/privacy-retention.mjs`, `tools/staging-gate.mjs`, `tools/migrate.mjs`, `src/server/rate-limits.mjs`, `src/server/security.mjs`, schema for `sessions`/`request_rate_limits`, `test/operational-retention.test.mjs`, Actions workflow, `tools/backup.mjs`, `tools/restore.mjs` and `test/backup.integration.mjs`. Source was latest PR #59 exact SHA `b1c52f0e8074f8b73d0c8dd80f72d2953b4bdacc`, with previously verified success on [CI #39984965787](https://github.com/titanfit102-bit/Protesto/actions/runs/39984965787). Inspection only; **did not execute deletion/restoration or write application code**.
+
+**Positive mechanisms already implemented / limited verification:**
+- Default retention CLI calls `expiredOperationalCounts` and reports counts only; `--apply` requires a synthetic staging predicate and explicit `PROTESTO_RETENTION_APPROVED=1`.
+- Destructive SQL explicitly targets expired rows (by `expires_at<=now()`) **only** in `sessions` and `request_rate_limits`, in a transaction, with row locks, `SKIP LOCKED` and 1–1000 row bound per table. There is no generic civic-content erase command here.
+- Synthetic `test/operational-retention.test.mjs` checks rejected flag/environment paths, read-only counts, expired vs live records and preservation of a synthetic `civic_cases` record. `test/backup.integration.mjs` exercises separate encrypted backup/restore safety on disposable CI; this is not operational data lifecycle certification.
+
+**New open security/design finding (P1 development, P0 before real-data operations):**
+- `isolatedStagingBoundary(env)` trusts caller-supplied environment strings such as `GITHUB_ACTIONS`, staging flags and `DATABASE_URL` at `127.0.0.1:5432/protesto`, without independently verifying actual database server identity or network isolation. A tunnel or forward can present a non-disposable endpoint at that address. It rejects only `NODE_ENV === "production"`, not every other non-test environment.
+- The exported function `purgeExpiredOperationalRows(pool,{env})` takes **a PostgreSQL connection pool separately from the environment being validated**, with no identity match proof between actual connected database and checked `env.DATABASE_URL`. No direct live exploit was executed or observed; the risk is demonstrated by function/API structure.
+- A superuser `postgres` account is used for the CI fixture; the inspected source does not establish a separate least-privilege retention role or database-level isolation attestation for mutating runs. Do not claim production DB privileges have been audited or that these flags are strong production authorization.
+
+**Proposed correction criteria (PLAN ONLY; separate code-change authorization required):**
+1. A disposable synthetic database explicitly provisioned and isolated for the specific run with a distinct low-privilege retention principal authorized to delete only expired operational records; avoid blanket `postgres` privileges in mutation path.
+2. A guard that checks the **actual PostgreSQL connection and authenticated server/database identity** in the same transaction before any DELETE, instead of accepting only caller-supplied env and host strings. Where strong service identity proof cannot be obtained, prohibit automatic destructive operations outside a demonstrably ephemeral isolated environment.
+3. Explicit `NODE_ENV=test` and origin/CI guards as supplementary checks, never sole security boundary; ensure pool and configured target match, preferably by constructing the connection within the validated, isolated process.
+4. New synthetic negative/positive tests: mismatched env vs pool, forwarded-loopback assumption, insufficient DB permissions, no writes to civic tables, lock contention, expired/live row separation, repeated safe execution and missing approvals. Do **not** deliberately connect these tests to real DBs or delete real data.
+5. Design backup/restore identity and permission boundaries separately; require owner/legal review before any live retention or erasure schedule. `docs/DATA_RETENTION_AND_ERASURE_REGISTER.md` is an existing P0 policy draft, not an approved legal retention regime.
+
+**Owner authorization state:** read-only audit and standing two-doc continuity updates allowed; **no authorization for new code changes, PR merges, deploy, live data deletion, new expenses or other repositories**. Current code SHA and previous CI verdict are unchanged; handoff checkpoint updated to preserve the finding. Continue technical planning without confusing proposals with implemented safeguards.
+
 ## 8. Roadmap to completion (plan, not completed work)
 
 **Phase 0 — consolidate technical baseline:** independently audit code/PR stack, eliminate priority regressions, pin dependencies, improve automated coverage and reproducibility, reconcile docs and design safe integration/review.  
