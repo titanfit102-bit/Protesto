@@ -13,7 +13,7 @@ import {responseRoute,responseGetRoute,responsePostRoute} from "./responses.mjs"
 import {publicCopyDecision} from "./publication-privacy.mjs";
 import {rateKey,consumeRateLimit} from "./rate-limits.mjs";
 import {decryptTotpSecret,verifyTotpCode} from "./totp.mjs";
-import {normalizeEmail,verifyPassword,newSessionToken,tokenHash,parseSessionCookie,sessionCookie,clearSessionCookie,secureWrite,canReview,SESSION_AGE_SECONDS} from "./security.mjs";
+import {normalizeEmail,verifyPasswordAsync,newSessionToken,tokenHash,parseSessionCookie,sessionCookie,clearSessionCookie,secureWrite,canReview,SESSION_AGE_SECONDS} from "./security.mjs";
 
 const publicAssets=new Map([
  ["/",["../../index.html","text/html; charset=utf-8"]],
@@ -59,6 +59,10 @@ export function createPilotServer(pool,{origin,production=false,rateLimitSecret=
  // Reject missing or unstable cross-instance rate-limit secret at startup.
  rateKey(rateLimitSecret,"startup","check");
  rateKey(dialogueSecret,"dialogue-startup","check");
+ // Bound simultaneous async KDF work per server process. The shared IP
+ // and email login quotas continue to apply before any password derivation.
+ let activePasswordChecks=0;
+ const MAX_CONCURRENT_PASSWORD_CHECKS=4;
  const auth=async(req)=>{
   const token=parseSessionCookie(req.headers.cookie);
   if(!token)return null;
@@ -160,13 +164,27 @@ export function createPilotServer(pool,{origin,production=false,rateLimitSecret=
     const accountLimit=await consumeRateLimit(pool,rateKey(rateLimitSecret,"login-email",email),{limit:15,windowSeconds:900});
     if(!accountLimit.allowed)return json(res,429,{error:"Shumë tentativa për këtë llogari."},{"Retry-After":String(accountLimit.retrySeconds)});
     const password=typeof body.password==="string"?body.password:"";
-    // Serializes one-time TOTP consumption with session creation.
+    // A non-locking snapshot avoids holding a user row locked through a KDF.
+    const preview=await pool.query(
+     "SELECT id,password_hash FROM civic_users WHERE email=$1 AND active=true",[email]);
+    const candidate=preview.rows[0];
+    if(activePasswordChecks>=MAX_CONCURRENT_PASSWORD_CHECKS)
+     return fail(res,503,"Identifikimi është përkohësisht i zënë. Provo përsëri.");
+    let passwordValid=false;
+    activePasswordChecks++;
+    try{passwordValid=await verifyPasswordAsync(password,candidate?.password_hash);}
+    finally{activePasswordChecks--;}
+    if(!candidate||!passwordValid)return fail(res,401,"Kredenciale të pavlefshme.");
+    // A disabled account, changed password or reused MFA code must still fail.
+    // Lock and recheck the exact account/hash before creating a session.
     const client=await pool.connect();
     try{
      await client.query("BEGIN");
-     const found=await client.query("SELECT id,email,role,password_hash,totp_secret_encrypted,totp_last_counter FROM civic_users WHERE email=$1 AND active=true FOR UPDATE",[email]);
+     const found=await client.query(
+      "SELECT id,email,role,password_hash,totp_secret_encrypted,totp_last_counter FROM civic_users WHERE id=$1 AND email=$2 AND active=true FOR UPDATE",
+      [candidate.id,email]);
      const account=found.rows[0];
-     if(!account||!verifyPassword(password,account.password_hash)){
+     if(!account||account.password_hash!==candidate.password_hash){
       await client.query("ROLLBACK");return fail(res,401,"Kredenciale të pavlefshme.");
      }
      if(account.totp_secret_encrypted){
