@@ -30,7 +30,7 @@ try{
  const syntheticId=randomUUID();
  await source.query('INSERT INTO civic_users(id,email,password_hash,role) VALUES ($1,$2,$3,$4)',[syntheticId,'drill-'+randomBytes(6).toString('hex')+'@example.org','fictional-hash-not-used','reporter']);
  const original=await getCounts(source);
- assert.equal(original.schema_migrations,16);
+ assert.equal(original.schema_migrations,17);
  const sourceDigests=await source.query("SELECT source_id,sha256_hex,byte_length,media_type FROM source_fingerprints ORDER BY source_id");
  await admin.query('CREATE DATABASE "'+database+'"');created=true;
  await run('tools/backup.mjs');
