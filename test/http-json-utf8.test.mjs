@@ -16,10 +16,6 @@ test("JSON HTTP decoding preserves Albanian and multibyte text across arbitrary 
   const result=await readJSON(request([encoded.subarray(0,split),encoded.subarray(split)]));
   assert.deepEqual(result,input,"byte boundary "+split);
  }
- for(const bytes of [...encoded].map((_,i)=>encoded.subarray(i,i+1))){
-  // The all-single-byte stream is covered below.
-  assert.ok(bytes.length===1);
- }
  const byteChunks=Array.from(encoded,(_,i)=>encoded.subarray(i,i+1));
  assert.deepEqual(await readJSON(request(byteChunks)),input);
 });
