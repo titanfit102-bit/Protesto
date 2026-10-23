@@ -20,7 +20,7 @@ export function assertPrivatePilotStartupPolicy({environment,host,port,origin}={
  const expected="http://"+(host==="::1"?"[::1]":host)+":"+port;
  if(parsed.origin!==expected||parsed.protocol!=="http:"||
   parsed.username||parsed.password||parsed.pathname!=="/"||
-  parsed.search||parsed.hash||!["", "80"].includes(parsed.port)&&parsed.port!==String(port)){
+  parsed.search||parsed.hash){
   throw new Error("Private pilot startup refused: APP_ORIGIN must match the loopback listener exactly.");
  }
  return {mode:"private-loopback-only",releaseAllowed:false};
