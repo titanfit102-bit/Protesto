@@ -72,7 +72,7 @@ Core principles:
 - Repository is **PUBLIC** as code; the application has **not** been publicly deployed.
 - `main` at `1e34611bdb48195e7deadb8e33d26ddac3338c4d`, containing the initial README only; GitHub inspection found `main` **unprotected** at this checkpoint. No merge performed.
 - Foundation: [Draft PR #1](https://github.com/titanfit102-bit/Protesto/pull/1) `feat/protesto-foundation` on `main`, unmerged.
-- Main cumulative stack: [Draft PR #31](https://github.com/titanfit102-bit/Protesto/pull/31) based on foundation, followed in strict successive base/head chain by PRs **#32–#58**; all #31–#57 were checked as Draft/unmerged at preceding audit, and #58 was checked at continuity initialization. Historical #4–#30 include overlapping/experimental branches, some OpenCode-related; never merge them blindly. #28–#30 overlap work integrated in #31.
+- Main cumulative stack: [Draft PR #31](https://github.com/titanfit102-bit/Protesto/pull/31) based on foundation, followed in successive base/head chain by PRs **#32–#59**; #31–#57 were checked as Draft/unmerged at prior audit, #58 at continuity initialization, and #59 at this checkpoint. Historical #4–#30 include overlapping/experimental branches, some OpenCode-related; never merge them blindly. #28–#30 overlap work integrated in #31.
 - Major PR groups:
   - #31–#35 integration of dialogue/corrections/ledger, separate public source metadata, experimental PDF hashes and publication privacy.
   - #36–#42 reviewer TOTP, shared abuse/session protection, moderated replies, URL/ARIA, admin ops, disposable staging, release gating.
@@ -80,9 +80,12 @@ Core principles:
   - #50–#55 parent-row transactional locks, quota/late-submission protections, fail-closed secondary public APIs, consistent public SQL snapshots.
   - [#56](https://github.com/titanfit102-bit/Protesto/pull/56): expanded own-data export with explicit incomplete coverage.
   - [#57](https://github.com/titanfit102-bit/Protesto/pull/57): retention register and synthetic-only operational expiry helper; SHA `e64f75163be41dd24e464d068e059188668969cc`, [CI success #39937755492](https://github.com/titanfit102-bit/Protesto/actions/runs/39937755492), 62/62 Node tests at that SHA.
-  - **Current code candidate:** [Draft PR #58](https://github.com/titanfit102-bit/Protesto/pull/58), `feat/protesto-utf8-url-ci-hardening`, base `feat/protesto-operational-retention-safety`, **HEAD `4aec08ac16207af4c36ee0e1f0f84e5f2c0c67d5`**, open/unmerged. Adds chunk-safe strict UTF-8 JSON parsing, trailing-dot hostname normalization, tests, and a future-stack GitHub Actions branch glob.
-- **CI verified at exact PR #58 SHA:** [GitHub Actions run #39980887111](https://github.com/titanfit102-bit/Protesto/actions/runs/39980887111), `completed/success`; fetched job logs show **64 tests, 64 pass, 0 fail**, npm audit **0 vulnerabilities** at that run, and successful migration, browser/E2E, offline preview and synthetic encrypted restore job steps. This is *not* evidence of production safety.
+  - **Prior code checkpoint:** [Draft PR #58](https://github.com/titanfit102-bit/Protesto/pull/58), `feat/protesto-utf8-url-ci-hardening`, base `feat/protesto-operational-retention-safety`, **HEAD `4aec08ac16207af4c36ee0e1f0f84e5f2c0c67d5`**, open/unmerged. Adds chunk-safe strict UTF-8 JSON parsing, trailing-dot hostname normalization, tests, and a future-stack GitHub Actions branch glob.
+- **Prior CI verified at exact PR #58 SHA:** [GitHub Actions run #39980887111](https://github.com/titanfit102-bit/Protesto/actions/runs/39980887111), `completed/success`; fetched job logs show **64 tests, 64 pass, 0 fail**, npm audit **0 vulnerabilities** at that run, and successful migration, browser/E2E, offline preview and synthetic encrypted restore job steps. This is *not* evidence of production safety.
 - Compared PR #57 -> #58: six commits ahead, zero behind, five changed files (HTTP parser, outbound URL filter, two test files, CI workflow).
+- **Current verified code candidate:** [Draft PR #59](https://github.com/titanfit102-bit/Protesto/pull/59), `feat/protesto-reproducible-deps` stacked on #58 `feat/protesto-utf8-url-ci-hardening`; **HEAD `b1c52f0e8074f8b73d0c8dd80f72d2953b4bdacc`**, open Draft / unmerged. It changes **only** `.github/workflows/verify.yml` and newly adds `package-lock.json` relative to #58 (three commits ahead, zero behind). Real npm registry resolution was performed on disposable GitHub Actions run #39984696626 (bootstrap), producing npm lockfile v3 with 40 packages. The temporary diagnostic capture step was **removed** from the final workflow; final install uses `npm ci --no-audit --no-fund`.
+- **CI verified at exact PR #59 SHA:** [GitHub Actions run #39984965787](https://github.com/titanfit102-bit/Protesto/actions/runs/39984965787), completed/success; fetched logs show **64/64 Node tests, 0 failures**, successful frozen `npm ci`, npm audit reporting **0 vulnerabilities at the time**, idempotent migrations, syntax checks, Chromium E2E/accessibility smoke, offline preview and synthetic encrypted backup restore. The passing CI is **not** Production, legal or independent security clearance.
+
 - **Continuity branch `docs/protesto-continuity`** was created directly from PR #58 verified code SHA. Its further docs-only commits **will not have application CI evidence by inheritance**. Refer to the independently verified PR #58 SHA for tested code; always recheck subsequent source commits.
 - Existing docs matrix and original `STATUS.md` are partly stale (older PR references). The original complete STATUS history is preserved in Git at [pre-continuity code checkpoint](https://github.com/titanfit102-bit/Protesto/blob/4aec08ac16207af4c36ee0e1f0f84e5f2c0c67d5/docs/STATUS.md), and older states remain in Git history.
 
@@ -104,7 +107,7 @@ The **continuity protocol** itself is an owner decision dated 2026-10-23: two do
 
 **P1 engineering/product work:**
 - `main` branch protection currently absent; define required checks and review before any approved merge.
-- npm lockfile absent; reproducible installs and supply-chain pinning (`npm ci`) need scoped authorization and verification.
+- npm dependency lockfile and `npm ci` are **implemented/verified in Draft PR #59**; this fixes npm dependency graph reproducibility for its tested environment, **not** complete toolchain or external action/container immutability (Node 22 minor, Postgres 16 tag, Chromium, `actions/*@v4`).
 - Workflow now uses `pull_request` branch pattern `feat/protesto-*` (from PR #58), but `workflow_dispatch` on default `main` is not available there until separately approved integration.
 - CI and unit/API tests are nonexhaustive; continue adversarial role/race/accessibility tests against synthetic DB.
 - Retention environment guard is a scoped CI-only safeguard, **not a substitute for true process/network/database isolation or approved content-deletion policy**.
@@ -127,9 +130,9 @@ A "100%" claim requires a defined weighted acceptance matrix for the chosen targ
 
 ## 9. Current active work and exact next action
 
-**Completed at this checkpoint:** PR #58 code fixes and successful scoped CI; continuity branch was created from its verified code SHA.  
+**Completed at this checkpoint:** PR #58 HTTP/URL/CI fixes and scoped CI; PR #59 npm lockfile plus frozen `npm ci` with successful exact-SHA CI. Continuity branch was originally created from PR #58 code SHA and independently records the newer #59 candidate.  
 **Continuity operation:** maintain the short `STATUS.md` and this full `MASTER_HANDOFF.md` in the authorized docs branch, each with precise code checkpoint and verified evidence.  
-**Next development task, not yet authorized for code edits:** audit dependency reproducibility / missing npm lockfile, determine `npm ci` strategy and regression criteria; then branch protection and deeper retention/process isolation review. Make a narrowly scoped implementation proposal and respect authorization. Additional project functionality is not automatically approved.
+**Next development task (READ-ONLY, unless separately authorized):** inspect GitHub branch protection, stacked Draft PR integration/review prerequisites and required checks before any merge planning; then perform deeper retention process/database isolation and remaining toolchain reproducibility analysis. The owner has not authorized new application-code changes, `main` merge, deploy, payments or real civic data processing. Present a focused proposal before any further source edits.
 
 ## 10. Rules for ongoing updates
 
