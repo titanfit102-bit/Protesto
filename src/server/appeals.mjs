@@ -1,3 +1,4 @@
+import {cancelOpenDialogueTopics} from "./dialogue-cancellation.mjs";
 import {randomUUID} from "node:crypto";
 import {cleanText} from "../domain.mjs";
 import {canReview} from "./security.mjs";
@@ -84,6 +85,7 @@ export async function appealRoute({pathname,req,res,pool,user,json,fail,readJSON
     [user.id,appeal.case_id]
    );
    if(!updated.rowCount){await client.query("ROLLBACK");return fail(res,409,"Dosja nuk është më e publikuar; nuk mund të miratohet tërheqja.");}
+   await cancelOpenDialogueTopics(client,{caseId:appeal.case_id,actorId:user.id});
    await client.query(
     "INSERT INTO retraction_history(id,case_id,reviewer_id,note) VALUES($1,$2,$3,$4)",
     [randomUUID(),appeal.case_id,user.id,note]
