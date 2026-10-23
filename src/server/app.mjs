@@ -208,13 +208,32 @@ export function createPilotServer(pool,{origin,production=false,rateLimitSecret=
     },disclaimer:"Pa identitete; kjo nuk është monitorim i vazhdueshëm."});
    }
    if(pathname==="/api/me/export"&&req.method==="GET"){
-    const [cases,actions,corrections,sources]=await Promise.all([
-     pool.query("SELECT id,title,description,area,category,source_url,state,created_at FROM civic_cases WHERE author_id=$1 ORDER BY created_at DESC LIMIT 1000",[user.id]),
-     pool.query("SELECT id,kind,subtype,title,description,area,event_date,state,created_at FROM civic_actions WHERE author_id=$1 ORDER BY created_at DESC LIMIT 1000",[user.id]),
-     pool.query("SELECT id,case_id,reason,counter_source_url,state,created_at FROM case_corrections WHERE author_id=$1 ORDER BY created_at DESC LIMIT 1000",[user.id]),
-     pool.query("SELECT id,case_id,title,url,context,state,created_at FROM case_sources WHERE submitted_by=$1 ORDER BY created_at DESC LIMIT 1000",[user.id])
-    ]);
-    return json(res,200,{exported_at:new Date().toISOString(),user,records:{cases:cases.rows,actions:actions.rows,corrections:corrections.rows,sources:sources.rows}});
+    // All categories are scoped to the authenticated author. A response can
+    // never silently claim to be a complete export past the 1000-row cap.
+    // Pseudonymous dialogue_votes cannot be safely linked back to a user here.
+    const exportSql={
+     cases:"SELECT id,title,description,area,category,source_url,state,public_title,public_description,public_area,public_source_url,created_at FROM civic_cases WHERE author_id=$1 ORDER BY created_at DESC,id DESC LIMIT 1001",
+     actions:"SELECT id,kind,subtype,title,description,area,event_date,state,public_title,public_description,public_area,created_at FROM civic_actions WHERE author_id=$1 ORDER BY created_at DESC,id DESC LIMIT 1001",
+     corrections:"SELECT id,case_id,reason,counter_source_url,state,created_at,reviewed_at FROM case_corrections WHERE author_id=$1 ORDER BY created_at DESC,id DESC LIMIT 1001",
+     sources:"SELECT id,case_id,title,url,context,state,public_title,public_url,created_at FROM case_sources WHERE submitted_by=$1 ORDER BY created_at DESC,id DESC LIMIT 1001",
+     appeals:"SELECT id,correction_id,reason,state,created_at,reviewed_at FROM correction_appeals WHERE author_id=$1 ORDER BY created_at DESC,id DESC LIMIT 1001",
+     responses:"SELECT id,case_id,body,source_url,state,public_body,created_at,reviewed_at FROM case_responses WHERE author_id=$1 ORDER BY created_at DESC,id DESC LIMIT 1001",
+     dialogue_topics:"SELECT id,case_id,title,description,public_title,public_description,state,review_state,created_at,reviewed_at FROM dialogue_topics WHERE created_by=$1 ORDER BY created_at DESC,id DESC LIMIT 1001",
+     dialogue_statements:"SELECT id,topic_id,body,public_body,state,created_at,reviewed_at FROM dialogue_statements WHERE author_id=$1 ORDER BY created_at DESC,id DESC LIMIT 1001"
+    };
+    const categories=Object.keys(exportSql);
+    const results=await Promise.all(categories.map(k=>pool.query(exportSql[k],[user.id])));
+    const records={},truncated=[];
+    for(let i=0;i<categories.length;i++){
+     const rows=results[i].rows;
+     records[categories[i]]=rows.slice(0,1000);
+     if(rows.length>1000)truncated.push(categories[i]);
+    }
+    return json(res,200,{
+     exported_at:new Date().toISOString(),user,records,
+     export_status:{per_category_limit:1000,truncated_categories:truncated,
+      complete:false,notice:"Eksport pilot i kufizuar: nuk përfshin votat pseudonime, historikun e plotë të moderimit apo çdo kategori ligjore të të dhënave personale. Kategoritë mbi kufirin 1000 janë të shkurtuara."}
+    });
    }
    if(pathname==="/api/auth/logout"&&req.method==="POST"){
     const token=parseSessionCookie(req.headers.cookie);
