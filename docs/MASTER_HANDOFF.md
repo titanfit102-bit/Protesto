@@ -238,6 +238,24 @@ Confirmed at current PR #61 source SHA `1bfe8db99cb37dc8ce48466864260895fc4c6115
 
 **Detailed acceptance matrix, conditional on policy and code authorization:** all three archival paths, mixed approved/pending/unreviewed open topics, already-closed topic, synthetic votes (both under and over 10), duplicate/competing archivings, vote vs archive, statement review vs archive and topic close vs archive; verify lock order `civic_cases` → `dialogue_topics` (plus statement row where applicable), atomic rollback, idempotence, no extra aggregates on cancelled topics, public 404/no report for withdrawn case, correct actor audit, and data disposition exactly as agreed. PostgreSQL concurrency integration + Chromium UI + backup implications + final SHA/tree CI with zero skipped critical database tests. **No actual code/schema/retention changes, no live data deletions and no deployment were made in this review.**
 
+### F05/F04 scoped design audit — 2026-10-23 (READ-ONLY, no application changes)
+
+**Verified source:** PR #61 at `1bfe8db99cb37dc8ce48466864260895fc4c6115`, `src/server/security.mjs`, `src/server/app.mjs`, `tools/pilot-server.mjs`, and security/pilot integration tests. Official `node-postgres` docs: https://node-postgres.com/apis/pool and https://node-postgres.com/apis/client.
+
+**F05 source observations:**
+- `hashPassword` and `verifyPassword` use `crypto.scryptSync`; the login HTTP path invokes synchronous `verifyPassword` while an account row is locked `FOR UPDATE` in an active transaction.
+- `if(!account||!verifyPassword(...))` skips derivation for unknown/inactive accounts, so the known/unknown work paths differ; a reliable timing-exploit magnitude has not been independently measured here. Existing login IP+email rate limits, reviewer TOTP serialization and session-cookie protections must not regress.
+- **Narrow design / not yet authorized:** an async `crypto.scrypt` verification function, secure fixed-format dummy verifier for unknown users, harmonized failure responses and request caps; avoid holding DB row locks for long password derivations if possible. If verification is moved before a lock, re-acquire and *recheck* exact account active/password-hash state under transaction before TOTP counter and session insertion, failing closed on changes; preserve one-time MFA atomicity. Operator provisioning may retain offline sync hashing if audited.
+- **Required test evidence:** valid/invalid/unknown/disabled logins, malformed stored hash, max input, active account changed mid-login, no TOTP replay, IP/email rate limits, 401 consistency, concurrent logins and event-loop progress. Do not assert strict millisecond equality in flaky CI; ensure bounded worker-thread-pool usage.
+
+**F04 source observations and correction of audit framing:**
+- `tools/pilot-server.mjs` constructs `new pg.Pool({connectionString:DATABASE_URL,max:10})` with no explicit `connectionTimeoutMillis`, `statement_timeout`, `query_timeout`, `lock_timeout`, `idle_in_transaction_session_timeout` or `pool.on('error')`; shutdown calls `server.close()` without awaiting its callback before `pool.end()`.
+- **Important confirmed positive safeguard:** `src/server/app.mjs` **already implements `GET /api/ready` via `SELECT 1`, returning 503 on database error**. The deficit is bounded failure handling: without configured deadlines, a stalled query can delay readiness. The separate `/api/health` is only liveness; HTTP server request timeout is not a PostgreSQL statement deadline.
+- **Narrow design / not yet authorized:** stage-appropriate bounded DB connect/statement/lock/idle-in-transaction timeouts, pool error listener and observable degraded state; bounded, awaited graceful shutdown with repeated-signal safety. Use PostgreSQL-side statement and lock timeouts plus driver semantics correctly, not a standalone Promise.race that abandons database work. Review all transactions for cleanup on timeouts.
+- **Required tests:** synthetic PostgreSQL unreachable/stalled connection, row lock contention, pool saturation, forced idle-client errors, readiness response (bounded 503 when DB is down), rollback/resource return, and clean SIGTERM process exit. Select budgets via measured synthetic test rather than arbitrary live time values.
+
+**Authorization:** F05/F04 audit and design only. No new code branch, PR, secrets, real DB/network fault injection, merge or deploy permitted under standing two-document continuity authorization. These findings remain **OPEN**; pass of PR #61 CI covers existing functional paths, not these proposed fault/timing regressions.
+
 ## 10. Rules for ongoing updates
 
 1. On each substantive project step, **READ** current GitHub PR head/status, branch references and exact CI run; distinguish newly observed facts from historical checkpoint.
