@@ -46,6 +46,16 @@
 3. Propose only narrowly scoped further edits if required; no application changes, `main` mutation, PR retargeting or Production without separate explicit authorization.
 4. After any material **verified** project change, update this file (short delta) and `MASTER_HANDOFF.md` if long-term context changed, **only on `docs/protesto-continuity`** under the standing authorization. Verify read-back before claiming the checkpoint was saved.
 
+## Integration safety audit — verified 2026-10-23 (READ-ONLY)
+
+- **GitHub baseline unchanged:** `main` at `1e34611bdb48195e7deadb8e33d26ddac3338c4d`, `protected:false`; repository Rulesets API returned `[]`. Detailed `/branches/main/protection` query returned **403 Resource not accessible by integration**, so deeper settings are not independently readable. **No protections were changed.**
+- **PR topology:** individually checked Draft/unmerged PR #1 (base `main`), then PR **#31 through #59** as a continuous sequence of matching `base`/`head` branches; each was GitHub-reported `mergeable:true` relative to its own base. **Do not infer review readiness or authorization to merge into `main`.**
+- **Alternative historical PRs:** #3 was closed without merge; #4–#7, #9, #11–#30 are open Drafts based on foundation. PR identifiers #2, #8, #10 were not pull requests in lookup. Historical #28–#30 overlap functionality in integrated #31 lineage per existing integration audit matrix. Do not bulk-merge older drafts.
+- **Human review / ownership:** PR #1, #31 and #59 each have **0 recorded formal review submissions**; no tracked `CODEOWNERS` file found in latest PR #59 tree. A successful CI run does not substitute for independent review.
+- **Cumulative candidate:** PR #59 at exact code SHA above is **223 commits ahead / 0 behind `main`**, with **124 changed files**; changes include the complete stacked pilot and are much broader than PR #59's own two-file delta against PR #58.
+- **PLANNED, NOT APPROVED OR EXECUTED:** owner/admin-approved `main` protection/ruleset (PR required, independent reviews, required **verify** CI check, no forced updates/deletion and resolved conversations), independent audit of cumulative diff and per-PR dependencies, review of overlapping drafts, explicit integration strategy, and re-run tests on exact candidate/merge commit. No merge, rebase, retarget, deployment or ruleset modification is authorized by this review.
+- **Immediate next:** continue read-only investigation of branch protection/review prerequisites and synthetic retention isolation; propose an integration plan for owner approval only when supported by verified evidence.
+
 ## Preservation of historical status
 
 The previous `docs/STATUS.md` contained valuable 2026-10-21/22 development history but had an obsolete opening claim that PR #1 was current. Its **full original text** remains retrievable at the immutable, exact [pre-continuity snapshot](https://github.com/titanfit102-bit/Protesto/blob/4aec08ac16207af4c36ee0e1f0f84e5f2c0c67d5/docs/STATUS.md); history is not deleted from Git. ADRs, release matrices and CI history remain in existing dedicated docs, linked from [MASTER_HANDOFF](./MASTER_HANDOFF.md).
