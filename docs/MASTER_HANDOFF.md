@@ -384,6 +384,21 @@ Confirmed at current PR #61 source SHA `1bfe8db99cb37dc8ce48466864260895fc4c6115
 
 **Next engineering item:** F08 `releaseAllowed:false` is a report-only construct; inspect the actual startup sequence and design a fail-closed Production-mode startup gate **READ-ONLY** before requesting another narrowly scoped code authorization. F07 protections, F09 backup content parity, F10 contrast and F12 reproducibility remain unresolved. No further source code authorization is implied by this F06 approval.
 
+### 2026-10-24 — F08 startup boundary review (READ-ONLY; no code edits)
+
+**Exact source:** [Draft PR #65](https://github.com/titanfit102-bit/Protesto/pull/65) SHA `2b6ae0d251e48326a515ff7cf0ff8f60409ebfa1`, `src/ops/release-gate.mjs`, `tools/pilot-server.mjs`, `src/server/app.mjs`, `test/release-gate.test.mjs`, `tools/release-audit.mjs`, `package.json`, and CI workflow.
+
+**Confirmed:** `evaluateReadiness()` intentionally returns `releaseAllowed:false` even if hypothetical manual P0 flags are true; `tools/release-audit.mjs` tests this invariant, but **`tools/pilot-server.mjs` does not call the release evaluator before startup**. It sets `production=process.env.NODE_ENV==="production"`, creates DB pool/server and binds `HOST`/`PORT`. `createPilotServer` requires an HTTPS `APP_ORIGIN` only if `production=true`; that is a transport check, not an owner release authorization. **Additional network exposure concern:** `HOST` can be overridden to `0.0.0.0` or another non-loopback bind even when `NODE_ENV` is unset/development/test; the private pilot would not receive the `production` HTTPS precondition. No real deployment/exposure was observed or claimed. `/api/health` and `/api/ready` are not release authorization.
+
+**Recommended constrained design, NOT APPROVED/IMPLEMENTED:**
+1. A fail-closed `assertPrivatePilotStartupPolicy` check at the **very beginning** of `tools/pilot-server.mjs`, before constructing a pool/server or attempting network bind: reject `NODE_ENV=production` unconditionally in this unreleased build, and reject unexpected runtime environment labels. Do not interpret CI or fake `manualEvidence` flags as release approvals.
+2. Allow only explicitly designated loopback host addresses / matching loopback `APP_ORIGIN` for the local private synthetic pilot; reject wildcard/non-loopback `HOST`, remote/non-loopback origins and insecure public bindings. Consider reverse-proxy origin/trust semantics carefully before any real hosted Staging.
+3. Keep the report-only `evaluateReadiness` as supporting evidence; a **separate reviewed human-governed release process** will be needed when all external P0 gates are genuinely satisfied. No CLI switch, environment boolean or test flag should unilaterally grant Production access.
+4. Synthetic tests must spawn the pilot with `NODE_ENV=production` + HTTPS origin and demonstrate nonzero **pre-bind refusal** (no `LISTEN` or DB connection); repeat for `HOST=0.0.0.0`, `::`, unexpected `NODE_ENV`, off-loopback `APP_ORIGIN`, falsified manual P0 flags. Verify allowed local loopback test startup and original F01–F06/Chromium/backup workflows; check no DB-critical skips and exact SHA/tree CI. Do not open a public socket or use live data to test failure behavior.
+5. Release gate stays NO-GO. **Source edits and a new Draft PR require specific owner approval for F08**; none was granted by the F06 continuation.
+
+**Evidence status:** confirmed source architecture and proposed correction, not an end-to-end bind exposure reproduction or Production incident. F06 synthetic hardening remains separate from these F08 startup concerns.
+
 ## 10. Rules for ongoing updates
 
 1. On each substantive project step, **READ** current GitHub PR head/status, branch references and exact CI run; distinguish newly observed facts from historical checkpoint.
