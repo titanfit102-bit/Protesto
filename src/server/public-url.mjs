@@ -4,7 +4,7 @@ import {validateSourceUrl} from "../domain.mjs";
 export function safePublicExternalUrl(value){
  let text;try{text=validateSourceUrl(value);}catch{return null;}
  if(!text)return null;
- const url=new URL(text),host=url.hostname.toLowerCase();
+ const url=new URL(text),host=url.hostname.toLowerCase().replace(/\.+$/u,"");
  if(url.search||url.hash||url.username||url.password||host==="localhost"||
     host.endsWith(".localhost")||host.endsWith(".local")||host.startsWith("["))return null;
  const ip=/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(host);
