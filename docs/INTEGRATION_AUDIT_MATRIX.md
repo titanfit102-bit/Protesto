@@ -65,7 +65,7 @@ Legend: **VERIFIED (automated)** = a specific implemented and exercised invarian
 - These are **local ephemeral CI tests**, not live hosted staging, independent penetration testing, authentic institutional workflow trials or a real disaster recovery exercise.
 - A `success` result does not make the application safe for actual allegations, whistleblower submissions or identifiable political-opinion data.
 - This audit verified the **GitHub ancestry and subset of code-level route/security contracts**, not an exhaustive line-by-line review of all 76 changed files. Full independent code and threat-model review remains necessary.
-- **UNKNOWN:** protection rules requiring reviews on foundation/main, production secrets policy applied outside repo, live deployment/monitoring state. Do not infer these from a green synthetic workflow. **No production deployment was initiated here.**
+- **UNKNOWN:** protection rules requiring reviews on foundation/main, production secrets policy applied outside repo, live deployment/monitoring state. The GitHub API returned **403 Resource not accessible by integration** for \`branches/main/protection\`; this does **not** establish that branch protection is absent. The owner must inspect repository Rulesets and Branch protection directly. **No production deployment was initiated here.**
 - Historical failed CI attempts are part of the audit trail; require a **green run at the exact integration-candidate SHA**, not an earlier success for a different tree.
 
 ## 5. Four distinct maturity assessments
@@ -100,7 +100,7 @@ These are enumerated by `src/ops/release-gate.mjs` and are **not** satisfied by 
 - [x] Confirm green CI at exact SHA and audit the verification steps.
 - [x] Identify separate overlapping #28–#30 branches and avoid duplicate merge.
 - [ ] Commission / complete a code and security review of the **cumulative 76-file diff**, with particular attention to `src/server/app.mjs`, `dialogue.mjs`, `dossiers.mjs`, `responses.mjs`, `appeals.mjs`, auth/TOTP, backups, migrations, and public projections.
-- [ ] Produce an independent route-by-role test matrix covering anonymous, author, reporter, reviewer, conflicting reviewer, admin, archived, rejected, unreviewed and concurrent states; attach observed evidence, not assumptions.
+- [x] Run a **scoped automated** role-by-route authorization test covering anonymous, reporter, reviewer and admin, with private/public/legacy/archived cases (\`test/role-boundary-matrix.integration.test.mjs\`, CI #39930486689).\n- [ ] Obtain an **independent** comprehensive route-by-role security audit, including conflict, rejected, revoked-session and concurrent states not exhaustively exercised by the new matrix.
 - [ ] Evaluate legal/privacy/institutional governance and verify live-data restrictions.
 - [ ] Verify actual branch protections/review requirements; confirm no surprise direct merge/deploy hooks.
 - [ ] Prepare an owner-approved integration strategy for the stacked PRs, including the overlapping historical PRs and a safe, reversible migration plan. **Do not execute yet.**
@@ -112,3 +112,20 @@ These are enumerated by `src/ops/release-gate.mjs` and are **not** satisfied by 
 ## 8. Source of truth / maintenance
 
 Primary evidence: [PR #55](https://github.com/titanfit102-bit/Protesto/pull/55), [CI run #39867893831](https://github.com/titanfit102-bit/Protesto/actions/runs/39867893831), `docs/RELEASE_READINESS.md`, `docs/RELEASE_GATES.md`, `src/ops/release-gate.mjs`, `tools/release-audit.mjs`, `.github/workflows/verify.yml`, and source/test modules named above. Revalidate hashes and statuses whenever a branch changes; this document is a **point-in-time** report, not a standing approval.
+
+## 9. Tested role/route matrix checkpoint (2026-10-23)
+
+**New synthetic regression:** `test/role-boundary-matrix.integration.test.mjs` added directly to the existing Draft PR #55; [GitHub Actions #39930486689](https://github.com/titanfit102-bit/Protesto/actions/runs/39930486689) completed **SUCCESS** at code+test SHA `74772783b31ef034096f3b5a678fb7ed16335c42`: **59/59 Node tests**, 16 migrations, Chromium pilot/dialogue, npm audit reporting zero findings, encrypted backup and isolated restore.
+
+| Tested API class | Anonymous | Reporter | Reviewer | Administrator | Observed scope |
+|---|---|---|---|---|---|
+| Seven private editorial queues (cases, actions, corrections, appeals, citizen responses, dialogue statements and topics) | 401 | 403 | 200 | 200 | Role boundary; response content remains private to editorial actors |
+| `GET /api/ops/status` | 401 | 403 | 403 | 200 | Aggregated operational counts only |
+| Own-case export and six personal GET routes | 401 | 200 | Authorized own-only data | Authorized own-only data | Distinct synthetic reporters cannot access each other's case records |
+| Private source list for unapproved pending dossier | 404 | 200 for author / 404 unrelated reporter | 200 | 200 | Original source kept from public and unrelated user |
+| Public accepted sources for fully approved dossier | 200 | 200 | 200 | 200 | Anonymous projection uses reviewed title/URL; original token-bearing link withheld |
+| Public source/reply endpoints on legacy-unapproved/archived dossier | 404 | 404 absent private exception | Reviewer source history permitted where authorized | Same | No anonymous publication of withdrawn/incomplete cases |
+| CSRF checks on authenticated case creation | N/A | 403 without CSRF | 403 | 403 | Origin/header validation precedes handler business logic |
+| Report author's editorial decision on their own case | N/A | 403 | Requires an independent reviewer | Requires an independent reviewer | Reporter cannot self-review |
+
+**Limitation:** this proves the matrix's exercised scenarios against a disposable PostgreSQL database. It does not prove exhaustive route coverage, hostile deployment proxy behavior, independent penetration resistance or correctness for every state permutation. Multi-actor conflicts and concurrent transitions remain covered in separate scoped integration tests, not exhaustively in this one. Existing branch protection remains **UNKNOWN** because the API call was not authorized (403). Owner-side Rulesets/Branch protection review is required before merge planning.
