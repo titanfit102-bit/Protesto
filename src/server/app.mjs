@@ -1,3 +1,4 @@
+import {cancelOpenDialogueTopics} from "./dialogue-cancellation.mjs";
 import {createServer} from "node:http";
 import {readFile} from "node:fs/promises";
 import {fileURLToPath} from "node:url";
@@ -314,6 +315,7 @@ export function createPilotServer(pool,{origin,production=false,rateLimitSecret=
      await client.query("BEGIN");
      const updated=await client.query("UPDATE civic_cases SET state='archived',reviewed_at=now(),reviewed_by=$1 WHERE id=$2 AND state='published' AND author_id<>$1 RETURNING id,state",[user.id,caseId]);
      if(!updated.rowCount){await client.query("ROLLBACK");return fail(res,409,"Dosja nuk mund të tërhiqet ose të përket ty.");}
+     await cancelOpenDialogueTopics(client,{caseId,actorId:user.id});
      await client.query("INSERT INTO retraction_history(id,case_id,reviewer_id,note) VALUES($1,$2,$3,$4)",[randomUUID(),caseId,user.id,note]);
      await client.query("INSERT INTO audit_entries(id,actor_id,action,object_type,object_id) VALUES($1,$2,'case.retracted','case',$3)",[randomUUID(),user.id,caseId]);
      await client.query("COMMIT");
