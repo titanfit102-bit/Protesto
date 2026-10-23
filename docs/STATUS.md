@@ -41,10 +41,10 @@
 
 ## Exact next action
 
-1. **READ-ONLY:** verify GitHub PR #59 or newer candidate, exact code HEAD/CI and continuity branch; reconcile any changes since this checkpoint.
-2. Audit current GitHub branch protection, stacked-PR integration procedure, check requirements and safe merge/review sequencing; separately inspect synthetic retention isolation and residual environment/toolchain risks.
-3. Propose only narrowly scoped further edits if required; no application changes, `main` mutation, PR retargeting or Production without separate explicit authorization.
-4. After any material **verified** project change, update this file (short delta) and `MASTER_HANDOFF.md` if long-term context changed, **only on `docs/protesto-continuity`** under the standing authorization. Verify read-back before claiming the checkpoint was saved.
+1. **READ-ONLY / scope proposal:** prioritize **F01 browser cross-account private state** and **F02 retraction note overflow** from the independently reviewed audit; write test-first regression/acceptance criteria and obtain separate owner authorization before editing application code.
+2. **Policy decision before implementation:** F03 archived parent/open dialogue vote lifecycle (private cancellation vs closure, disposition of pseudonymous votes, backup retention). Do **not** delete real records or silently create a real-data retention policy.
+3. After F01/F02 scope approval, implement via isolated Draft PR(s), synthetic Chromium and PostgreSQL tests, verify exact CI/tree, and update the two continuity documents. Then tackle F04/F05 operational resilience/login timing, F06/F08 isolation/release boundary, F09 recovery verification, F07 review/integration governance, and F10/F12 quality gates.
+4. Recheck all PR HEADs, `main`, CI and docs branch before any work. Changes to application files, branch protections, PR bases, merges, deploy, real data or spending still require separate authorization. Standing authorization covers **only these two continuity docs**.
 
 ## Integration safety audit — verified 2026-10-23 (READ-ONLY)
 
@@ -67,6 +67,27 @@
 - No general GDPR deletion or retention schedule exists; [`DATA_RETENTION_AND_ERASURE_REGISTER.md`](./DATA_RETENTION_AND_ERASURE_REGISTER.md) remains a non-approved P0 draft. The CI pass proves tested synthetic paths, not an independent environment-security assessment.
 
 **Next action:** prepare a narrowly scoped implementation design for the above retention identity/isolation safeguards and role/negative test matrix, then request **separate** code-edit authorization; continue read-only assessment where useful. The integration governance findings documented earlier remain open.
+
+## Independent GPT Work report reconciliation — 2026-10-23 (VERIFIED static, no code changes)
+
+**External source:** owner-provided `PROTESTO_INDEPENDENT_DEEP_AUDIT_2026-10-23(1).md`; observations are **untrusted until compared** to current code. Verified again against PR #59 HEAD `b1c52f0e8074f8b73d0c8dd80f72d2953b4bdacc` and unchanged CI [#39984965787](https://github.com/titanfit102-bit/Protesto/actions/runs/39984965787); checkout merge commit `c059e3a0b279ce72c9fafdf2458181eebf9e55b8` and PR head share Git tree `cb942053a0b63ceb97f318d6d885ef924b5da68e`. **No new CI, Chromium E2E or PostgreSQL integration was executed by this review.**
+
+| Finding | Verification and severity for intended real-data pilot |
+|---|---|
+| F01 / P1 | **Confirmed source bug**: `src/pilot.mjs` fails to clear private forms/DOM and identity-stale async state on logout/switch; public-feed errors interrupt refresh. Work's Chromium reproduction not independently repeated. **First fix.** |
+| F02 / P1 | **Deterministic contract mismatch**: accepted correction/appeal prefixes (21/19 chars) plus accepted 1000-char note overflow `retraction_history.note varchar(1000)`; actual DB failure not independently rerun. **Second fix.** |
+| F03 / P1 | **Confirmed lifecycle gap**: archived case prevents topic close and its vote purge; existing regression deliberately expects 409/open topic. Requires owner-approved privacy/lifecycle decision before code change. |
+| F04 / P1 | No pg pool idle error listener, configured DB connection/query/lock deadlines or robust shutdown in `tools/pilot-server.mjs`; Work's synthetic delay not independently rerun. |
+| F05 / P1 | Login performs synchronous `scryptSync` only for existing accounts; timing/event-loop risk proven from source; Work's measured 50ms/4ms not independently repeated. |
+| F06 / P1 (P0 live destructive ops) | Previously known: retention flags/loopback are not DB identity attestation, and injected pool can differ from validated env; no real deletion tested. |
+| F07 / P1 pre-integration | Previously known: `main protected:false`, empty rulesets, 55 open PRs; review requirements not established. |
+| F08 / P1 | Reporting `releaseAllowed:false` is not wired to production startup; not proof of a real deployment. |
+| F09 / P1 before real recovery | Restore test compares counts for 9 of 20 tables plus selected fields, not full data parity; no evidence of actual data loss. |
+| F10 / P2 (release accessibility blocker) | Independently computed CSS white vs `#ed4356` = **3.791884:1**, fails 4.5:1 for 12px bold; existing accessibility smoke has no contrast metric. |
+| F11 / P2 | Existing documents have historical-vs-current drift; canonical MASTER_HANDOFF lockfile claim corrected under authorized docs-only scope; other docs remain historical until independently authorized. |
+| F12 / P2 | npm graph frozen in #59, but Ubuntu/Node major/Postgres major/Chromium/Actions tags remain floating; not a failure of #59 CI. |
+
+**Decision:** Work's 12 issues are supported as code observations, measured discrepancy or evidence gaps; its dynamic Chromium/DB-spy experiments have **not been independently repeated** in this review. None is proof of real-world breach, backup corruption or Production deployment. Release remains **NO-GO**; favor test-first F01/F02 over adding new features. No new repository application branch, code edit, merge or deploy authorized.
 
 ## Preservation of historical status
 
