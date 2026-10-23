@@ -220,6 +220,17 @@ A "100%" claim requires a defined weighted acceptance matrix for the chosen targ
 - **NEXT decision (NOT IMPLEMENTED):** F03 on open dialogue topics with an archived parent: current close path rejects and cannot delete previously recorded pseudonymous votes. Requires a **new owner-approved privacy/lifecycle policy**, considering cancellation vs closure, associated audit, no public results after archive, backup/legal holds and transactional locking before any code edit. Never run live deletion.
 - **Other open work:** F04/F05 DB fault tolerance and login timing; F06 retention identity; F07 branch protection/integration; F08 startup interlock; F09 recovery parity; F10 accessibility; F12 toolchain. Existing independent-review and release P0 gates remain NO-GO.
 
+### F03 lifecycle policy design checkpoint — 2026-10-23 (READ-ONLY, NOT AUTHORIZED)
+
+Confirmed at current PR #61 source SHA `1bfe8db99cb37dc8ce48466864260895fc4c6115`:
+- `db/007_civic_dialogue.sql` restricts `dialogue_topics.state` to `open`/`closed`, with no explicit `cancelled` state.
+- The normal topic close operation requires `civic_cases.state='published'`, produces `dialogue_results` aggregates when eligible and deletes `dialogue_votes` only in that successful transaction. This does not run after case archival.
+- **Three separate editorial archival paths** can archive a case: direct reviewer `/api/archive/:id` in `src/server/app.mjs`; accepted correction in `src/server/dossiers.mjs`; accepted appeal in `src/server/appeals.mjs`. Each needs coverage. The public reading paths already suppress withdrawn-parent content but hidden votes may persist in PostgreSQL/backups.
+
+**Proposed policy for owner/privacy review only (not a settled decision):** distinguish cancelled-by-case-withdrawal from normally closed topics. When a published case is archived, cancel all still-open child topics within the **same database transaction** and record a precise audit event, never create new aggregate results for cancelled topics and never publish withdrawn material. If and only if an independently approved retention/erasure policy authorizes it, delete pseudonymous individual votes for cancelled topics transactionally; address restoration/backup lifecycle/legal holds explicitly. Already closed topics and any historical aggregates require a separate specified handling rule (at minimum public suppression on parent archive, already implemented). A new `cancelled` state would require an additive v017 migration and downstream query/UI/test changes; do not mutate migration 007 historical checksum. An alternative approach reusing `closed` hides cancellation semantics and is not preferred without a detailed rationale.
+
+**Potential acceptance matrix after owner policy + code authorization:** all three archive pathways, case/topic/vote race order `civic_cases` then `dialogue_topics` to match normal voting/closing locks, idempotent repeated archive, absence of post-archive public report/aggregates, complete appropriate audit events, synthetic votes retained/erased strictly per approved policy, backup/restore implications. Run PostgreSQL concurrency/integration and Chromium smoke, exact new PR SHA and no critical skips. No real data deletion/deploy is allowed without further explicit permission.
+
 ## 10. Rules for ongoing updates
 
 1. On each substantive project step, **READ** current GitHub PR head/status, branch references and exact CI run; distinguish newly observed facts from historical checkpoint.
