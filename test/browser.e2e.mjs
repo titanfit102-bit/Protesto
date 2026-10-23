@@ -81,10 +81,43 @@ try{
  await clickText(page,"#case-form","Dërgo për verifikim");
  await page.waitForFunction(t=>[...document.querySelectorAll("#my-cases h3")].some(x=>x.textContent===t),{timeout:12000},title);
  log("submitted case appears in reporter queue");
+ // F01: a private unsent draft and earlier user cards may never pass from A to B.
+ const privateDraft="PRIVATE_A_UNSENT_DRAFT_"+unique;
+ await page.$eval('#case-form [name="description"]',(field,value)=>field.value=value,privateDraft);
  await clickText(page,"header","Dil");
  await waitVisible(page,"#auth-section");
+ const afterLogout=await page.evaluate(()=>({
+  draft:document.querySelector('#case-form [name="description"]')?.value,
+  mine:document.querySelector("#my-cases")?.textContent,
+  privateVisible:!document.querySelector("#authenticated")?.hidden
+ }));
+ assert.equal(afterLogout.draft,"","Logout must remove A's unsent private draft");
+ assert.equal(afterLogout.mine,"","Logout must remove A's private cards");
+ assert.equal(afterLogout.privateVisible,false,"Logout must hide private sections");
+ // A synthetic public API failure used to leave A's private cards visible for B.
+ await page.setRequestInterception(true);
+ const failPublicLedger=request=>{
+  if(new URL(request.url()).pathname==="/api/public/ledger"){
+   request.respond({status:503,contentType:"application/json",body:JSON.stringify({error:"Synthetic public feed unavailable"})});
+  }else request.continue();
+ };
+ page.on("request",failPublicLedger);
  await fillForm(page,"#login-form",{email:accounts[1].email,password:accounts[1].password});
  await clickText(page,"#login-form","Hyr në pilot");
+ await waitVisible(page,"#review-section");
+ const afterSwitch=await page.evaluate(()=>({
+  draft:document.querySelector('#case-form [name="description"]')?.value,
+  mine:document.querySelector("#my-cases")?.textContent,
+  displayed:document.body.textContent.includes("PRIVATE_A_UNSENT_DRAFT_"),
+  identity:document.querySelector("#account-label")?.textContent
+ }));
+ assert.equal(afterSwitch.draft,"","B must not inherit A's draft on 503");
+ assert.equal(afterSwitch.mine,"","B must not inherit A's private case cards on 503");
+ assert.equal(afterSwitch.displayed,false,"A's private draft must not remain visible to B");
+ assert.ok(afterSwitch.identity.includes(accounts[1].email),"B identity must be displayed after login");
+ page.off("request",failPublicLedger);
+ await page.setRequestInterception(false);
+ await page.reload({waitUntil:"networkidle0"});
  await waitVisible(page,"#review-section");
  await checkAccessibility(page,"reviewer dashboard");
  await page.waitForFunction(t=>[...document.querySelectorAll("#review-cases h3")].some(x=>x.textContent===t),{timeout:12000},title);
