@@ -44,13 +44,28 @@ export async function dialogueRoute({pathname,req,res,pool,user,json,fail,readJS
  if(topicMatch&&req.method==="GET"){
   const id=topicMatch[1];
   if(!isUUID(id))return fail(res,400,"ID i pavlefshëm.");
-  const t=await pool.query("SELECT "+jsonTopic+" FROM dialogue_topics t JOIN civic_cases c ON c.id=t.case_id WHERE t.id=$1 AND t.review_state='approved' AND t.public_title IS NOT NULL AND t.public_description IS NOT NULL AND c.state='published' AND c.public_title IS NOT NULL AND c.public_description IS NOT NULL AND c.public_area IS NOT NULL",[id]);
-  if(!t.rowCount)return fail(res,404,"Tema nuk është publike.");
-  const rows=await pool.query(
-   "SELECT s.id,s.public_body AS body,s.created_at,CASE WHEN t.state='closed' AND r.participants>=10 THEN r.participants END AS participants,CASE WHEN t.state='closed' AND r.participants>=10 THEN r.agree_count END AS agree_count,CASE WHEN t.state='closed' AND r.participants>=10 THEN r.disagree_count END AS disagree_count,CASE WHEN t.state='closed' AND r.participants>=10 THEN r.pass_count END AS pass_count FROM dialogue_statements s JOIN dialogue_topics t ON t.id=s.topic_id LEFT JOIN dialogue_results r ON r.statement_id=s.id WHERE s.topic_id=$1 AND s.state='accepted' AND s.public_body IS NOT NULL ORDER BY s.created_at ASC LIMIT 100",
+  // Eligibility and results share one PostgreSQL MVCC snapshot.
+  const selected=await pool.query(
+   "SELECT "+jsonTopic+",COALESCE(("+
+   "SELECT json_agg(row_to_json(items) ORDER BY items.created_at ASC,items.id ASC) FROM ("+
+   "SELECT s.id,s.public_body AS body,s.created_at,"+
+   "CASE WHEN t.state='closed' AND r.participants>=10 THEN r.participants END AS participants,"+
+   "CASE WHEN t.state='closed' AND r.participants>=10 THEN r.agree_count END AS agree_count,"+
+   "CASE WHEN t.state='closed' AND r.participants>=10 THEN r.disagree_count END AS disagree_count,"+
+   "CASE WHEN t.state='closed' AND r.participants>=10 THEN r.pass_count END AS pass_count "+
+   "FROM dialogue_statements s LEFT JOIN dialogue_results r ON r.statement_id=s.id "+
+   "WHERE s.topic_id=t.id AND s.state='accepted' AND s.public_body IS NOT NULL "+
+   "ORDER BY s.created_at ASC,s.id ASC LIMIT 100"+
+   ") items),'[]'::json) AS statements "+
+   "FROM dialogue_topics t JOIN civic_cases c ON c.id=t.case_id "+
+   "WHERE t.id=$1 AND t.review_state='approved' AND t.public_title IS NOT NULL "+
+   "AND t.public_description IS NOT NULL AND c.state='published' "+
+   "AND c.public_title IS NOT NULL AND c.public_description IS NOT NULL AND c.public_area IS NOT NULL",
    [id]
   );
-  return json(res,200,{item:t.rows[0],statements:rows.rows,minimumParticipants:10,resultsPolicy:"Rezultatet publikohen vetëm pas mbylljes dhe me të paktën 10 përgjigje për deklaratë; jo sondazh përfaqësues."});
+  if(!selected.rowCount)return fail(res,404,"Tema nuk është publike.");
+  const {statements,...item}=selected.rows[0];
+  return json(res,200,{item,statements,minimumParticipants:10,resultsPolicy:"Rezultatet publikohen vetëm pas mbylljes dhe me të paktën 10 përgjigje për deklaratë; jo sondazh përfaqësues."});
  }
  if(!user)return fail(res,401,"Kërkohet identifikim.");
  if(pathname==="/api/dialogue/topic-review/queue"&&req.method==="GET"){
