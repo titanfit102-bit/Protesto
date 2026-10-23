@@ -8,12 +8,30 @@ const make=(tag,className,content)=>{
 let selectedTopic="";
 let publicAggregateReport=null;
 let context;
+export function resetDialogue(){
+ selectedTopic="";
+ publicAggregateReport=null;
+ context=null;
+ for(const id of ["dialogue-details","dialogue-report","review-dialogue-topics","review-dialogue-statements"]){
+  $(id)?.replaceChildren();
+ }
+ const topic=$("dialogue-topic-select");
+ if(topic)topic.replaceChildren(listOption("","Zgjidh një diskutim..."));
+ const cases=$("dialogue-case-select");
+ if(cases)cases.replaceChildren(listOption("","Zgjidh dosjen e verifikuar..."));
+ for(const id of ["dialogue-statement-form","dialogue-vote-consent","dialogue-close-form","dialogue-create-section"]){
+  const el=$(id);if(el)el.hidden=true;
+ }
+}
 function listOption(value,title){const opt=make("option","",title);opt.value=value;return opt;}
 async function openTopic(id){
+ const activeContext=context;
+ if(!activeContext)return;
  const target=$("dialogue-details");target.replaceChildren();
  if(!id){target.append(make("p","pilot-empty","Nuk ka diskutime të hapura ende."));return;}
  try{
-  const data=await context.call("/api/dialogue/topics/"+encodeURIComponent(id));
+  const data=await activeContext.call("/api/dialogue/topics/"+encodeURIComponent(id));
+  if(context!==activeContext)return;
   const topic=data.item;
   const h=make("h3","",topic.title),p=make("p","",topic.description);
   const status=make("p","pilot-dialogue-disclaimer",topic.state==="closed"?
@@ -58,12 +76,15 @@ async function openTopic(id){
    records.append(item);
   }
   target.append(records);
- }catch(e){target.append(make("p","pilot-empty",e.message));}
+ }catch(e){if(context===activeContext)target.append(make("p","pilot-empty",e.message));}
 }
 async function loadAggregateReport(){
+ const activeContext=context;
+ if(!activeContext)return;
  const target=$("dialogue-report");
  target.replaceChildren();
- const report=await context.call("/api/dialogue/report");
+ const report=await activeContext.call("/api/dialogue/report");
+ if(context!==activeContext)return;
  publicAggregateReport=report;
  if(!report.items.length){
   target.append(make("p","pilot-empty","Nuk ka ende rezultate të kualifikuara. Diskutimet mbyllen përpara publikimit të totalit."));
@@ -94,8 +115,12 @@ async function loadAggregateReport(){
 }
 export async function renderDialogue({user,call,notice,refresh,cases}){
  context={user,call,notice,refresh};
- const result=await call("/api/dialogue/topics"),topics=result.items;
+ const activeContext=context;
+ const result=await call("/api/dialogue/topics");
+ if(context!==activeContext)return;
+ const topics=result.items;
  await loadAggregateReport();
+ if(context!==activeContext)return;
  const select=$("dialogue-topic-select");select.replaceChildren(listOption("","Zgjidh një diskutim..."));
  for(const item of topics)select.append(listOption(item.id,item.title+" — "+(item.state==="closed"?"mbyllur":"hapur")));
  if(!topics.some(x=>x.id===selectedTopic))selectedTopic=topics[0]?.id||"";

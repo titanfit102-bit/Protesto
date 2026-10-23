@@ -1,18 +1,51 @@
 import {attachEvidence,attachCorrection,displayCorrections,displayAppeals} from "./pilot-evidence.mjs";
-import {initDialogue,renderDialogue} from "./pilot-dialogue.mjs";
+import {initDialogue,renderDialogue,resetDialogue} from "./pilot-dialogue.mjs";
 import {attachCitizenResponse,displayCitizenResponseQueue} from "./pilot-right-reply.mjs";
 const $=id=>document.getElementById(id);
 let user=null;
+let sessionGeneration=0;
 const escapeHTML=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 async function call(path,method="GET",payload){
+ const generation=sessionGeneration;
  const options={method,credentials:"same-origin",cache:"no-store",headers:{}};
  if(method==="POST"){options.headers={"Content-Type":"application/json","X-Protesto-Request":"1"};options.body=JSON.stringify(payload||{});}
- const response=await fetch(path,options);
- let body;try{body=await response.json();}catch{body={error:"Përgjigje e pavlefshme nga serveri."};}
+ let response,body;
+ try{
+  response=await fetch(path,options);
+  if(generation!==sessionGeneration)throw Error("Përgjigje e vjetruar e sesionit.");
+  try{body=await response.json();}catch{body={error:"Përgjigje e pavlefshme nga serveri."};}
+ }catch(error){
+  if(generation!==sessionGeneration)throw Error("Përgjigje e vjetruar e sesionit.");
+  throw error;
+ }
+ if(generation!==sessionGeneration)throw Error("Përgjigje e vjetruar e sesionit.");
  if(!response.ok)throw Error(body.error||"Kërkesa dështoi ("+response.status+").");
  return body;
 }
-function notice(message,error=false){const n=$("pilot-notice");n.hidden=false;n.textContent=message;n.classList.toggle("error",error);}
+function notice(message,error=false){
+ if(message==="Përgjigje e vjetruar e sesionit.")return;
+ const n=$("pilot-notice");n.hidden=false;n.textContent=message;n.classList.toggle("error",error);
+}
+function clearPrivateUi(){
+ // Clear the content as well as the visibility state. A subsequent API error
+ // must never allow the new account to see an earlier user's draft or queues.
+ for(const id of ["login-form","case-form","initiative-form","gathering-form",
+  "dialogue-create-form","dialogue-statement-form","dialogue-close-form"]){
+  $(id)?.reset();
+ }
+ for(const id of ["my-appeals","my-corrections","my-actions","my-cases",
+  "review-responses","review-appeals","review-corrections","review-actions","review-cases",
+  "public-cases","public-actions","public-ledger"]){
+  $(id)?.replaceChildren();
+ }
+ const consent=$("dialogue-consent");if(consent)consent.checked=false;
+ resetDialogue();
+ $("account-label").textContent="";
+ $("authenticated").hidden=true;
+ $("review-section").hidden=true;
+ $("logout").hidden=true;
+ $("auth-section").hidden=true;
+}
 function record(item,review=false){
  const article=document.createElement("article");article.className="pilot-card";
  const state=item.state||"publikuar";
@@ -160,18 +193,30 @@ async function refresh(){
  }
 }
 async function load(){
- try{const result=await call("/api/me");user=result.user;}
- catch{user=null;}
+ const generation=++sessionGeneration;
+ user=null;
+ clearPrivateUi();
+ try{
+  const result=await call("/api/me");
+  if(generation!==sessionGeneration)return;
+  user=result.user;
+ }catch{
+  if(generation!==sessionGeneration)return;
+  user=null;
+ }
+ // Render while private content is hidden. Even an early public-feed error
+ // leaves no private content from the previous identity in the DOM.
+ try{await refresh();}catch(e){if(generation===sessionGeneration)notice(e.message,true);}
+ if(generation!==sessionGeneration)return;
  $("auth-section").hidden=!!user;
  $("authenticated").hidden=!user;
  $("logout").hidden=!user;
  $("account-label").textContent=user?user.email+" ("+user.role+")":"";
  $("review-section").hidden=!(user&&(user.role==="reviewer"||user.role==="admin"));
- try{await refresh();}catch(e){notice(e.message,true);}
 }
 $("login-form").addEventListener("submit",async event=>{
  event.preventDefault();const form=event.currentTarget;
- try{const data=Object.fromEntries(new FormData(form));const result=await call("/api/auth/login","POST",data);user=result.user;form.reset();notice("Identifikimi u krye.");await load();}
+ try{const data=Object.fromEntries(new FormData(form));await call("/api/auth/login","POST",data);form.reset();notice("Identifikimi u krye.");await load();}
  catch(e){notice(e.message,true);}
 });
 $("case-form").addEventListener("submit",async event=>{
@@ -197,8 +242,20 @@ $("export-user-data").addEventListener("click",async()=>{
  }catch(e){notice(e.message,true);}
 });
 $("logout").addEventListener("click",async()=>{
- try{await call("/api/auth/logout","POST",{});user=null;notice("Dole nga llogaria.");await load();}
- catch(e){notice(e.message,true);}
+ // Hide and forget private data immediately, before awaiting the network.
+ const generation=++sessionGeneration;
+ user=null;
+ clearPrivateUi();
+ try{
+  await call("/api/auth/logout","POST",{});
+  if(generation!==sessionGeneration)return;
+  notice("Dole nga llogaria.");
+  await load();
+ }catch(e){
+  if(generation!==sessionGeneration)return;
+  $("auth-section").hidden=false;
+  notice("Dalja nuk u konfirmua; provo përsëri ose mbyll faqen. "+e.message,true);
+ }
 });
 initDialogue({call,notice,refresh});
 load();
