@@ -35,15 +35,17 @@ const json=(res,status,data,headers={})=>{
  res.end(JSON.stringify(data));
 };
 const fail=(res,status,message)=>json(res,status,{error:message});
-async function readJSON(req){
+export async function readJSON(req){
  if(!(req.headers["content-type"]||"").toLowerCase().startsWith("application/json"))throw {status:415,message:"Kërkohet Content-Type: application/json."};
- let result="";let size=0;
+ const chunks=[];let size=0;
  for await(const part of req){
   size+=part.length;
   if(size>16384)throw {status:413,message:"Kërkesa është shumë e madhe."};
-  result+=part.toString("utf8");
+  chunks.push(part);
  }
  try{
+  // Decode once: UTF-8 code points may cross HTTP stream chunk boundaries.
+  const result=new TextDecoder("utf-8",{fatal:true}).decode(Buffer.concat(chunks,size));
   const parsed=JSON.parse(result);
   if(!parsed||typeof parsed!=="object"||Array.isArray(parsed))throw Error();
   return parsed;
