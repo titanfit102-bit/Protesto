@@ -11,10 +11,10 @@
 
 | Subject | Grounded fact |
 |---|---|
-| Latest candidate | [Draft PR #60](https://github.com/titanfit102-bit/Protesto/pull/60), open/unmerged; based on PR #59 |
-| Code branch | `feat/protesto-client-session-isolation` |
-| **Code HEAD SHA** | `69ecbf5fc3972758b595cb2cac416fce38c4a730` |
-| Automated run | [Actions #40009351146](https://github.com/titanfit102-bit/Protesto/actions/runs/40009351146) **success**; 64/64 Node tests, 0 failed, PostgreSQL migrations/replay, Chromium E2E (including A/logout/B with synthetic ledger 503), npm audit and synthetic encrypted restore |
+| Latest candidate | [Draft PR #61](https://github.com/titanfit102-bit/Protesto/pull/61), open/unmerged; based on PR #60 |
+| Code branch | `feat/protesto-retraction-note-boundaries` |
+| **Code HEAD SHA** | `1bfe8db99cb37dc8ce48466864260895fc4c6115` |
+| Automated run | [Actions #40010017504](https://github.com/titanfit102-bit/Protesto/actions/runs/40010017504) **success**; **65/65 PASS, 0 FAIL, 0 SKIP** Node/PostgreSQL tests, Chromium E2E (including F01 scenario), npm audit, migrations/replay and synthetic encrypted restore |
 | CI checkout proof | Merge commit `c059e3a0b279ce72c9fafdf2458181eebf9e55b8` has the **same Git tree** as code HEAD: `cb942053a0b63ceb97f318d6d885ef924b5da68e` |
 | Dependencies | `package-lock.json` **present**, frozen installs use `npm ci` in #59; full runtime/toolchain pinning still partial |
 | `main` | `1e34611bdb48195e7deadb8e33d26ddac3338c4d`, original README, `protected:false` and repository rulesets `[]`; no merge |
@@ -26,8 +26,8 @@ The last independent GPT Work report uploaded in conversation is **external mate
 ## Current engineering priorities — NOT implemented yet
 
 1. **F01 / P1 privacy (IMPLEMENTED, TESTED scope):** [Draft PR #60](https://github.com/titanfit102-bit/Protesto/pull/60) clears private DOM/forms/dialogue module state on logout/session refresh and ignores stale requests. E2E A→logout→B with public ledger 503 **PASS** at `69ecbf5fc3972758b595cb2cac416fce38c4a730`. Residual delayed-response, 401 and broader cross-module scenarios warrant later expansion before real-data pilot; no Production approval.
-2. **F02 / P1 correctness (NEXT):** correction/appeal accepted notes of 1000 chars grow to 1021/1019 after prefixes but `retraction_history.note` is `varchar(1000)`. Prepare separate stacked Draft PR and synthetic PostgreSQL boundary tests; never silently truncate.
-3. **F03 / P1 privacy lifecycle:** after case archival, dialogue topic closure returns 409 and earlier pseudonymous votes may remain. **Owner/privacy lifecycle decision required BEFORE implementation**; never execute live deletions by inference.
+2. **F02 / P1 correctness (IMPLEMENTED AND VERIFIED synthetic):** [Draft PR #61](https://github.com/titanfit102-bit/Protesto/pull/61) stores exact accepted correction/appeal reasoning (no prefix/truncation) and records decision provenance in existing audit entries. New PostgreSQL boundary tests for 979/980/1000, 981/982/1000, rejected and 1001 invalid, Unicode, case state and audit/rollback checks **PASS**, exact SHA/CI above.
+3. **F03 / P1 privacy lifecycle (NEXT):** after case archival, dialogue topic closure returns 409 and earlier pseudonymous votes may remain. **Owner/privacy lifecycle decision required BEFORE implementation**, including data erasure vs retention, audit continuity, backups and no public aggregate; never execute live deletions by inference.
 4. **F05/F04:** synchronous login scrypt and known/unknown timing; missing PostgreSQL pool error handling, DB timeouts/fault recovery.
 5. **F06/F08:** real-DB identity/least privilege for synthetic retention; release verdict is not a startup interlock.
 6. **F09/F07:** broader encrypted restore parity and human review/protection/integration of cumulative 124-file diff.
@@ -45,7 +45,7 @@ The last independent GPT Work report uploaded in conversation is **external mate
 
 ## Exact resume action
 
-Reconfirm GitHub PR #60 and this docs checkpoint; **F01 is implemented/tested in Draft PR #60**. Continue the agreed narrow F02 package as an isolated Draft PR on top of #60 with synthetic DB boundary tests; no merge/deploy. F03's vote/case lifecycle first requires a policy decision; defer irreversible behavior. When code edits are separately approved, run targeted+full synthetic CI including zero-skipped DB tests and browser scenarios, record new HEAD/merge tree evidence and update both continuity docs. If no code-edit permission exists, continue read-only threat/acceptance design.
+Reconfirm GitHub PR #61 and this docs checkpoint. **F01/F02 are now implemented and verified in separate stacked Draft PRs #60 and #61**, while additional adversarial coverage remains planned. **NEXT:** read-only F03 archived-dialogue lifecycle design, evidence/locking analysis and a proposed privacy-preserving policy for explicit owner approval before any related code mutation. Then plan F05/F04 as separately authorized engineering tranches; do not merge/deploy. F03's vote/case lifecycle first requires a policy decision; defer irreversible behavior. When code edits are separately approved, run targeted+full synthetic CI including zero-skipped DB tests and browser scenarios, record new HEAD/merge tree evidence and update both continuity docs. If no code-edit permission exists, continue read-only threat/acceptance design.
 
 ## Historical preservation
 
