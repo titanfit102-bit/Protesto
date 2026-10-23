@@ -34,6 +34,12 @@ jobs:
         with:
           node-version: '22'
       - run: npm install --no-audit --no-fund
+      # Temporary bootstrap on a disposable runner: extract npm's *actual*
+      # generated lockfile before switching this job to npm ci.
+      - name: Capture resolved lockfile (temporary bootstrap only)
+        shell: bash
+        run: |
+          node --input-type=module -e 'import { readFileSync } from "node:fs"; const data=readFileSync("package-lock.json","utf8"); console.log("PROTESTO_LOCK_START"); for(let i=0;i<data.length;i+=500) console.log("PROTESTO_LOCK_CHUNK:"+JSON.stringify(data.slice(i,i+500))); console.log("PROTESTO_LOCK_END");'
       - name: Audit runtime and development dependencies for high severity vulnerabilities
         run: npm audit --audit-level=high
       - name: Syntax-check every JavaScript module
