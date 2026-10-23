@@ -1,5 +1,11 @@
-import { randomBytes, scryptSync, timingSafeEqual, createHash } from "node:crypto";
+import { randomBytes, scrypt, scryptSync, timingSafeEqual, createHash } from "node:crypto";
+import {promisify} from "node:util";
 const COOKIE="protesto_session";
+const scryptAsync=promisify(scrypt);
+const storedPasswordPattern=/^scrypt\$([a-f0-9]{32})\$([a-f0-9]{128})$/;
+// A valid-format non-account hash ensures unknown, inactive and corrupt-hash
+// attempts still perform one KDF. It cannot authorize an absent account.
+const DUMMY_PASSWORD_HASH="scrypt$"+"0".repeat(32)+"$"+"0".repeat(128);
 export const SESSION_AGE_SECONDS=8*60*60;
 export function normalizeEmail(raw){
  const email=typeof raw==="string"?raw.trim().toLowerCase():"";
@@ -15,6 +21,14 @@ export function verifyPassword(password,stored){
  const p=stored.split("$");
  if(p.length!==3||p[0]!=="scrypt"||!/^[a-f0-9]{32}$/.test(p[1])||!/^[a-f0-9]{128}$/.test(p[2]))return false;
  return timingSafeEqual(scryptSync(password,p[1],64),Buffer.from(p[2],"hex"));
+}
+export async function verifyPasswordAsync(password,stored){
+ if(typeof password!=="string"||password.length>256)return false;
+ const valid=typeof stored==="string"?storedPasswordPattern.exec(stored):null;
+ const parts=(valid?stored:DUMMY_PASSWORD_HASH).split("$");
+ const derived=await scryptAsync(password,parts[1],64);
+ const matched=timingSafeEqual(derived,Buffer.from(parts[2],"hex"));
+ return Boolean(valid&&matched);
 }
 export const newSessionToken=()=>randomBytes(32).toString("base64url");
 export const tokenHash=(token)=>createHash("sha256").update(token).digest("hex");
