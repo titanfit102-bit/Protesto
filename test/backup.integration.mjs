@@ -289,7 +289,7 @@ try{
 }finally{
  if(source)await source.end();
  for(const [name,created] of [[dstName,createdDestination],[srcName,createdSource]]){
-  if(created)await admin.query("DROP DATABASE "+qname(name)+" WITH (FORCE)");
+  if(created)await admin.query("DROP DATABASE "+qname(name));
  }
  if(createdRole)await admin.query("DROP ROLE "+qname(role));
  await admin.end();
