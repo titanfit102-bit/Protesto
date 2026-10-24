@@ -7,11 +7,11 @@ permissions:
   contents: read
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     services:
       postgres:
-        image: postgres:16
+        image: postgres:16.15-bookworm@sha256:d81f7b51697014367236d07ec58b54153fc28f828b72bf247fe5c7487520bcb0
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -29,10 +29,10 @@ jobs:
       PROTESTO_RATE_LIMIT_SECRET: synthetic-ci-rate-limit-secret-for-isolated-postgres-only
       PROTESTO_DIALOGUE_SECRET: synthetic-ci-dialogue-secret-for-isolated-postgres-only
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: '22'
+          node-version: '22.23.4'
       - run: npm ci --no-audit --no-fund
       - name: Audit runtime and development dependencies for high severity vulnerabilities
         run: npm audit --audit-level=high
@@ -49,12 +49,20 @@ jobs:
       - run: npm run verify
       - name: Review integrated candidate manifest and fail-closed release gate
         run: node tools/release-audit.mjs
-      - name: Find preinstalled Chromium
+      - name: Install exact Chrome for Testing from lockfile-resolved Puppeteer CLI
         shell: bash
+        env:
+          CHROME_VERSION: '156.0.8078.47'
         run: |
-          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
-          if [ -z "$CHROME" ]; then echo 'Chrome is not installed in runner'; exit 1; fi
-          echo "CHROME_PATH=$CHROME" >> "$GITHUB_ENV"
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/protesto-chrome"
+          ./node_modules/.bin/browsers install "chrome@$CHROME_VERSION" --path "$RUNNER_TEMP/protesto-chrome"
+          CHROME_PATH="$(CHROME_CACHE_DIR="$RUNNER_TEMP/protesto-chrome" node --input-type=module -e 'import {computeExecutablePath, Browser} from "@puppeteer/browsers"; console.log(computeExecutablePath({cacheDir:process.env.CHROME_CACHE_DIR,browser:Browser.CHROME,buildId:process.env.CHROME_VERSION}));')"
+          test -x "$CHROME_PATH"
+          echo "CHROME_PATH=$CHROME_PATH" >> "$GITHUB_ENV"
+          echo "CHROME_VERSION=$CHROME_VERSION" >> "$GITHUB_ENV"
+      - name: Verify exact toolchain versions before browser and backup tests
+        run: node tools/check-ci-toolchain.mjs
       - name: Build private offline HTML preview (no deployment)
         run: node tools/build-offline-preview.mjs
       - name: Capture real browser demo screenshots
@@ -64,7 +72,7 @@ jobs:
           PROTESTO_CAPTURE_PREVIEW: '1'
         run: npm run test:e2e
       - name: Upload offline preview and screenshots as workflow artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: Protesto-Preview-Offline
           path: dist-preview/
