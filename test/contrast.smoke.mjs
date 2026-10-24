@@ -9,7 +9,7 @@ export async function checkTextContrast(page,label,selectors){
  const results=await page.evaluate(requested=>{
   const issues=[];
   const normalize=rgb=>{
-   const nums=rgb.match(/[\\d.]+/g)?.map(Number);
+   const nums=rgb.match(/[\d.]+/g)?.map(Number);
    return nums&&nums.length>=3?[nums[0],nums[1],nums[2],nums.length>3?nums[3]:1]:null;
   };
   const composite=(top,bottom)=>{
