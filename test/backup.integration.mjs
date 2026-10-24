@@ -45,6 +45,17 @@ const run=(script,overrides={})=>exec(process.execPath,[script],{
 });
 const qname=x=>'"'+x+'"'; // only generated [a-z0-9_] names may reach identifiers
 const sha=v=>createHash("sha256").update(v).digest("hex");
+// PostgreSQL 16 may round-trip a varchar[] -> text[] CHECK expression as
+// varchar::text on each ARRAY element. This exact, semantics-preserving
+// normalization is restricted to CHECK ... ANY(ARRAY[...]) deparser output.
+function canonicalConstraint(definition){
+ if(!definition.startsWith("CHECK (")||!definition.includes(" = ANY (ARRAY["))
+  return definition;
+ return definition
+  .replace(/::character varying::text/g,"::text")
+  .replace(/::character varying(?=[,\]])/g,"::text")
+  .replace(/\]::text\[\](?=\)\))/g,"]");
+}
 let createdRole=false,createdSource=false,createdDestination=false,source;
 
 const tableNames=async pool=>{
@@ -88,16 +99,14 @@ const schemaProof=async pool=>{
  const out={};
  for(let i=0;i<queries.length;i++){
   const {rows}=await pool.query(queries[i]);
+  if(i===1){
+   for(const row of rows){
+    row.definition=canonicalConstraint(row.definition);
+   }
+  }
   out[["columns","constraints","indexes","triggers","functions"][i]]={
    count:rows.length,sha256:sha(JSON.stringify(rows))
   };
-  if(i===1){
-   // Keys plus digest only: never print PII or full application row content.
-   out.constraintFingerprintByName=Object.fromEntries(
-    rows.map(r=>[r.table_name+"."+r.conname,sha(r.definition)]));
-   out.constraintDefinitionByName=Object.fromEntries(
-    rows.map(r=>[r.table_name+"."+r.conname,r.definition]));
-  }
  }
  return out;
 };
@@ -263,19 +272,7 @@ try{
  try{
   assert.deepEqual(await rowProof(restored),initialRows,
    "all 20 table counts and full row contents must match byte-for-byte canonical hashes");
-  const restoredSchema=await schemaProof(restored);
-  if(restoredSchema.constraints.sha256!==initialSchema.constraints.sha256){
-   const before=initialSchema.constraintFingerprintByName;
-   const after=restoredSchema.constraintFingerprintByName;
-   const names=[...new Set([...Object.keys(before),...Object.keys(after)])].sort();
-   const differing=names.filter(name=>before[name]!==after[name]);
-   const samples=differing.slice(0,2).map(name=>({
-    name,source:initialSchema.constraintDefinitionByName[name],
-    restored:restoredSchema.constraintDefinitionByName[name]
-   }));
-   throw Error("F09 constraint deparser differences: "+JSON.stringify(samples));
-  }
-  assert.deepEqual(restoredSchema,initialSchema,
+  assert.deepEqual(await schemaProof(restored),initialSchema,
    "columns, constraints, indexes, custom triggers and functions must match");
   const foreignKeys=await restored.query(
    "SELECT count(*)::integer n FROM pg_constraint WHERE contype='f' "+
