@@ -215,6 +215,9 @@ try{
   ".hero p",".hero .btn.primary",".text-link",".stat span",
   ".record-footer",".steps span",".eyebrow","footer"
  ]);
+ await page.hover(".hero .btn.primary");
+ await checkTextContrast(page,"demo primary button hover",[".hero .btn.primary"]);
+ await page.mouse.move(0,0);
  await page.setViewport({width:390,height:844,isMobile:true});
  await page.goto(host+"/#cases",{waitUntil:"networkidle0"});
  await page.waitForSelector("#query");
