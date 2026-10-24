@@ -128,10 +128,10 @@ try{
  await page.reload({waitUntil:"networkidle0"});
  await waitVisible(page,"#review-section");
  await checkAccessibility(page,"reviewer dashboard");
+ await page.waitForFunction(t=>[...document.querySelectorAll("#review-cases h3")].some(x=>x.textContent===t),{timeout:12000},title);
  await checkTextContrast(page,"reviewer dashboard",[
   ".pilot-subtitle",".pilot-panel p","#review-section .pilot-card p",".pilot-disclaimer"
  ]);
- await page.waitForFunction(t=>[...document.querySelectorAll("#review-cases h3")].some(x=>x.textContent===t),{timeout:12000},title);
  const caseIndex=await page.evaluate(t=>[...document.querySelectorAll("#review-cases .pilot-card")].findIndex(el=>el.querySelector("h3")?.textContent===t),title);
  assert.ok(caseIndex>=0);
  const selectCard="#review-cases .pilot-card:nth-child("+(caseIndex+1)+")";
@@ -213,7 +213,7 @@ try{
  await checkTextContrast(page,"demo desktop overview",[
   ".sidebar .brand small",".nav-caption",".breadcrumb",".breadcrumb span",
   ".hero p",".hero .btn.primary",".text-link",".stat span",
-  ".record-footer",".record-footer a",".steps span",".eyebrow","footer"
+  ".record-footer",".steps span",".eyebrow","footer"
  ]);
  await page.setViewport({width:390,height:844,isMobile:true});
  await page.goto(host+"/#cases",{waitUntil:"networkidle0"});
@@ -221,8 +221,7 @@ try{
  await checkAccessibility(page,"demo case list");
  await checkTextContrast(page,"demo mobile case list",[
   ".breadcrumb",".breadcrumb span",".page-head p",
-  ".page-head .btn.primary",".result-count",".record-footer",
-  ".record-footer a","footer"
+  ".page-head .btn.primary",".result-count",".record-footer","footer"
  ]);
  await page.$eval("#query",el=>{el.value="Mjedis";el.dispatchEvent(new Event("input",{bubbles:true}));});
  await page.waitForFunction(()=>document.querySelector(".result-count")?.textContent.includes("1 rezultate"),{timeout:12000});
@@ -248,6 +247,7 @@ try{
  });
  await clickText(page,"#compose-form","Ruaj lokalisht →");
  await page.waitForFunction(t=>[...document.querySelectorAll("#content .record h3")].some(x=>x.textContent===t),{timeout:12000},demoTitle);
+ await checkTextContrast(page,"demo local source link",[".record-footer a"]);
  assert.ok((await page.evaluate(()=>localStorage.getItem("protesto.demo.v1"))).includes(demoTitle));
  await page.reload({waitUntil:"networkidle0"});
  await page.waitForFunction(t=>[...document.querySelectorAll("#content .record h3")].some(x=>x.textContent===t),{timeout:12000},demoTitle);
