@@ -91,6 +91,11 @@ const schemaProof=async pool=>{
   out[["columns","constraints","indexes","triggers","functions"][i]]={
    count:rows.length,sha256:sha(JSON.stringify(rows))
   };
+  if(i===1){
+   // Keys plus digest only: never print PII or full application row content.
+   out.constraintFingerprintByName=Object.fromEntries(
+    rows.map(r=>[r.table_name+"."+r.conname,sha(r.definition)]));
+  }
  }
  return out;
 };
@@ -256,7 +261,15 @@ try{
  try{
   assert.deepEqual(await rowProof(restored),initialRows,
    "all 20 table counts and full row contents must match byte-for-byte canonical hashes");
-  assert.deepEqual(await schemaProof(restored),initialSchema,
+  const restoredSchema=await schemaProof(restored);
+  if(restoredSchema.constraints.sha256!==initialSchema.constraints.sha256){
+   const before=initialSchema.constraintFingerprintByName;
+   const after=restoredSchema.constraintFingerprintByName;
+   const names=[...new Set([...Object.keys(before),...Object.keys(after)])].sort();
+   const differing=names.filter(name=>before[name]!==after[name]);
+   throw Error("F09 schema constraint definitions differ after restore: "+differing.join(", "));
+  }
+  assert.deepEqual(restoredSchema,initialSchema,
    "columns, constraints, indexes, custom triggers and functions must match");
   const foreignKeys=await restored.query(
    "SELECT count(*)::integer n FROM pg_constraint WHERE contype='f' "+
