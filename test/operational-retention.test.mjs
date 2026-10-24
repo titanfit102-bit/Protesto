@@ -160,7 +160,7 @@ test("F06: retention runs only in fresh disposable CI DB under least-privilege i
   if(other)await other.end();
   if(restricted)await restricted.end();
   if(scratch)await scratch.end();
-  if(createdDB)await admin.query('DROP DATABASE "'+database+'" WITH (FORCE)');
+  if(createdDB)await admin.query('DROP DATABASE "'+database+'"');
   if(createdRole)await admin.query('DROP ROLE "'+role+'"');
   await admin.end();
  }
