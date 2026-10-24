@@ -95,6 +95,8 @@ const schemaProof=async pool=>{
    // Keys plus digest only: never print PII or full application row content.
    out.constraintFingerprintByName=Object.fromEntries(
     rows.map(r=>[r.table_name+"."+r.conname,sha(r.definition)]));
+   out.constraintDefinitionByName=Object.fromEntries(
+    rows.map(r=>[r.table_name+"."+r.conname,r.definition]));
   }
  }
  return out;
@@ -267,7 +269,11 @@ try{
    const after=restoredSchema.constraintFingerprintByName;
    const names=[...new Set([...Object.keys(before),...Object.keys(after)])].sort();
    const differing=names.filter(name=>before[name]!==after[name]);
-   throw Error("F09 schema constraint definitions differ after restore: "+differing.join(", "));
+   const samples=differing.slice(0,2).map(name=>({
+    name,source:initialSchema.constraintDefinitionByName[name],
+    restored:restoredSchema.constraintDefinitionByName[name]
+   }));
+   throw Error("F09 constraint deparser differences: "+JSON.stringify(samples));
   }
   assert.deepEqual(restoredSchema,initialSchema,
    "columns, constraints, indexes, custom triggers and functions must match");
