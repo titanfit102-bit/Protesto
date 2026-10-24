@@ -6,6 +6,7 @@ import puppeteer from "puppeteer-core";
 import pg from "pg";
 import {hashPassword} from "../src/server/security.mjs";
 import {checkAccessibility} from "./accessibility.smoke.mjs";
+import {checkTextContrast} from "./contrast.smoke.mjs";
 
 const chrome=process.env.CHROME_PATH||"/usr/bin/google-chrome";
 const host="http://127.0.0.1:4174";
@@ -64,6 +65,10 @@ try{
  await page.goto(host+"/pilot.html",{waitUntil:"networkidle0"});
  await waitVisible(page,"#auth-section");
  await checkAccessibility(page,"pilot login");
+ await checkTextContrast(page,"pilot login",[
+  ".pilot-logo small",".pilot-subtitle","#auth-section > p",
+  "#login-form .btn.primary",".pilot-disclaimer"
+ ]);
  await page.keyboard.press("Tab");
  assert.notEqual(await page.evaluate(()=>document.activeElement?.tagName),"BODY","Pilot must have keyboard focus");
  log("login form loaded");
@@ -71,6 +76,9 @@ try{
  await clickText(page,"#login-form","Hyr në pilot");
  await waitVisible(page,"#authenticated");
  await checkAccessibility(page,"authenticated reporter");
+ await checkTextContrast(page,"reporter controls",[
+  ".pilot-subtitle","#case-form .btn.primary",".pilot-panel p",".pilot-disclaimer"
+ ]);
  log("reporter logged in");
  const title="Raport browser "+unique;
  await fillForm(page,"#case-form",{
@@ -120,6 +128,9 @@ try{
  await page.reload({waitUntil:"networkidle0"});
  await waitVisible(page,"#review-section");
  await checkAccessibility(page,"reviewer dashboard");
+ await checkTextContrast(page,"reviewer dashboard",[
+  ".pilot-subtitle",".pilot-panel p","#review-section .pilot-card p",".pilot-disclaimer"
+ ]);
  await page.waitForFunction(t=>[...document.querySelectorAll("#review-cases h3")].some(x=>x.textContent===t),{timeout:12000},title);
  const caseIndex=await page.evaluate(t=>[...document.querySelectorAll("#review-cases .pilot-card")].findIndex(el=>el.querySelector("h3")?.textContent===t),title);
  assert.ok(caseIndex>=0);
@@ -195,9 +206,24 @@ try{
  assert.ok(size.scroll<=size.viewport+2,"Mobile overflow: "+JSON.stringify(size));
  log("mobile viewport has no horizontal page overflow");
  log("private pilot journey and mobile viewport passed");
+ // Inspect the desktop DEMO landing page before mobile navigation.
+ await page.setViewport({width:1280,height:800,isMobile:false});
+ await page.goto(host+"/#overview",{waitUntil:"networkidle0"});
+ await page.waitForSelector(".stats .stat span");
+ await checkTextContrast(page,"demo desktop overview",[
+  ".sidebar .brand small",".nav-caption",".breadcrumb",".breadcrumb span",
+  ".hero p",".hero .btn.primary",".text-link",".stat span",
+  ".record-footer",".record-footer a",".steps span",".eyebrow","footer"
+ ]);
+ await page.setViewport({width:390,height:844,isMobile:true});
  await page.goto(host+"/#cases",{waitUntil:"networkidle0"});
  await page.waitForSelector("#query");
  await checkAccessibility(page,"demo case list");
+ await checkTextContrast(page,"demo mobile case list",[
+  ".breadcrumb",".breadcrumb span",".page-head p",
+  ".page-head .btn.primary",".result-count",".record-footer",
+  ".record-footer a","footer"
+ ]);
  await page.$eval("#query",el=>{el.value="Mjedis";el.dispatchEvent(new Event("input",{bubbles:true}));});
  await page.waitForFunction(()=>document.querySelector(".result-count")?.textContent.includes("1 rezultate"),{timeout:12000});
  log("demo search filter works");
@@ -208,6 +234,10 @@ try{
  });
  await page.waitForSelector("#composer[open]");
  await checkAccessibility(page,"open report dialog");
+ await checkTextContrast(page,"demo open compose dialog",[
+  "#composer .eyebrow","#composer .field",
+  "#composer .btn.primary"
+ ]);
  const focusInsideDialog=await page.evaluate(()=>document.querySelector("#composer")?.contains(document.activeElement));
  assert.equal(focusInsideDialog,true,"Opening dialog should move focus inside it");
  const demoTitle="Raport demonstrimi browser "+unique;
