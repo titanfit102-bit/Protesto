@@ -622,6 +622,42 @@ The PR checkout merge commit **`a52d258dd7908fbddeb980301350316ca562b289`** has 
 
 **Next owner-controlled integration prerequisites (proposal only):** (1) enable branch ruleset for `main` requiring `verify` check from GitHub Actions and genuinely independent approving reviews; prevent force-push, unreviewed bypass and deletion; (2) review cumulative **135-file** #69 vs main tree and the 22 legacy decisions; (3) decide whether to transfer canonical `docs/STATUS.md` and `docs/MASTER_HANDOFF.md` via a separately authorized documentation-only reviewed integration path, not a wholesale docs-branch merge; (4) choose explicit reviewed staging of Draft stack; (5) preserve Production NO-GO until all external P0 privacy/security/legal/editorial/backup/hosted checks and authorizations. Current GPT GitHub integration lacks branch protection admin access. **No actions in these steps were taken.**
 
+
+### 2026-10-25 — F07 22-PR historical test-contract crosswalk (READ-ONLY)
+
+**Live recheck:** #69 remains OPEN/Draft at application SHA 8f46a94ecc8fb8e3b5e860c6656f07dea15ef661. GitHub Actions [#40089967166](https://github.com/titanfit102-bit/Protesto/actions/runs/40089967166) completed successfully for that exact SHA, including all 23 named job steps. The previously logged 75/75 pass figure is historical verified CI evidence, NOT a test rerun in this read-only investigation. Main is still 1e34611bdb48195e7deadb8e33d26ddac3338c4d with protected:false and rulesets []. No merge, release or real civic-data use.
+
+**Source method:** Fetched the unified patches for **every one of the 22 parallel experimental PRs** #4–#7, #9 and #11–#27. Identified exact prior exported functions and their test scenarios; independently read the current candidate implementation and selected tests (domain, security, role boundary, public URL/ledger, dialogue report, source publication, data export, accessibility, browser, correction). This is source-level comparison, **not** program-wide equivalence, product-scope approval, independent security certification or local execution.
+
+| Historical PR | Original purpose / export | Current mainline candidate counterpart / unresolved choice |
+|---|---|---|
+| #4 | Case limits, HTTPS validation and leap-year/date boundary tests | src/domain.mjs + test/domain.test.mjs; exact historical boundary tests need mapping |
+| #5 | Fallback, immutable clone and 500/200/200 restore cap tests | restoreState + domain.test; named current assertions only cover basic fallback/roundtrip |
+| #6 | OpenCode automatic PR proof document | Historical process documentation; not an application feature |
+| #7 | Combined filters, newest-first sorting and no mutation | filterCases + domain.test; named current assertions check filters individually |
+| #9 | validateDialogueAggregate / summarizeDialogueReport | src/server/dialogue-report.mjs and report tests; equivalence not established |
+| #11 | roundedDialogueShares | Current dialogue report tests verify deterministic percentages totaling 100 |
+| #12 | adaptPublicDialogueRows | Current dialogue report tests check allowlist and low-count suppression |
+| #13 | publicLedgerView | public-ledger.mjs and current public-ledger tests overlap |
+| #14 | evidenceReviewGates | source-publication.mjs and review/test paths overlap |
+| #15 | correctionDecisionPolicy | Current correction-policy.mjs and tests overlap |
+| #16 | independentAppealGates | appeals.mjs and private integration review paths overlap |
+| #17 | validatePublicAuditSequence with corrected event | Current ledger only allows published/archived; needs owner product/privacy decision |
+| #18 | summarizeSourceProvenance | Current source-publication helper/tests overlap |
+| #19 | institutionReplyTransition | Official institution response lifecycle NOT established in current API |
+| #20 | addInstitutionWorkingDays | No approved equivalent institutional follow-up schedule found |
+| #21 | institutionPublicSummary | responses.mjs handles citizen, not institutional, replies |
+| #22 | evaluateCaseRetention | Historical helper does not authorize auto-erasure; real-data legal policy OPEN |
+| #23 | ownCivicExport | Broader current /api/me/export with owner scoping and explicit incompleteness |
+| #24 | initiativeStatusLogic | Historical statuses differ from pending/published/archived; product mapping OPEN |
+| #25 | peacefulEventWindow | Current gathering validation uses a calendar DATE, not a UTC start/end window |
+| #26 | accessibleStatusMessage | Central dynamic announcement contract not shown by current accessibility smoke |
+| #27 | publicSourceLinkSafety | Current safePublicExternalUrl lacks explicit rejection of all older pseudo-private suffixes; URL policy OPEN |
+
+**New focused test-parity observation:** Read the complete 69-line current test/domain.test.mjs and current src/domain.mjs. Historical #4/#5/#7 name exact 7/8/120/121 and 24/25/2000/2001 input boundaries, calendar leap-year edges, pre-filter 500/200/200 restore limits, fallback independence, combined query/category/status matching, stable ordering and input immutability. The named current domain unit tests prove only selected short/invalid inputs, three filters **individually**, and basic restore fallback. Implementation directly contains filtering composition/sorting and restore limits. **The absence of those exact assertions in this one file is a test-traceability gap, not proof of broken behavior; other currently executing browser/integration tests may overlap**. If specifically authorized, deduplicate against the full suite first, then add only missing high-value synthetic regression assertions to the current candidate; DO NOT cherry-pick old experimental modules or close old PRs automatically.
+
+**Decision boundary:** This crosswalk is provisional; for EACH legacy PR, independent reviewer and owner must still record SUPPORTED_BY_CURRENT_CONTRACT_AND_TEST, INTENTIONALLY_OUT_OF_MVP, REQUIRES_NEW_SPEC_AND_TEST or INCONCLUSIVE with actual evidence and product/privacy signoff. Priority owner decisions remain corrected ledger event, institutional replies, gathering time window, external URL suffix policy, dynamic accessibility status announcements and lawful retention. Protection of main, real independent review of cumulative candidate, and external P0 remain blocking. Only canonical continuity docs are authorized for writing; no code, rulesets, PR lifecycle, branch merges, deploy or cost changes executed here.
+
 ## 10. Rules for ongoing updates
 
 1. On each substantive project step, **READ** current GitHub PR head/status, branch references and exact CI run; distinguish newly observed facts from historical checkpoint.
