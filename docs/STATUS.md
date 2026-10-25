@@ -1,6 +1,6 @@
 # PROTESTO — CURRENT_STATE (canonical recovery checkpoint)
 
-**Verified/reconciled:** 2026-10-24 | **Release gate: NO-GO for Production or real sensitive civic data**  
+**Verified/reconciled:** 2026-10-25 | **Release gate: NO-GO for Production or real sensitive civic data**  
 **Documentation branch:** [`docs/protesto-continuity`](https://github.com/titanfit102-bit/Protesto/tree/docs/protesto-continuity)  
 **Full history and detailed F01–F12 audit:** [`docs/MASTER_HANDOFF.md`](./MASTER_HANDOFF.md)  
 **Repository:** https://github.com/titanfit102-bit/Protesto
@@ -60,6 +60,15 @@ Verify latest [Draft PR #69](https://github.com/titanfit102-bit/Protesto/pull/69
 - Directly fetched all **22** parallel historic PR diffs (#4–#7, #9, #11–#27) and compared legacy function/test intentions to latest candidate code and selected tests. Full per-PR crosswalk in MASTER_HANDOFF. Legacy #4/#5/#7 include additional date/input-limit/restore/filter combination/immutability scenarios not directly asserted in the named current 69-line domain unit test. This is **a scoped test-traceability gap, NOT a demonstrated runtime defect**; current implementation and other test suites may already cover some scenarios.
 - Historical gaps still requiring product decisions: corrected ledger event (#17), genuine institutional replies (#19–#21), gathering UTC time windows (#25), pseudo-private URL domains (#27), dynamic screen-reader messages (#26), legal retention (#22). Do not import overlapping OpenCode branches without contract and independent review.
 - **Next:** owner/admin approves/enforces protected main rules with the real GitHub Actions check **verify**, identifies independent reviewer, then expressly authorizes any targeted synthetic test-only parity work or final product specifications. Cumulative code remains unmerged, Production/real sensitive data **NO-GO**. Standing writing permission covers only these two docs on docs/protesto-continuity.
+
+
+## 2026-10-25 — Cybersecurity governance documentation checkpoint
+
+- **Authorized security docs-only branch:** [docs/protesto-permanent-security-governance](https://github.com/titanfit102-bit/Protesto/tree/docs/protesto-permanent-security-governance), HEAD `f6e3713453d67db93cf060a0ad914468ebfc7c23`, based on the **application** PR #69 SHA `8f46a94ecc8fb8e3b5e860c6656f07dea15ef661` (no app code changes). Four new files: [SECURITY_REGISTER](https://github.com/titanfit102-bit/Protesto/blob/docs/protesto-permanent-security-governance/docs/security/SECURITY_REGISTER.md), [SECURITY_ARCHITECTURE](https://github.com/titanfit102-bit/Protesto/blob/docs/protesto-permanent-security-governance/docs/security/SECURITY_ARCHITECTURE.md), [THREAT_MODEL](https://github.com/titanfit102-bit/Protesto/blob/docs/protesto-permanent-security-governance/docs/security/THREAT_MODEL.md) and [SECURITY_TEST_MATRIX](https://github.com/titanfit102-bit/Protesto/blob/docs/protesto-permanent-security-governance/docs/security/SECURITY_TEST_MATRIX.md). This is the **canonical security register in a separate unmerged documentation branch**, NOT an enforced CI control or merged application policy.
+- Code/CI reverified: Draft [PR #69](https://github.com/titanfit102-bit/Protesto/pull/69) at the same SHA; [Actions #40089967166](https://github.com/titanfit102-bit/Protesto/actions/runs/40089967166) SUCCESS; job logs 75/75, 0 fail/skip, npm audit 0 at run, `releaseAllowed:false`. No new tests on docs commits, no Production.
+- [GitHub governance F07] `main` `1e34611bdb48195e7deadb8e33d26ddac3338c4d`, `protected:false`, rulesets `[]` as rechecked; 65 open Draft PRs. Existing workflow `verify` has dependency audit/synthetic privacy, DB and browser/recovery gates, **but no dedicated CodeQL/SAST/secret scanner step in that workflow** (native repository-wide GitHub scanners/settings unverified). Release P0 remains OPEN.
+- **Prepared but not implemented:** brief root `AGENTS.md` proposal in the security register; optional dedicated secret scanning/SAST/CI hardening in security test matrix. New changes to the application branch/CI require separate scoped approval. No workflow, ruleset, merge, deploy, real data, payment, or PR closures occurred.
+- **Exact resume:** finish security docs read-back; then return to planned F07 independent reviewer and `main` protection/integration decision. Canonical continuity is still ONLY `docs/STATUS.md` and `docs/MASTER_HANDOFF.md` on `docs/protesto-continuity`. When an integration plan is approved, explicitly reconcile these two canonical files and four security docs into candidate branch without wholesale merging the older continuity tree. No auto-merge.
 
 ## Historical preservation
 
