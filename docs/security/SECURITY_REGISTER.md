@@ -48,4 +48,38 @@
 - `main` ruleset, CODEOWNERS, branch protection, reviewer i pavarur dhe integrimi i 40 PR-ve: **OWNER/ADMIN**, jo veprim i kësaj dege dokumentacioni.
 - Nuk ka autorizim për identitete reale, evidencë konfidenciale, email të qytetarëve, sekrete, shërbime me pagesë, deploy, delete ose merge.
 
+## Teksti i propozuar për `AGENTS.md` — NOT YET AUTHORIZED FOR CODE BRANCH
+
+Ky është **propozim** i shkurtër për t'u ruajtur më vonë në root të degës së kodit me Draft PR të veçantë, **vetëm pas autorizimit të ndryshimit**. Nuk do të ekzekutohet/zbatohet automatikisht vetëm sepse ndodhet në këtë dokument.
+
+```markdown
+# Protesto — Agent operating rules
+Scope: titanfit102-bit/Protesto only. Never reuse other-project assets or secrets.
+
+1. Before changing anything, read docs/STATUS.md and docs/MASTER_HANDOFF.md from
+   the canonical docs/protesto-continuity branch, and docs/security/SECURITY_REGISTER.md
+   plus SECURITY_TEST_MATRIX.md from their currently authorized security baseline.
+   Verify actual GitHub branch HEAD/PR/CI; do not treat old docs as latest code.
+2. Keep main, deployments, GitHub rulesets and real civic data untouched without
+   separate owner authorization. Do not merge/close historical PRs or use OpenCode.
+3. Threat/risk classification BEFORE edit: low (docs/UI), medium (features),
+   high (auth/RBAC, public copies, moderation, SQL/migrations, dialogue,
+   retention, backup, CI, secrets, production boundaries).
+4. Preserve reviewed public/private separation, independent moderation,
+   pseudonymity warnings, peaceful lawful participation and fail-closed release.
+   No automatic allegations/AI publication, political profiling or attendance lists.
+5. For low-risk changes use focused checks. For medium use relevant unit/API/UI
+   positives and negatives. For high use synthetic full CI, PostgreSQL role/privacy
+   regressions and manual review of the changed trust boundary; zero skipped DB tests.
+6. Use disposable test data and least privileges. Never print/store user data,
+   secrets, token contents or actionable unpatched exploit details in the public repo.
+7. Report changed files, exact SHA/PR, test run and failures/skips. Green CI
+   never means Production approval. Update the security register only for
+   material proven security changes, and maintain canonical continuity checkpoints.
+8. If outside authorization, record the blocker and stop that specific edit;
+   continue only independently authorized non-destructive analysis.
+```
+
+**Miratimi që mungon:** autorizim për të krijuar/ndryshuar `AGENTS.md` në degë kodi, për të shtuar SAST/secret scanning në CI dhe për hapjen e Draft PR-së së tyre; kontrollo për referenca të sakta në degën finale, pasi sot dokumentet `docs/security` ndodhen vetëm në një degë dokumentacioni.
+
 **Referenca standarde:** [OWASP ASVS 5.0.0](https://github.com/OWASP/ASVS/tree/v5.0.0), [OWASP Cheat Sheets](https://cheatsheetseries.owasp.org/), [NIST SSDF](https://csrc.nist.gov/Projects/ssdf). Kjo është hartë kontrollesh e përshtatur, jo pretendim për certifikim ASVS.
